@@ -43,21 +43,20 @@ Typical use case: a family video archive kept in Immich, watched on the TV throu
 ## Installation
 
 Showrunner runs with Docker Compose on the machine that holds the Immich library; Jellyfin may run
-in Docker or be installed as a system package. There is no released image yet: for now the image is
-built from the source.
+in Docker or be installed as a system package. The image is ready-made, for `amd64` and `arm64`:
 
 ```sh
-git clone https://github.com/Ivamic/immich-showrunner.git
-cd immich-showrunner
-cp .env.example .env      # Immich and Jellyfin addresses and keys, folders
-docker compose -f compose.yaml -f compose.build.yaml build
-docker compose -f compose.yaml -f compose.build.yaml run --rm app check
-docker compose -f compose.yaml -f compose.build.yaml run --rm app sync --dry-run
-docker compose -f compose.yaml -f compose.build.yaml up -d
+mkdir immich-showrunner && cd immich-showrunner
+curl -L -o compose.yaml https://github.com/Ivamic/immich-showrunner/releases/latest/download/compose.yaml
+curl -L -o example.env https://github.com/Ivamic/immich-showrunner/releases/latest/download/example.env
+cp example.env .env      # Immich and Jellyfin addresses and keys, folders
+docker compose run --rm app check
+docker compose run --rm app sync --dry-run
+docker compose up -d
 ```
 
-[Installation step by step](docs/install.md): the user and the API key in Immich, the path
-mapping, the library in Jellyfin, the commands.
+Updating is `docker compose pull && docker compose up -d`. [Installation step by step](docs/install.md):
+the user and the API key in Immich, the path mapping, the library in Jellyfin, the web page, people.
 
 ## Architecture
 

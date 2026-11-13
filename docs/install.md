@@ -4,8 +4,8 @@ Showrunner runs with Docker Compose on the machine that holds the Immich library
 server (Jellyfin 12) must be able to read two folders: the Immich library and the output folder of
 Showrunner. It may run in Docker or be installed as a system package.
 
-> There is no released image yet. Until the first release, build the image from the source:
-> see [Building from source](#building-from-source).
+The image is published on GitHub Container Registry (`ghcr.io/ivamic/immich-showrunner`) for
+`amd64` and `arm64`. It can also be [built from the source](#building-from-source).
 
 ## 1. A user in Immich
 
@@ -25,7 +25,8 @@ Immich library.
 
 ```sh
 mkdir immich-showrunner && cd immich-showrunner
-# compose.yaml and example.env come from the release (or from the source tree)
+curl -L -o compose.yaml https://github.com/Ivamic/immich-showrunner/releases/latest/download/compose.yaml
+curl -L -o example.env https://github.com/Ivamic/immich-showrunner/releases/latest/download/example.env
 cp example.env .env
 ```
 
@@ -145,6 +146,18 @@ does not fill them in with a namesake from TMDB.
 > lost for Jellyfin; in our tests they did not come back by joining again. All owners whose people
 > should be in Jellyfin have to be in the same group. The page accepts an invitation only while the
 > user of the app is alone in its group.
+
+## Updating
+
+```sh
+docker compose pull
+docker compose up -d
+```
+
+`compose.yaml` pulls the newest release of the major version (`0` for now), so these two commands
+are all an update needs; the database is brought to the new version when the app starts. To stay
+on one version, set `SHOWRUNNER_VERSION=0.1.0` in `.env`. Read the release notes before an update:
+they say when anything else is needed.
 
 ## Commands
 

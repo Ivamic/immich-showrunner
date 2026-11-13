@@ -7,6 +7,8 @@ between releases.
 
 ## [Unreleased]
 
+The first release, 0.1.0.
+
 ### Added
 
 - **Albums as shows.** Every album shared with the Immich user of the app becomes a show in the
@@ -33,3 +35,10 @@ between releases.
   changed by hand is left alone. Nothing is removed when Immich does not answer, and a sync that
   would remove most of the links is held until it is forced.
 - Docker image, `compose.yaml` and an example `.env`; [installation](docs/install.md).
+
+### Security
+
+- Before every release the dependencies that ship are checked for known vulnerabilities; the
+  release workflow stops on a finding. For 0.1.0: none in the Python packages and none in what
+  the web page ships. The build tools of the page have two (moderate, low), which do not reach
+  the image.

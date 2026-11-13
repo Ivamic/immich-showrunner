@@ -1,0 +1,125 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Publishes the Docker image of a release to GitHub Container Registry (ghcr.io) when a version tag
+# (v1.2.3, v1.2.3-rc.1) is pushed, after checking the dependencies that ship for known
+# vulnerabilities, and attaches the files for installing without git (compose.yaml, example.env)
+# when the release is published. Can be re-run by hand for an existing tag.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+
+jobs:
+  audit:
+    name: Known vulnerabilities in what ships
+    runs-on: ubuntu-latest
+    if: github.event_name != 'release' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.12"
+      # The packages of the image: no development tools. A finding stops the release; one that is
+      # checked and does not reach our code can be passed with --ignore-vuln <id> here.
+      - name: Python packages
+        run: |
+          uv export --frozen --no-dev --no-emit-project --no-hashes -o requirements.txt
+          uvx pip-audit -r requirements.txt --no-deps --disable-pip --desc
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.10.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # Only the static files of the page ship; the build tools stay on the build machine.
+      - name: Web page
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm audit --prod --audit-level high
+
+  publish:
+    name: Image
+    runs-on: ubuntu-latest
+    needs: [audit]
+    if: github.event_name != 'release' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      # The tag of the major version ("0", later "1") is what compose.yaml pulls by default, so
+      # that `docker compose pull` alone updates. metadata-action skips {{major}} for 0.x, and
+      # pre-releases (v0.1.0-rc.1) must not move it.
+      - id: major
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [[ "$TAG" =~ ^v([0-9]+)\.[0-9]+\.[0-9]+$ ]]; then
+            echo "tag=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/ivamic/immich-showrunner
+          # 1.2.3, 1.2, 1 and latest; pre-release tags (v1.3.0-rc.1) get only their version.
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ steps.major.outputs.tag }},enable=${{ steps.major.outputs.tag != '' }}
+          labels: |
+            org.opencontainers.image.title=immich-showrunner
+            org.opencontainers.image.description=Immich albums as TV shows in Jellyfin, without copying files
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+          annotations: |
+            org.opencontainers.image.description=Immich albums as TV shows in Jellyfin, without copying files
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          cache-from: type=gha,scope=release
+          cache-to: type=gha,scope=release,mode=max
+
+  install-files:
+    name: Files for installing without git
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - name: Attach compose.yaml and example.env
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          cp .env.example example.env
+          gh release upload "$TAG" compose.yaml example.env --clobber
