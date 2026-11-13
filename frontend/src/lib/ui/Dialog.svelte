@@ -24,6 +24,9 @@
 	} = $props();
 
 	let dialog: HTMLDialogElement;
+	// A click beside the window closes it only if it also started there: selecting text in a field
+	// and letting the button go beside the window must not close it.
+	let pressedBeside = false;
 
 	$effect(() => {
 		dialog.showModal();
@@ -40,7 +43,11 @@
 		e.preventDefault();
 		onclose();
 	}}
-	onclick={(e) => e.target === e.currentTarget && onclose()}
+	onpointerdown={(e) => (pressedBeside = e.target === e.currentTarget)}
+	onclick={(e) => {
+		if (pressedBeside && e.target === e.currentTarget) onclose();
+		pressedBeside = false;
+	}}
 >
 	<div class="st-dialog__head">
 		{#if icon}<span class="st-dialog__icon"><Icon name={icon} /></span>{/if}
