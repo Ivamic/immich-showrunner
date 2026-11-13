@@ -62,12 +62,13 @@ jobs:
       - uses: actions/checkout@v7
       - name: compose.yaml works with only the required settings
         run: |
-          printf 'SHOWRUNNER_IMMICH_URL=http://127.0.0.1:9
-SHOWRUNNER_IMMICH_API_KEY=k
-SHOWRUNNER_PATH_MAP=/data=/srv
-SHOWRUNNER_OUTPUT_LOCATION=/tmp/out
-DB_PASSWORD=ci
-' > .env
+          {
+            echo "SHOWRUNNER_IMMICH_URL=http://127.0.0.1:9"
+            echo "SHOWRUNNER_IMMICH_API_KEY=k"
+            echo "SHOWRUNNER_PATH_MAP=/data=/srv"
+            echo "SHOWRUNNER_OUTPUT_LOCATION=/tmp/out"
+            echo "DB_PASSWORD=ci"
+          } > .env
           docker compose config -q
           # Without a required setting it stops with a clear message.
           grep -v SHOWRUNNER_PATH_MAP .env > /tmp/partial.env
