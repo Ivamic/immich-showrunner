@@ -8,13 +8,18 @@ import logging
 from dataclasses import dataclass, field, replace
 from uuid import UUID
 
-from showrunner.immich.client import ImmichClient
+from showrunner.immich.client import (
+    ImmichAuthError,
+    ImmichClient,
+    ImmichError,
+    ImmichUnreachableError,
+)
 from showrunner.immich.models import Album
 from showrunner.model.naming import show_folder_name
 from showrunner.model.show import Options, SeasonMode, Skipped, build_show
 from showrunner.store.registry import Registry
 from showrunner.sync.executor import Executor, Outcome, Result, UnsafePathError
-from showrunner.sync.plan import ActionType, Plan, make_plan
+from showrunner.sync.plan import Action, ActionType, Plan, make_plan
 from showrunner.targets.base import DesiredFile, Target
 
 log = logging.getLogger(__name__)
@@ -45,6 +50,8 @@ class SyncReport:
     visible_albums: frozenset[UUID] = field(default_factory=frozenset)
     # Shows the media server still has to be told about, after this pass.
     media_server_pending: int = 0
+    # Pictures that could not be taken from Immich; they are tried again on the next pass.
+    pictures_failed: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -120,9 +127,10 @@ async def run_sync(
     if executor is None:
         return report
 
+    actions = await _with_pictures(immich, plan.actions, report)
     executor.ensure_marker()
     failed: set[UUID] = set()
-    for action in plan.actions:
+    for action in actions:
         try:
             outcome = executor.apply(action)
         except (UnsafePathError, OSError) as exc:
@@ -154,6 +162,31 @@ async def run_sync(
             )
     await registry.commit()
     return report
+
+
+async def _with_pictures(
+    immich: ImmichClient, actions: tuple[Action, ...], report: SyncReport
+) -> list[Action]:
+    """Download the pictures that have to be written, before anything is written.
+
+    A picture Immich can not give is left out of this pass and noted; it is tried again on the
+    next one. When Immich does not answer at all, the pass stops here, before any change."""
+    result: list[Action] = []
+    for action in actions:
+        desired = action.desired
+        if desired is None or desired.image is None or action.type is ActionType.REMOVE:
+            result.append(action)
+            continue
+        try:
+            content = await immich.preview(desired.image.asset_id)
+        except (ImmichUnreachableError, ImmichAuthError):
+            raise
+        except ImmichError as exc:
+            report.pictures_failed.append(f"{action.path}: {exc}")
+            log.warning("picture %s not taken from Immich: %s", action.path, exc)
+            continue
+        result.append(replace(action, desired=replace(desired, content=content)))
+    return result
 
 
 def _unchanged(album: Album, updated_at: object, assets_modified_at: object) -> bool:

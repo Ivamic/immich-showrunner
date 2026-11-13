@@ -28,6 +28,8 @@ class Entry:
     asset_id: UUID | None = None
     link_target: PurePosixPath | None = None
     content_hash: str | None = None
+    # For a picture: the version of the Immich picture it holds.
+    source_version: str | None = None
 
 
 class ActionType(StrEnum):
@@ -139,10 +141,12 @@ def make_plan(
 
 
 def _same(want: DesiredFile, entry: Entry) -> bool:
-    return (
-        want.kind is entry.kind
-        and want.link_target == entry.link_target
-        and want.content_hash == entry.content_hash
-        and want.album_id == entry.album_id
-        and want.asset_id == entry.asset_id
-    )
+    if want.kind is not entry.kind or (want.album_id, want.asset_id) != (
+        entry.album_id,
+        entry.asset_id,
+    ):
+        return False
+    if want.kind is FileKind.IMAGE:
+        # The picture is not downloaded to compare it: its version in Immich tells.
+        return want.source_version == entry.source_version
+    return want.link_target == entry.link_target and want.content_hash == entry.content_hash

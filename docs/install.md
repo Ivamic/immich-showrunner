@@ -83,7 +83,7 @@ set it up like this:
 | Automatically refresh metadata from the internet | Never | |
 | Metadata savers: Nfo | off | Jellyfin would overwrite the NFO files of the app |
 | Image fetchers (shows, seasons) | all off | |
-| Image fetchers (episodes) | only **Screen Grabber** | A frame of the video as the picture of an episode |
+| Image fetchers (episodes) | off, or only **Screen Grabber** | The app writes the preview of every video from Immich; Screen Grabber only fills in a picture that Immich could not give |
 | Save artwork into media folders | off | The output folder belongs to the app |
 | Automatically merge series that are spread across multiple folders | off | Two albums with the same name would become one show |
 | Trickplay: save trickplay images next to media | off | Trickplay itself is up to you; it costs CPU time |

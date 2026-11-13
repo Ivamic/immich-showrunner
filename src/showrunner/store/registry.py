@@ -45,6 +45,7 @@ class Registry:
                 asset_id=row.asset_id,
                 link_target=PurePosixPath(row.link_target) if row.link_target else None,
                 content_hash=row.content_hash,
+                source_version=row.source_version,
             )
             for row in rows
         ]
@@ -57,6 +58,7 @@ class Registry:
             "asset_id": file.asset_id,
             "link_target": str(file.link_target) if file.link_target else None,
             "content_hash": file.content_hash,
+            "source_version": file.source_version,
         }
         statement = insert(FileRow).values(path=str(file.path), **values)
         await self._session.execute(

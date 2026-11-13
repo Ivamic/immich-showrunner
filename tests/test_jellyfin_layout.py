@@ -87,8 +87,10 @@ def test_layout() -> None:
         ("Summer [imm-97769e09]/tvshow.nfo", FileKind.SHOW_NFO),
         ("Summer [imm-97769e09]/Season 2024/2024-07-15 VID_D [712f0482].mp4", FileKind.LINK),
         ("Summer [imm-97769e09]/Season 2024/2024-07-15 VID_D [712f0482].nfo", FileKind.EPISODE_NFO),
+        ("Summer [imm-97769e09]/Season 2024/2024-07-15 VID_D [712f0482]-thumb.jpg", FileKind.IMAGE),
         ("Summer [imm-97769e09]/Season 2023/2023-06-10 VID_A [00000001].mp4", FileKind.LINK),
         ("Summer [imm-97769e09]/Season 2023/2023-06-10 VID_A [00000001].nfo", FileKind.EPISODE_NFO),
+        ("Summer [imm-97769e09]/Season 2023/2023-06-10 VID_A [00000001]-thumb.jpg", FileKind.IMAGE),
     ]
     link = files[1]
     assert link.link_target == PurePosixPath("/mnt/immich/upload/a/b/c.mp4")

@@ -42,6 +42,10 @@ class ImmichPermissionError(ImmichError):
     """The API key lacks a permission required by the endpoint."""
 
 
+class NotJpegError(ImmichError):
+    """The preview is not a JPEG picture (Immich can be set to make WebP previews)."""
+
+
 def api_base_url(url: str) -> str:
     url = url.rstrip("/")
     return url if url.endswith("/api") else url + "/api"
@@ -107,6 +111,23 @@ class ImmichClient:
         """Every album the user of the key can see: its own and the ones shared with it."""
         response = await self._request("GET", "/albums")
         return [Album.model_validate(item) for item in response.json()]
+
+    async def preview(self, asset_id: UUID) -> bytes:
+        """The preview picture of an asset: the same picture Immich shows, as JPEG."""
+        response = await self._request(
+            "GET",
+            f"/assets/{asset_id}/thumbnail",
+            params={"size": "preview"},
+            headers={"Accept": "image/*"},
+        )
+        media_type = response.headers.get("content-type", "").split(";")[0].strip()
+        if media_type != "image/jpeg":
+            raise NotJpegError(
+                f"the preview of asset {asset_id} is {media_type or 'of no type'}, not JPEG; "
+                "set the preview format of Immich to JPEG",
+                response.status_code,
+            )
+        return response.content
 
     async def album_videos(self, album_id: UUID) -> AsyncIterator[Asset]:
         """The videos of an album, with their descriptions and the people that the user of the

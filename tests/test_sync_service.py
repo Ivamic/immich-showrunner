@@ -69,6 +69,11 @@ FILES = [
     f"{FOLDER}/Season 2024/20240715-143200 VID_2 [00000002].nfo",
     f"{FOLDER}/tvshow.nfo",
 ]
+THUMBS = [
+    f"{FOLDER}/Season 2023/20230610-090000 VID_1 [00000001]-thumb.jpg",
+    f"{FOLDER}/Season 2024/20240715-143200 VID_2 [00000002]-thumb.jpg",
+]
+ALL = sorted(FILES + THUMBS)
 
 
 async def test_dry_run_writes_nothing(session: AsyncSession, out: Path) -> None:
@@ -76,7 +81,7 @@ async def test_dry_run_writes_nothing(session: AsyncSession, out: Path) -> None:
     report = await sync(immich, session, None)
     assert not (out / MARKER_NAME).exists()
     assert report.dry_run and report.ok
-    assert len(report.plan.actions) == 5
+    assert len(report.plan.actions) == 7
     assert (report.created, report.albums, report.albums_read) == (0, 1, 1)
     assert tree(out) == []
     await session.rollback()
@@ -91,8 +96,8 @@ async def test_album_becomes_a_show_and_a_second_pass_changes_nothing(
 ) -> None:
     immich, album = family()
     report = await sync(immich, session, out)
-    assert report.ok and report.created == 5
-    assert tree(out) == FILES
+    assert report.ok and report.created == 7
+    assert tree(out) == ALL
     assert os.readlink(out / FILES[0]) == "/mnt/immich/upload/owner/v1.mp4"
     assert "<title>First steps</title>" in (out / FILES[1]).read_text(encoding="utf-8")
     assert "<title>◈ Family</title>" in (out / FILES[4]).read_text(encoding="utf-8")
@@ -100,7 +105,7 @@ async def test_album_becomes_a_show_and_a_second_pass_changes_nothing(
 
     again = await sync(immich, session, out)
     assert again.plan.is_empty and again.changed_folders == {}
-    assert tree(out) == FILES
+    assert tree(out) == ALL
 
 
 @needs_links
@@ -111,14 +116,14 @@ async def test_quick_pass_skips_unchanged_albums(session: AsyncSession, out: Pat
     report = await sync(immich, session, out, full=False)
     assert report.albums_read == 0 and report.plan.is_empty
     assert immich.requests == ["GET /api/albums"]
-    assert tree(out) == FILES
+    assert tree(out) == ALL
 
     immich.add_video(album, 3, "2024-03-08T10:00:00")
     immich.touch(album, "2026-02-02T00:00:00.000Z")
     report = await sync(immich, session, out, full=False)
     assert report.albums_read == 1
     # The new video and its metadata, and the number of the later episode of the same season.
-    assert (report.created, report.replaced) == (2, 1)
+    assert (report.created, report.replaced) == (3, 1)
     later = (out / FILES[3]).read_text(encoding="utf-8")
     assert "<episode>2</episode>" in later
 
@@ -130,7 +135,7 @@ async def test_renamed_album_keeps_its_folder(session: AsyncSession, out: Path) 
     immich.albums[album]["albumName"] = "Summers"
     report = await sync(immich, session, out)
     assert (report.created, report.replaced, report.removed) == (0, 1, 0)
-    assert tree(out) == FILES
+    assert tree(out) == ALL
     assert "<title>◈ Summers</title>" in (out / FILES[4]).read_text(encoding="utf-8")
 
 
@@ -142,7 +147,7 @@ async def test_album_no_longer_shared_disappears_and_comes_back_in_the_same_fold
     await sync(immich, session, out)
     saved_album, saved_videos = immich.albums.pop(album), immich.videos.pop(album)
     report = await sync(immich, session, out)
-    assert report.ok and report.removed == 5
+    assert report.ok and report.removed == 7
     assert tree(out) == [] and out.is_dir()
     # The output folder is never left empty: Jellyfin would keep the show otherwise.
     assert (out / MARKER_NAME).is_file()
@@ -150,7 +155,7 @@ async def test_album_no_longer_shared_disappears_and_comes_back_in_the_same_fold
     saved_album["albumName"] = "Renamed meanwhile"
     immich.albums[album], immich.videos[album] = saved_album, saved_videos
     await sync(immich, session, out)
-    assert tree(out) == FILES
+    assert tree(out) == ALL
 
 
 @needs_links
@@ -162,7 +167,7 @@ async def test_immich_error_removes_nothing(session: AsyncSession, out: Path) ->
         with pytest.raises(ImmichError):
             await sync(immich, session, out)
         await session.rollback()
-        assert tree(out) == FILES
+        assert tree(out) == ALL
 
 
 @needs_links
@@ -172,16 +177,16 @@ async def test_mass_removal_is_held_until_forced(session: AsyncSession, out: Pat
     for n in range(1, 31):
         immich.add_video(album, n, f"2024-01-{n:02d}T10:00:00")
     await sync(immich, session, out)
-    assert len(tree(out)) == 61
+    assert len(tree(out)) == 91
 
     immich.albums.clear()  # the wrong API key: no album is visible
     report = await sync(immich, session, out)
     assert report.held and not report.ok
     assert report.plan.links_removed == 30
-    assert len(tree(out)) == 61
+    assert len(tree(out)) == 91
 
     forced = await sync(immich, session, out, force=True)
-    assert forced.ok and forced.removed == 61
+    assert forced.ok and forced.removed == 91
     assert tree(out) == []
 
 
@@ -200,7 +205,7 @@ async def test_foreign_files_and_skipped_videos_are_reported(
     ]
     assert [str(o.action.path) for o in report.foreign] == [f"{FOLDER}/tvshow.nfo"]
     assert (out / FOLDER / "tvshow.nfo").read_text(encoding="utf-8") == "written by hand"
-    assert report.created == 4
+    assert report.created == 6
 
 
 @needs_links

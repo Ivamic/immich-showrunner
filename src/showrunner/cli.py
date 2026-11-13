@@ -56,6 +56,8 @@ def print_report(report: SyncReport, notes: list[str]) -> None:
         )
     for album, skipped in report.skipped:
         print(f"  skipped: {album} / {skipped.file_name} ({skipped.reason.value})")
+    for failed in report.pictures_failed:
+        print(f"  picture not taken: {failed}")
     for outcome in report.foreign:
         print(f"  left alone: {outcome.action.path} ({outcome.detail})")
     for error in report.errors:

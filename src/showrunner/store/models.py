@@ -52,6 +52,8 @@ class FileRow(Base):
     asset_id: Mapped[UUID | None] = mapped_column()
     link_target: Mapped[str | None] = mapped_column(Text)
     content_hash: Mapped[str | None] = mapped_column(String(64))
+    # For a picture: the version of the Immich picture it holds.
+    source_version: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

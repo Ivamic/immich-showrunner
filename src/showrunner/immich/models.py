@@ -79,6 +79,8 @@ class Asset(ImmichModel):
     updated_at: datetime
     exif_info: ExifInfo | None = None
     people: list[Person] = Field(default_factory=list)
+    # A short hash of the thumbnail; it changes when Immich makes the thumbnail again.
+    thumbhash: str | None = None
 
     @property
     def description(self) -> str:

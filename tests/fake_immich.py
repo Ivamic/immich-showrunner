@@ -27,6 +27,8 @@ class FakeImmich:
     videos: dict[UUID, list[dict[str, Any]]] = field(default_factory=dict)
     # Paths that answer with an error, by their start.
     broken: dict[str, int] = field(default_factory=dict)
+    # What the previews are served as.
+    preview_type: str = "image/jpeg"
     requests: list[str] = field(default_factory=list)
 
     def add_album(self, n: int, name: str, *, stamp: str = "2026-01-01T00:00:00.000Z") -> UUID:
@@ -58,6 +60,7 @@ class FakeImmich:
                 "updatedAt": "2026-01-01T00:00:00.000Z",
                 "exifInfo": {"description": description},
                 "people": [],
+                "thumbhash": "hash1",
             }
         )
         return key
@@ -74,6 +77,19 @@ class FakeImmich:
                 return httpx2.Response(status, json={"message": "broken"})
         if path == "/api/albums":
             return httpx2.Response(200, json=list(self.albums.values()))
+        if path.startswith("/api/assets/") and path.endswith("/thumbnail"):
+            asset = path.split("/")[3]
+            version = next(
+                (
+                    v.get("thumbhash", "")
+                    for vs in self.videos.values()
+                    for v in vs
+                    if v["id"] == asset
+                ),
+                "cover",
+            )
+            body = f"JPEG {asset} {version}".encode()
+            return httpx2.Response(200, content=body, headers={"content-type": self.preview_type})
         if path == "/api/search/metadata":
             body = json.loads(request.content)
             items = self.videos[UUID(body["albumIds"][0])]

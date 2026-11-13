@@ -17,6 +17,9 @@ between releases.
 - **Sync on a schedule**, a quick pass that leaves unchanged albums alone and a full pass every
   hour. Jellyfin is told about every change through its API; when Jellyfin is down, the app
   keeps trying on every pass until it answers (`jellyfin_pending` in `/api/health`).
+- **Pictures from Immich.** The cover of the album becomes the poster of the show, and the preview
+  of every video the picture of its episode: the same pictures as in Immich. A picture is
+  downloaded only when it is new or changed in Immich, and one you replaced by hand stays.
 - **Commands**: `sync`, `sync --dry-run`, `check`, `migrate`, and `serve` with `GET /api/health`.
 - **Safety.** The app writes only to its output folder and removes only what it created; a file
   changed by hand is left alone. Nothing is removed when Immich does not answer, and a sync that

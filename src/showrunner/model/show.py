@@ -60,6 +60,8 @@ class Episode:
     extension: str
     link_target: PurePosixPath
     people: tuple[EpisodePerson, ...] = ()
+    # Changes when the preview of the video changes in Immich.
+    picture_version: str = ""
 
 
 @dataclass(frozen=True)
@@ -77,6 +79,8 @@ class Show:
     plot: str
     episodes: tuple[Episode, ...]
     skipped: tuple[Skipped, ...] = field(default=())
+    # The asset whose picture is the cover of the album, if it has one.
+    cover_asset_id: UUID | None = None
 
     @property
     def seasons(self) -> tuple[int, ...]:
@@ -158,6 +162,7 @@ def build_show(album: Album, assets: Iterable[Asset], options: Options) -> Show:
                 extension=extension,
                 link_target=target,
                 people=_people(asset, options.person_prefix),
+                picture_version=asset.thumbhash or asset.updated_at.isoformat(),
             )
         )
 
@@ -169,6 +174,7 @@ def build_show(album: Album, assets: Iterable[Asset], options: Options) -> Show:
         plot=album.description.strip(),
         episodes=tuple(episodes),
         skipped=tuple(skipped),
+        cover_asset_id=album.album_thumbnail_asset_id,
     )
 
 

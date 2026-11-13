@@ -33,7 +33,7 @@ def link(path: str = "show/Season 2024/v1.mp4", target: str = "/mnt/immich/v1.mp
 
 async def test_migrations_created_the_tables(session: AsyncSession) -> None:
     version = await session.scalar(text("SELECT version_num FROM alembic_version"))
-    assert version == "0002"
+    assert version == "0003"
 
 
 async def test_pending_marks(registry: Registry) -> None:
