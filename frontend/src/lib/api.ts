@@ -88,6 +88,59 @@ export interface Status {
 	foreign: { path: string; detail: string }[];
 }
 
+export type SeasonMode = 'year' | 'single';
+
+export interface ShowSummary {
+	album_id: string;
+	album_name: string;
+	title: string;
+	title_edited: boolean;
+	hidden: boolean;
+	season_mode: SeasonMode;
+	episodes: number;
+	cover_asset_id: string | null;
+}
+
+export interface Episode {
+	asset_id: string;
+	file_name: string;
+	filmed_at: string;
+	season: number;
+	/** 0 for a hidden episode. */
+	number: number;
+	title: string;
+	auto_title: string;
+	title_edited: boolean;
+	plot: string;
+	auto_plot: string;
+	plot_edited: boolean;
+	moved: boolean;
+	hidden: boolean;
+}
+
+export interface ShowDetail extends ShowSummary {
+	episode_list: Episode[];
+}
+
+export const getShows = () => request<ShowSummary[]>('GET', '/shows');
+export const getShow = (id: string) => request<ShowDetail>('GET', `/shows/${id}`);
+export const editShow = (
+	id: string,
+	patch: { title?: string | null; hidden?: boolean; season_mode?: SeasonMode }
+) => request<ShowSummary>('PATCH', `/shows/${id}`, patch);
+/** A field set to null goes back to what Immich says (`sort_at: null`: the order of filming). */
+export const editEpisode = (
+	show: string,
+	episode: string,
+	patch: { title?: string | null; plot?: string | null; hidden?: boolean; sort_at?: null }
+) => request<void>('PATCH', `/shows/${show}/episodes/${episode}`, patch);
+export const moveEpisode = (
+	show: string,
+	episode: string,
+	place: { after?: string; before?: string }
+) => request<void>('POST', `/shows/${show}/episodes/${episode}/move`, place);
+export const thumbnailUrl = (assetId: string) => `/api/thumbnails/${assetId}`;
+
 export const getStatus = () => request<Status>('GET', '/status');
 /** A full pass right away; `force` carries out a mass removal that the last pass held. */
 export const syncNow = (force = false) => request<void>('POST', '/sync', { force });

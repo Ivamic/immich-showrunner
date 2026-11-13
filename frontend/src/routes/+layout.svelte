@@ -41,6 +41,11 @@
 	});
 
 	const pages = $derived([
+		{
+			href: resolve('/shows'),
+			label: m.nav_shows(),
+			current: page.route.id?.startsWith('/shows') ?? false
+		},
 		{ href: resolve('/'), label: m.nav_status(), current: page.route.id === '/' }
 	]);
 
