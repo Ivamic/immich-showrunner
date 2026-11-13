@@ -9,7 +9,15 @@ from uuid import UUID
 
 import httpx2
 
-from showrunner.immich.models import Album, ApiKeyInfo, Asset, SearchPage, ServerVersion
+from showrunner.immich.models import (
+    Album,
+    ApiKeyInfo,
+    Asset,
+    ImmichUser,
+    LoginResult,
+    SearchPage,
+    ServerVersion,
+)
 
 DEFAULT_TIMEOUT_S = 30.0
 SEARCH_PAGE_SIZE = 500
@@ -57,16 +65,18 @@ class ImmichClient:
     def __init__(
         self,
         base_url: str,
-        api_key: str,
+        api_key: str | None,
         *,
         timeout: float = DEFAULT_TIMEOUT_S,
         transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
+        """Without `api_key` only signing in works; the calls that take an Immich session token
+        use it instead."""
+        headers = {"Accept": "application/json"}
+        if api_key:
+            headers["x-api-key"] = api_key
         self._http = httpx2.AsyncClient(
-            base_url=api_base_url(base_url),
-            headers={"x-api-key": api_key, "Accept": "application/json"},
-            timeout=timeout,
-            transport=transport,
+            base_url=api_base_url(base_url), headers=headers, timeout=timeout, transport=transport
         )
 
     async def __aenter__(self) -> Self:
@@ -102,6 +112,37 @@ class ImmichClient:
     async def server_version(self) -> ServerVersion:
         response = await self._request("GET", "/server/version")
         return ServerVersion.model_validate(response.json())
+
+    async def current_user(self) -> ImmichUser:
+        response = await self._request("GET", "/users/me")
+        return ImmichUser.model_validate(response.json())
+
+    # --- signing in: these take the token of an Immich session ---------------------------------
+
+    async def login(self, email: str, password: str) -> LoginResult:
+        response = await self._request(
+            "POST", "/auth/login", json={"email": email, "password": password}
+        )
+        return LoginResult.model_validate(response.json())
+
+    async def logout(self, token: str) -> None:
+        await self._request("POST", "/auth/logout", headers=_bearer(token))
+
+    async def api_keys(self, token: str) -> list[ApiKeyInfo]:
+        response = await self._request("GET", "/api-keys", headers=_bearer(token))
+        return [ApiKeyInfo.model_validate(item) for item in response.json()]
+
+    async def create_api_key(self, token: str, name: str, permissions: list[str]) -> str:
+        response = await self._request(
+            "POST",
+            "/api-keys",
+            headers=_bearer(token),
+            json={"name": name, "permissions": permissions},
+        )
+        return str(response.json()["secret"])
+
+    async def delete_api_key(self, token: str, key_id: UUID) -> None:
+        await self._request("DELETE", f"/api-keys/{key_id}", headers=_bearer(token))
 
     async def api_key_info(self) -> ApiKeyInfo:
         response = await self._request("GET", "/api-keys/me")
@@ -163,6 +204,10 @@ def excess_permissions(info: ApiKeyInfo) -> frozenset[str]:
     """Permissions the key has and the app never uses. A key with them could change the library;
     the app reports them, so that the key can be replaced by a read-only one."""
     return frozenset(info.permissions) - REQUIRED_PERMISSIONS
+
+
+def _bearer(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
 
 
 def _jpeg(response: httpx2.Response, what: str) -> bytes:

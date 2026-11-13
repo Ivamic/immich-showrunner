@@ -27,6 +27,18 @@ class ApiKeyInfo(ImmichModel):
     permissions: list[str]
 
 
+class ImmichUser(ImmichModel):
+    id: UUID
+    name: str
+    email: str
+
+
+class LoginResult(ImmichModel):
+    access_token: str
+    user_id: UUID
+    name: str = ""
+
+
 class AlbumUserInfo(ImmichModel):
     id: UUID
     name: str

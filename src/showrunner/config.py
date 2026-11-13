@@ -9,6 +9,7 @@ from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_PREFIX = "SHOWRUNNER_"
+MIN_SECRET_KEY_LENGTH = 32
 
 
 class PathMapping(NamedTuple):
@@ -74,12 +75,30 @@ class Settings(BaseSettings):
 
     sync_interval_seconds: int = Field(default=300, ge=30)
 
+    # The web page. The secret encrypts the Immich key the app keeps for what the user does on the
+    # page; changing it signs everybody out. Without it the page can not be signed in to.
+    secret_key: SecretStr | None = None
+    session_ttl_days: int = Field(default=90, ge=1)
+    # Set when the page is served over HTTPS (a reverse proxy).
+    cookie_secure: bool = False
+    # The built web page; without it only the API is served.
+    static_dir: Path | None = None
+
     @field_validator("immich_url")
     @classmethod
     def _check_url(cls, value: str) -> str:
         value = value.strip().rstrip("/")
         if not value.startswith(("http://", "https://")):
             raise ValueError("must start with http:// or https://")
+        return value
+
+    @field_validator("secret_key")
+    @classmethod
+    def _check_secret(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is None or not value.get_secret_value():
+            return None
+        if len(value.get_secret_value()) < MIN_SECRET_KEY_LENGTH:
+            raise ValueError(f"must be at least {MIN_SECRET_KEY_LENGTH} characters long")
         return value
 
     @field_validator("path_map")

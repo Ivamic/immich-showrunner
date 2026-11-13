@@ -53,6 +53,32 @@ class PersonRow(Base):
     )
 
 
+class UiUser(Base):
+    """The Immich user that signed in to the web page: always the user of the app."""
+
+    __tablename__ = "ui_user"
+
+    immich_user_id: Mapped[UUID] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(Text)
+    email: Mapped[str] = mapped_column(Text)
+    # The Immich key for what the user does on the page (names of people, invitations), encrypted.
+    write_key_encrypted: Mapped[str | None] = mapped_column(Text)
+    can_write: Mapped[bool] = mapped_column(default=False, server_default=false())
+    last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class UiSession(Base):
+    __tablename__ = "ui_session"
+
+    # SHA-256 of the token in the cookie: a copy of the database opens no session.
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    immich_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("ui_user.immich_user_id", ondelete="CASCADE")
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class FileRow(Base):
     """A file the app created in the output folder. Only what is listed here is ever removed."""
 

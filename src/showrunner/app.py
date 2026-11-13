@@ -7,11 +7,19 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
+import httpx2
 from fastapi import FastAPI
+from starlette.exceptions import HTTPException
+from starlette.responses import Response
+from starlette.staticfiles import StaticFiles
+from starlette.types import Scope
 
 from showrunner import __version__
+from showrunner.api import auth
+from showrunner.api.errors import ApiError, api_error_handler
 from showrunner.config import Settings, get_settings
 from showrunner.immich.client import ImmichError
 from showrunner.runner import SetupError, sync_once
@@ -81,8 +89,28 @@ async def scheduler(settings: Settings, state: State, app: FastAPI) -> None:
         await asyncio.sleep(settings.sync_interval_seconds)
 
 
-def create_app() -> FastAPI:
-    settings = get_settings()
+class SPAStaticFiles(StaticFiles):
+    """Serves the built web page; unknown paths fall back to index.html (routing in the page)."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except HTTPException as exc:
+            # Unknown API paths stay real 404s. `path` has backslashes on Windows.
+            first_segment = path.replace("\\", "/").split("/", 1)[0]
+            if exc.status_code != 404 or first_segment == "api":
+                raise
+            return await super().get_response("index.html", scope)
+
+
+def create_app(
+    settings: Settings | None = None,
+    *,
+    run_scheduler: bool = True,
+    immich_transport: httpx2.AsyncBaseTransport | None = None,
+) -> FastAPI:
+    """The server. Tests pass their own settings, no scheduler and a fake Immich."""
+    settings = settings or get_settings()
     state = State()
 
     @asynccontextmanager
@@ -90,16 +118,21 @@ def create_app() -> FastAPI:
         await upgrade_async(settings.database_url)
         engine = make_engine(settings.database_url)
         app.state.sessions = make_session_factory(engine)
-        task = asyncio.create_task(scheduler(settings, state, app))
+        task = asyncio.create_task(scheduler(settings, state, app)) if run_scheduler else None
         try:
             yield
         finally:
-            task.cancel()
-            with suppress(asyncio.CancelledError):
-                await task
+            if task is not None:
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
             await engine.dispose()
 
     app = FastAPI(title="Showrunner for Immich", version=__version__, lifespan=lifespan)
+    app.state.settings = settings
+    app.state.immich_transport = immich_transport
+    app.add_exception_handler(ApiError, api_error_handler)
+    app.include_router(auth.router, prefix="/api")
 
     @app.get("/api/health")
     async def health() -> dict[str, Any]:
@@ -119,4 +152,7 @@ def create_app() -> FastAPI:
             "notes": state.notes,
         }
 
+    static_dir = settings.static_dir
+    if static_dir is not None and Path(static_dir, "index.html").is_file():
+        app.mount("/", SPAStaticFiles(directory=static_dir, html=True), name="page")
     return app
