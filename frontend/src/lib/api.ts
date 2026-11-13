@@ -65,3 +65,29 @@ export interface Health {
 }
 
 export const getHealth = () => request<Health>('GET', '/health');
+
+export interface Status {
+	version: string;
+	running: boolean;
+	ok: boolean | null;
+	error: string;
+	errors: string[];
+	held: boolean;
+	held_links_removed: number;
+	held_links_before: number;
+	shows: number;
+	jellyfin_pending: number;
+	created: number;
+	replaced: number;
+	removed: number;
+	last_sync_at: string | null;
+	last_full_sync_at: string | null;
+	sync_interval_seconds: number;
+	skipped: { album: string; file: string; reason: string }[];
+	pictures_failed: string[];
+	foreign: { path: string; detail: string }[];
+}
+
+export const getStatus = () => request<Status>('GET', '/status');
+/** A full pass right away; `force` carries out a mass removal that the last pass held. */
+export const syncNow = (force = false) => request<void>('POST', '/sync', { force });

@@ -46,7 +46,7 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM", "ASYNC", "RUF"]
 "tests/*" = ["ASYNC240"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["showrunner", "fake_immich"]
+known-first-party = ["showrunner", "fake_immich", "test_auth", "conftest"]
 
 [tool.mypy]
 python_version = "3.12"
