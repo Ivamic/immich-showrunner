@@ -33,7 +33,14 @@ def link(path: str = "show/Season 2024/v1.mp4", target: str = "/mnt/immich/v1.mp
 
 async def test_migrations_created_the_tables(session: AsyncSession) -> None:
     version = await session.scalar(text("SELECT version_num FROM alembic_version"))
-    assert version == "0003"
+    assert version == "0004"
+
+
+async def test_people(registry: Registry) -> None:
+    await registry.remember_people({"◈ Anna": A1, "◈ Boris": A2})
+    await registry.remember_people({"◈ Anna": ASSET})
+    await registry.commit()
+    assert await registry.people() == {"◈ Anna": ASSET, "◈ Boris": A2}
 
 
 async def test_pending_marks(registry: Registry) -> None:

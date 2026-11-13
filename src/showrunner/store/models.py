@@ -40,6 +40,19 @@ class ShowRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class PersonRow(Base):
+    """A person the app wrote into metadata, by the name the media server knows: its face in
+    Immich is found through it, also on a pass that did not read the album again."""
+
+    __tablename__ = "person"
+
+    name: Mapped[str] = mapped_column(Text, primary_key=True)
+    immich_id: Mapped[UUID] = mapped_column()
+    seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class FileRow(Base):
     """A file the app created in the output folder. Only what is listed here is ever removed."""
 

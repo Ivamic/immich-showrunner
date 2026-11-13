@@ -20,6 +20,10 @@ between releases.
 - **Pictures from Immich.** The cover of the album becomes the poster of the show, and the preview
   of every video the picture of its episode: the same pictures as in Immich. A picture is
   downloaded only when it is new or changed in Immich, and one you replaced by hand stays.
+- **People.** The people on a video are the cast of its episode, under the names the Immich
+  user of the app gave them, marked with the prefix. Jellyfin looks every new person up on
+  TMDB; the app removes what it found there for a namesake, sets the face from Immich and
+  locks the person. People of your other libraries are never touched.
 - **Commands**: `sync`, `sync --dry-run`, `check`, `migrate`, and `serve` with `GET /api/health`.
 - **Safety.** The app writes only to its output folder and removes only what it created; a file
   changed by hand is left alone. Nothing is removed when Immich does not answer, and a sync that

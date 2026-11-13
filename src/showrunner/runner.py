@@ -17,6 +17,7 @@ from showrunner.sync.executor import Executor
 from showrunner.sync.service import SyncReport, run_sync
 from showrunner.targets.jellyfin.client import JellyfinClient, JellyfinError, tell_jellyfin
 from showrunner.targets.jellyfin.layout import JellyfinLayout
+from showrunner.targets.jellyfin.people import tend_people
 
 log = logging.getLogger(__name__)
 
@@ -117,6 +118,12 @@ async def sync_once(
                         report.visible_albums,
                     )
                 )
+                async with immich_client(settings) as immich:
+                    notes.extend(
+                        await tend_people(
+                            jellyfin, immich, settings.person_prefix, await registry.people()
+                        )
+                    )
         except JellyfinError as exc:
             # The folder is right; only Jellyfin has not been told. The shows stay marked and
             # the next pass tries again.

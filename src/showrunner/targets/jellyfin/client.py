@@ -4,6 +4,7 @@
 A plain scan of the library does not read an NFO file again once Jellyfin knows the episode, so
 after every change the app asks Jellyfin to refresh the show."""
 
+import base64
 from pathlib import PurePosixPath
 from types import TracebackType
 from typing import Any, Self
@@ -129,6 +130,33 @@ class JellyfinClient:
 
     async def scan_all(self) -> None:
         await self._request("POST", "/Library/Refresh")
+
+    async def admin_user_id(self) -> str:
+        """An administrator: reading a whole item needs a user, and an API key has none."""
+        response = await self._request("GET", "/Users")
+        for user in response.json():
+            if (user.get("Policy") or {}).get("IsAdministrator"):
+                return str(user["Id"])
+        raise JellyfinError("Jellyfin has no administrator to read items with")
+
+    async def persons(self) -> list[dict[str, Any]]:
+        response = await self._request("GET", "/Persons")
+        return list(response.json().get("Items", []))
+
+    async def item(self, item_id: str, user_id: str) -> dict[str, Any]:
+        response = await self._request("GET", f"/Items/{item_id}", params={"userId": user_id})
+        return dict(response.json())
+
+    async def update_item(self, item_id: str, item: dict[str, Any]) -> None:
+        await self._request("POST", f"/Items/{item_id}", json=item)
+
+    async def set_primary_image(self, item_id: str, jpeg: bytes) -> None:
+        await self._request(
+            "POST",
+            f"/Items/{item_id}/Images/Primary",
+            content=base64.b64encode(jpeg),
+            headers={"Content-Type": "image/jpeg"},
+        )
 
 
 async def tell_jellyfin(

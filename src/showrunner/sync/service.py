@@ -52,6 +52,8 @@ class SyncReport:
     media_server_pending: int = 0
     # Pictures that could not be taken from Immich; they are tried again on the next pass.
     pictures_failed: list[str] = field(default_factory=list)
+    # People of the albums read in this pass: name as written for the media server -> Immich id.
+    people: dict[str, UUID] = field(default_factory=dict)
 
     @property
     def ok(self) -> bool:
@@ -105,6 +107,8 @@ async def run_sync(
         videos = [video async for video in immich.album_videos(album.id)]
         show = build_show(album, videos, replace(options, season_mode=mode))
         report.skipped.extend((album.album_name, item) for item in show.skipped)
+        for episode in show.episodes:
+            report.people.update((person.name, person.id) for person in episode.people)
         desired.extend(target.files(show, folder))
         folders[album.id] = folder
         read.append(album)
@@ -153,6 +157,7 @@ async def run_sync(
             else:
                 report.removed += 1
 
+    await registry.remember_people(report.people)
     if notify_media_server:
         await registry.mark_pending(plan.changed_albums)
     for album in read:

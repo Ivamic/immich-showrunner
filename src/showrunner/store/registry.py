@@ -1,17 +1,17 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """The registry: which shows there are and which files the app created for them."""
 
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
 from datetime import datetime
 from pathlib import PurePosixPath
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from showrunner.model.naming import show_folder_name
-from showrunner.store.models import FileRow, ShowRow
+from showrunner.store.models import FileRow, PersonRow, ShowRow
 from showrunner.sync.plan import Entry
 from showrunner.targets.base import DesiredFile, FileKind
 
@@ -101,6 +101,21 @@ class Registry:
                 .where(ShowRow.album_id.in_(list(album_ids)))
                 .values(media_server_pending=False)
             )
+
+    async def remember_people(self, people: Mapping[str, UUID]) -> None:
+        """Remember which person of Immich each name stands for."""
+        for name, immich_id in people.items():
+            statement = insert(PersonRow).values(name=name, immich_id=immich_id)
+            await self._session.execute(
+                statement.on_conflict_do_update(
+                    index_elements=[PersonRow.name],
+                    set_={"immich_id": immich_id, "seen_at": func.now()},
+                )
+            )
+
+    async def people(self) -> dict[str, UUID]:
+        rows = await self._session.execute(select(PersonRow.name, PersonRow.immich_id))
+        return {name: immich_id for name, immich_id in rows}
 
     async def commit(self) -> None:
         await self._session.commit()

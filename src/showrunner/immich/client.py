@@ -120,14 +120,14 @@ class ImmichClient:
             params={"size": "preview"},
             headers={"Accept": "image/*"},
         )
-        media_type = response.headers.get("content-type", "").split(";")[0].strip()
-        if media_type != "image/jpeg":
-            raise NotJpegError(
-                f"the preview of asset {asset_id} is {media_type or 'of no type'}, not JPEG; "
-                "set the preview format of Immich to JPEG",
-                response.status_code,
-            )
-        return response.content
+        return _jpeg(response, f"the preview of asset {asset_id}")
+
+    async def person_picture(self, person_id: UUID) -> bytes:
+        """The face of a person, as Immich shows it in the list of people."""
+        response = await self._request(
+            "GET", f"/people/{person_id}/thumbnail", headers={"Accept": "image/*"}
+        )
+        return _jpeg(response, f"the picture of person {person_id}")
 
     async def album_videos(self, album_id: UUID) -> AsyncIterator[Asset]:
         """The videos of an album, with their descriptions and the people that the user of the
@@ -163,6 +163,17 @@ def excess_permissions(info: ApiKeyInfo) -> frozenset[str]:
     """Permissions the key has and the app never uses. A key with them could change the library;
     the app reports them, so that the key can be replaced by a read-only one."""
     return frozenset(info.permissions) - REQUIRED_PERMISSIONS
+
+
+def _jpeg(response: httpx2.Response, what: str) -> bytes:
+    media_type = response.headers.get("content-type", "").split(";")[0].strip()
+    if media_type != "image/jpeg":
+        raise NotJpegError(
+            f"{what} is {media_type or 'of no type'}, not JPEG; "
+            "set the preview format of Immich to JPEG",
+            response.status_code,
+        )
+    return response.content
 
 
 def _message(response: httpx2.Response) -> str:
