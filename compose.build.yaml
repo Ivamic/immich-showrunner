@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Build the image from this source tree instead of pulling it:
+#   docker compose -f compose.yaml -f compose.build.yaml up -d --build
+
+services:
+  app:
+    image: immich-showrunner:local
+    build:
+      context: .
+      dockerfile: docker/Dockerfile

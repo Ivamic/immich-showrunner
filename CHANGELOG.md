@@ -7,4 +7,17 @@ between releases.
 
 ## [Unreleased]
 
-Nothing yet: the project is at the planning stage.
+### Added
+
+- **Albums as shows.** Every album shared with the Immich user of the app becomes a show in the
+  output folder: a link per video and NFO files with the titles, for a Jellyfin library of the type
+  "Shows". Seasons are the years of filming, episodes are numbered in the order of filming.
+- **Titles.** The first line of a video's description is its title, the rest is the plot; without
+  a description the title is the time of filming.
+- **Sync on a schedule**, a quick pass that leaves unchanged albums alone and a full pass every
+  hour. Jellyfin is told about every change through its API.
+- **Commands**: `sync`, `sync --dry-run`, `check`, `migrate`, and `serve` with `GET /api/health`.
+- **Safety.** The app writes only to its output folder and removes only what it created; a file
+  changed by hand is left alone. Nothing is removed when Immich does not answer, and a sync that
+  would remove most of the links is held until it is forced.
+- Docker image, `compose.yaml` and an example `.env`; [installation](docs/install.md).

@@ -4,8 +4,9 @@
   Your Immich albums as TV shows in Jellyfin — every video an episode, no files copied.
 </p>
 
-> **Status: planning.** There is no working version yet. This page describes what the app is
-> going to do; the first release will be announced here.
+> **Status: early development, no release yet.** The core works: shared albums become shows in
+> Jellyfin and follow the changes in Immich. Posters, people in Jellyfin and the web page for
+> corrections are still to come. Expect bugs and changes.
 
 A self-hosted companion app for [Immich](https://immich.app). It makes the videos of your Immich
 albums appear in [Jellyfin](https://jellyfin.org) as ordinary library items: an album becomes a
@@ -40,8 +41,30 @@ Typical use case: a family video archive kept in Immich, watched on the TV throu
 
 ## Installation
 
-Not available yet. The app will run with Docker Compose next to your Immich server; Jellyfin
-may run in Docker or be installed as a system package.
+Showrunner runs with Docker Compose on the machine that holds the Immich library; Jellyfin may run
+in Docker or be installed as a system package. There is no released image yet: for now the image is
+built from the source.
+
+```sh
+git clone https://github.com/Ivamic/immich-showrunner.git
+cd immich-showrunner
+cp .env.example .env      # Immich and Jellyfin addresses and keys, folders
+docker compose -f compose.yaml -f compose.build.yaml build
+docker compose -f compose.yaml -f compose.build.yaml run --rm app check
+docker compose -f compose.yaml -f compose.build.yaml run --rm app sync --dry-run
+docker compose -f compose.yaml -f compose.build.yaml up -d
+```
+
+[Installation step by step](docs/install.md): the user and the API key in Immich, the path
+mapping, the library in Jellyfin, the commands.
+
+## Architecture
+
+- Python (FastAPI), PostgreSQL; one container for the app and one for its database.
+- The app container mounts only its output folder. It reads Immich over the API with a read-only
+  key and never sees the files of the library.
+- A sync first makes a plan from what Immich reports and from the registry of the files the app
+  created, then carries it out; `sync --dry-run` stops after the plan.
 
 ## Support the project
 
