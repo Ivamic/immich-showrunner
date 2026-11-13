@@ -4,9 +4,9 @@
   Your Immich albums as TV shows in Jellyfin — every video an episode, no files copied.
 </p>
 
-> **Status: early development, no release yet.** The core works: shared albums become shows in
-> Jellyfin and follow the changes in Immich. Posters, people in Jellyfin and the web page for
-> corrections are still to come. Expect bugs and changes.
+> **Status: early development, no release yet.** Shared albums become shows in Jellyfin with
+> posters, pictures and people, follow the changes in Immich, and can be corrected on a web page.
+> Expect bugs and changes.
 
 A self-hosted companion app for [Immich](https://immich.app). It makes the videos of your Immich
 albums appear in [Jellyfin](https://jellyfin.org) as ordinary library items: an album becomes a
@@ -25,8 +25,9 @@ Typical use case: a family video archive kept in Immich, watched on the TV throu
 - **People from Immich**, under names of their own for the media server ("Mum" can stay "Mum"
   in your library), marked with a short prefix so that they never mix with the actors of your
   film library.
-- **Works by itself**, with a small web page for the cases where it guessed wrong: rename an
-  episode, change the order, hide a video.
+- **Works by itself**, with a web page for the cases where it guessed wrong: rename a show or
+  an episode, change the order, hide a video, name people and describe them. In English, German,
+  French, Italian and Russian.
 - **Jellyfin first.** Kodi is planned as the second target.
 
 ## Principles

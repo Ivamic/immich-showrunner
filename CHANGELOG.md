@@ -24,6 +24,10 @@ between releases.
   user of the app gave them, marked with the prefix. Jellyfin looks every new person up on
   TMDB; the app removes what it found there for a namesake, sets the face from Immich and
   locks the person. People of your other libraries are never touched.
+- **Web page**, signed in to as the Immich user of the app: albums as they will be shows, with
+  their own titles, seasons, and episodes renamed, described, moved or hidden; people with names
+  and descriptions for Jellyfin, and the invitations into a group in Immich; the status of the
+  sync with a button to sync now. In English, German, French, Italian and Russian, light and dark.
 - **Commands**: `sync`, `sync --dry-run`, `check`, `migrate`, and `serve` with `GET /api/health`.
 - **Safety.** The app writes only to its output folder and removes only what it created; a file
   changed by hand is left alone. Nothing is removed when Immich does not answer, and a sync that

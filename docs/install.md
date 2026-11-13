@@ -40,6 +40,8 @@ Set in `.env`:
 | `PUID`, `PGID` | Owner of the created files; the media server must be able to read them |
 | `SHOWRUNNER_JELLYFIN_URL`, `SHOWRUNNER_JELLYFIN_API_KEY` | Address of Jellyfin and an API key (Dashboard → API Keys) |
 | `DB_PASSWORD` | Any password of letters and digits for the app's own database |
+| `SHOWRUNNER_SECRET_KEY` | At least 32 random characters, for signing in to the web page (see below) |
+| `SHOWRUNNER_BIND` | `0.0.0.0` to open the web page to your home network; by default only this machine reaches it |
 
 ### The path mapping
 
@@ -95,6 +97,54 @@ leaves it alone: it removes only the files it created.
 
 Run `docker compose run --rm app check` again: it tells whether Jellyfin has a library with the
 output folder.
+
+## 6. The web page
+
+Open `http://<your-server>:8790` and sign in as the Immich user of the app (step 1), with its
+Immich email and password. Only that user can sign in. The password is checked by Immich and not
+stored; the app keeps its own Immich key, encrypted with `SHOWRUNNER_SECRET_KEY`, with just the
+permissions to name people and accept invitations. The sync keeps reading with the read-only key.
+
+Generate the secret with:
+
+```sh
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+On the page:
+
+- **Albums**: every shared album, as it will be a show in Jellyfin. Give a show its own title,
+  one season instead of a season per year of filming, or leave it out of Jellyfin. Rename the
+  episodes, give them a description, move them up and down within their season, or hide them.
+  Every change reaches Jellyfin within a minute, and can be reset to what Immich says.
+- **People**: the people shared with the user of the app (see below), their names for Jellyfin and
+  their descriptions.
+- **Status**: the last sync, what it could not do, and a button to sync now.
+
+If Immich signs in only through OAuth, sign in with an API key of the user of the app instead.
+To name people from the page, that key needs `person.update`, `clusterGroup.read`,
+`clusterGroupRequest.read` and `clusterGroupRequest.create`.
+
+## 7. People
+
+People in Immich belong to the owner of the videos. To have them in Jellyfin under names of their
+own ("Mum" can stay "Mum" in the owner's library):
+
+1. The owner invites the user of the app into their group: Account Settings → Sharing.
+2. On the People page of Showrunner, accept the invitation.
+3. The owner shares people with the user of the app: People → a person → Manage access.
+4. On the People page, give each of them a name for Jellyfin. The name is written to Immich for the
+   user of the app only.
+
+A person without such a name is not in Jellyfin. People appear with the prefix
+(`SHOWRUNNER_PERSON_PREFIX`), with their face from Immich, and are locked in Jellyfin, so that it
+does not fill them in with a namesake from TMDB.
+
+> **One group only.** An Immich user is in one group at a time. Accepting the invitation of
+> another group takes the user of the app out of the current one, and the people shared there are
+> lost for Jellyfin; in our tests they did not come back by joining again. All owners whose people
+> should be in Jellyfin have to be in the same group. The page accepts an invitation only while the
+> user of the app is alone in its group.
 
 ## Commands
 
