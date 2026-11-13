@@ -13,7 +13,7 @@ from showrunner.config import parse_path_map
 from showrunner.immich.client import ImmichError
 from showrunner.model.show import Options, SkipReason
 from showrunner.store.registry import Registry
-from showrunner.sync.executor import Executor
+from showrunner.sync.executor import MARKER_NAME, Executor
 from showrunner.sync.service import SyncReport, run_sync
 from showrunner.targets.jellyfin.layout import JellyfinLayout
 
@@ -46,7 +46,11 @@ async def sync(
 
 
 def tree(root: Path) -> list[str]:
-    return sorted(p.relative_to(root).as_posix() for p in root.rglob("*") if not p.is_dir())
+    return sorted(
+        p.relative_to(root).as_posix()
+        for p in root.rglob("*")
+        if not p.is_dir() and p.name != MARKER_NAME
+    )
 
 
 def family() -> tuple[FakeImmich, UUID]:
@@ -70,6 +74,7 @@ FILES = [
 async def test_dry_run_writes_nothing(session: AsyncSession, out: Path) -> None:
     immich, _ = family()
     report = await sync(immich, session, None)
+    assert not (out / MARKER_NAME).exists()
     assert report.dry_run and report.ok
     assert len(report.plan.actions) == 5
     assert (report.created, report.albums, report.albums_read) == (0, 1, 1)
@@ -139,6 +144,8 @@ async def test_album_no_longer_shared_disappears_and_comes_back_in_the_same_fold
     report = await sync(immich, session, out)
     assert report.ok and report.removed == 5
     assert tree(out) == [] and out.is_dir()
+    # The output folder is never left empty: Jellyfin would keep the show otherwise.
+    assert (out / MARKER_NAME).is_file()
 
     saved_album["albumName"] = "Renamed meanwhile"
     immich.albums[album], immich.videos[album] = saved_album, saved_videos

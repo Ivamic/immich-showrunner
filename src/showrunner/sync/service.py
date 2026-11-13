@@ -112,6 +112,7 @@ async def run_sync(
     if executor is None:
         return report
 
+    executor.ensure_marker()
     failed: set[UUID] = set()
     for action in plan.actions:
         try:

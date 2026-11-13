@@ -24,6 +24,17 @@ from showrunner.targets.base import FileKind
 
 TEMP_PREFIX = ".showrunner-tmp-"
 
+# A file that keeps the output folder from ever being empty. Jellyfin takes an empty library folder
+# for a disk that is not mounted and then removes nothing from the library, so the last show of an
+# album that is no longer shared would stay (checked on Jellyfin 12.4). A hidden file is enough and
+# does not show up in the library. The app never removes it.
+MARKER_NAME = ".showrunner"
+MARKER_TEXT = (
+    b"This folder is managed by Showrunner for Immich: it holds links to the videos of an Immich\n"
+    b"library and their metadata. Do not remove this file: without it, an empty folder looks to\n"
+    b"Jellyfin like a disk that is not mounted.\n"
+)
+
 
 class Result(StrEnum):
     DONE = "done"
@@ -68,6 +79,13 @@ class Executor:
             raise UnsafePathError(f"the output folder {str(output_dir)!r} does not exist")
         self._root = output_dir.resolve(strict=True)
         self._link_roots = tuple(link_roots)
+
+    def ensure_marker(self) -> None:
+        """Put the marker file into the output folder, unless something is already at its name."""
+        path = self._root / MARKER_NAME
+        if path.is_symlink() or path.exists():
+            return
+        path.write_bytes(MARKER_TEXT)
 
     # --- paths --------------------------------------------------------------------------------
 
