@@ -73,16 +73,25 @@ docker compose up -d
 
 ## 5. The library in Jellyfin
 
-Add a library (Dashboard → Libraries):
+Add a library (Dashboard → Libraries) of the content type **Shows** with the output folder, and
+set it up like this:
 
-- Content type: **Shows**; folder: the output folder.
-- Turn off every metadata downloader for shows, seasons and episodes, and every image fetcher
-  that downloads from the internet; keep **Nfo** as the metadata reader.
-- For episodes, keep the image fetcher **Screen Grabber**: it takes a frame of the video for the
-  picture of the episode. Jellyfin keeps that picture in its own data folder, not next to the
-  links.
-- Turn off "Save artwork into media folders" and the NFO metadata saver: the output folder
-  belongs to the app.
+| Setting | Value | Why |
+|---|---|---|
+| Enable real time monitoring | off | The app tells Jellyfin about every change itself; watching the folder only makes Jellyfin read a link before its NFO is there |
+| Metadata downloaders (shows, seasons, episodes) | all off | Titles and everything else come from the NFO files |
+| Automatically refresh metadata from the internet | Never | |
+| Metadata savers: Nfo | off | Jellyfin would overwrite the NFO files of the app |
+| Image fetchers (shows, seasons) | all off | |
+| Image fetchers (episodes) | only **Screen Grabber** | A frame of the video as the picture of an episode |
+| Save artwork into media folders | off | The output folder belongs to the app |
+| Automatically merge series that are spread across multiple folders | off | Two albums with the same name would become one show |
+| Trickplay: save trickplay images next to media | off | Trickplay itself is up to you; it costs CPU time |
+| Subtitle downloaders, save subtitles into media folders | off | |
+| Prefer embedded titles over filenames, prefer embedded episode information | off | Phones write their own titles into videos |
+
+Nothing of Jellyfin then lands in the output folder. Should something get there anyway, the app
+leaves it alone: it removes only the files it created.
 
 Run `docker compose run --rm app check` again: it tells whether Jellyfin has a library with the
 output folder.
