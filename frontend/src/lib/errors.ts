@@ -26,6 +26,14 @@ export function errorMessage(error: unknown): string {
 			return m.error_immich_unsupported_version({ version: String(error.params.version ?? '?') });
 		case 'immich_error':
 			return m.error_immich_error();
+		case 'cannot_write':
+			return m.error_cannot_write();
+		case 'sign_in_again':
+			return m.error_sign_in_again();
+		case 'already_in_a_group':
+			return m.people_invitation_blocked();
+		case 'show_not_found':
+			return m.error_show_not_found();
 		default:
 			return m.error_unexpected();
 	}

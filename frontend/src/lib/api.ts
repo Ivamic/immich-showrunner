@@ -141,6 +141,30 @@ export const moveEpisode = (
 ) => request<void>('POST', `/shows/${show}/episodes/${episode}/move`, place);
 export const thumbnailUrl = (assetId: string) => `/api/thumbnails/${assetId}`;
 
+export interface Person {
+	id: string;
+	/** The name for Jellyfin; empty: the person is not in Jellyfin. */
+	name: string;
+	owner_names: string[];
+	shared_by: string[];
+	description: string;
+}
+
+export interface People {
+	people: Person[];
+	can_write: boolean;
+	group: string[] | null;
+	invitations: { id: string; from_users: string[] }[];
+	can_accept: boolean;
+}
+
+export const getPeople = () => request<People>('GET', '/people');
+export const editPerson = (id: string, patch: { name?: string; description?: string }) =>
+	request<void>('PATCH', `/people/${id}`, patch);
+export const acceptInvitation = (id: string) =>
+	request<void>('POST', `/people/invitations/${id}/accept`);
+export const faceUrl = (id: string) => `/api/people/${id}/face`;
+
 export const getStatus = () => request<Status>('GET', '/status');
 /** A full pass right away; `force` carries out a mass removal that the last pass held. */
 export const syncNow = (force = false) => request<void>('POST', '/sync', { force });
