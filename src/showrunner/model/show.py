@@ -194,6 +194,9 @@ def build_show(
         edit = edits.get(asset.id, EpisodeEdit())
         season = season_of(asset)
         auto_title, auto_plot = split_description(asset.description, options.title_max_length)
+        if edit.title and auto_title:
+            # The first line of the description is no longer the title: it goes back into the plot.
+            auto_plot = f"{auto_title}\n{auto_plot}".strip()
         auto_title = auto_title or asset.local_date_time.strftime(options.date_title_format)
         number = 0 if edit.hidden else counters.get(season, 0) + 1
         episode = Episode(

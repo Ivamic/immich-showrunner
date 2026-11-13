@@ -65,9 +65,29 @@ def test_title_and_plot_edits_and_their_reset() -> None:
     edits = {asset_id(1): EpisodeEdit(title="Our walk", plot="")}
     episode = build_show(ALBUM_ROW, VIDEOS, OPTIONS, edits).episodes[0]
     assert (episode.title, episode.plot) == ("Our walk", "")
-    assert (episode.auto_title, episode.auto_plot) == ("First", "walk")
+    # With an own title, the description of Immich is the whole text, first line included.
+    assert (episode.auto_title, episode.auto_plot) == ("First", "First\nwalk")
     plain = build_show(ALBUM_ROW, VIDEOS, OPTIONS).episodes[0]
     assert (plain.title, plain.plot) == ("First", "walk")
+
+
+def test_an_own_title_gives_the_first_line_back_to_the_plot() -> None:
+    edits = {
+        asset_id(1): EpisodeEdit(title="Our walk"),  # description "First\nwalk"
+        asset_id(2): EpisodeEdit(title="February"),  # no description: nothing to give back
+    }
+    first, second = build_show(ALBUM_ROW, VIDEOS, OPTIONS, edits).episodes[:2]
+    assert (first.title, first.plot, first.auto_plot) == ("Our walk", "First\nwalk", "First\nwalk")
+    assert (second.title, second.plot) == ("February", "")
+    # An own plot still wins over it.
+    edits = {asset_id(1): EpisodeEdit(title="Our walk", plot="Mine")}
+    assert build_show(ALBUM_ROW, VIDEOS, OPTIONS, edits).episodes[0].plot == "Mine"
+    # A description that was too long to be a title was the plot anyway.
+    long = video(5, "2024-04-01T10:00:00", "x" * 100)
+    episode = build_show(
+        ALBUM_ROW, [long], OPTIONS, {asset_id(5): EpisodeEdit(title="T")}
+    ).episodes[0]
+    assert episode.plot == "x" * 100
 
 
 def test_hidden_episode_leaves_no_gap_in_the_numbers() -> None:
