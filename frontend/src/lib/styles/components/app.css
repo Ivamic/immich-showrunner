@@ -1,0 +1,151 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.st-header {
+	position: sticky;
+	top: 0;
+	z-index: var(--z-header);
+	display: flex;
+	align-items: center;
+	gap: var(--space-4);
+	height: var(--header-height);
+	padding-inline: var(--space-4);
+	border-bottom: var(--border-width) solid var(--color-border);
+	background: var(--color-bg);
+}
+.st-header__nav {
+	display: flex;
+	gap: var(--space-1);
+	min-width: 0;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+.st-header__nav a {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1-5);
+	height: var(--control-md);
+	padding-inline: var(--space-2-5, 0.625rem);
+	border-radius: var(--radius-sm);
+	color: var(--color-text-muted);
+	font-size: var(--text-base);
+	font-weight: var(--weight-medium);
+	text-decoration: none;
+	white-space: nowrap;
+	transition:
+		background-color var(--motion-instant) var(--ease-out),
+		color var(--motion-instant) var(--ease-out);
+}
+.st-header__nav a:hover {
+	background: var(--color-surface-hover);
+	color: var(--color-text);
+}
+.st-header__nav a[aria-current='page'] {
+	background: var(--color-surface-active);
+	color: var(--color-text);
+}
+.st-header__nav a:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+.st-header__end {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	margin-inline-start: auto;
+}
+.st-header__user {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding-inline: var(--space-2);
+	font-size: var(--text-sm);
+	color: var(--color-text-muted);
+	white-space: nowrap;
+}
+/* What does not fit a narrow header goes into its menu (HeaderMenu): first the account, the
+   language and the theme, on a phone the pages too. Signed out there is no menu: nothing hides. */
+.st-headmenu {
+	position: relative;
+	display: none;
+}
+.st-headmenu__panel {
+	position: absolute;
+	top: calc(100% + 4px);
+	inset-inline-end: 0;
+	min-width: 14rem;
+	animation: st-menu-in var(--motion-fast) var(--ease-out);
+}
+.st-headmenu__pages {
+	display: none;
+	flex-direction: column;
+}
+.st-headmenu__pages a {
+	text-decoration: none;
+}
+.st-headmenu__row {
+	margin: 0 var(--space-2) var(--space-1);
+}
+.st-headmenu__user {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+@media (max-width: 72rem) {
+	.st-header--menu .st-header__wide {
+		display: none;
+	}
+	.st-header--menu .st-headmenu {
+		display: inline-flex;
+	}
+}
+/* Signed out on a phone the header has no menu: About is reached from the sign-in card. */
+@media (max-width: 26rem) {
+	.st-header:not(.st-header--menu) .st-header__about {
+		display: none;
+	}
+}
+@media (max-width: 40rem) {
+	.st-header--menu .st-header__nav {
+		display: none;
+	}
+	.st-headmenu__pages {
+		display: flex;
+	}
+}
+.st-brand {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	color: var(--color-text);
+	text-decoration: none;
+	flex-shrink: 0;
+}
+.st-brand svg {
+	display: block;
+	border-radius: 22%;
+}
+.st-brand__name {
+	font-size: var(--text-base);
+	font-weight: var(--weight-semibold);
+	letter-spacing: var(--tracking-tight);
+	white-space: nowrap;
+}
+.st-brand__name b {
+	font-weight: var(--weight-regular);
+	color: var(--color-text-muted);
+}
+.st-langsw {
+	position: relative;
+	display: inline-flex;
+}
+.st-langsw > .st-menu {
+	position: absolute;
+	top: calc(100% + 4px);
+	inset-inline-end: 0;
+	animation: st-menu-in var(--motion-fast) var(--ease-out);
+}
+@keyframes st-menu-in {
+	from {
+		opacity: 0;
+		transform: translateY(calc(var(--motion-distance) * -1));
+	}
+}

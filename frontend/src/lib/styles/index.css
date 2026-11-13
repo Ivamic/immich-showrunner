@@ -1,0 +1,18 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Design system of the app: tokens first, then the shared `st-*` component classes.
+   Source of truth is the design project (Claude Design, "Steward for Immich"; Showrunner uses the same system); keep these files
+   close to it so new screens can be styled from the same reference. */
+@import './tokens/fonts.css';
+@import './tokens/colors.css';
+@import './tokens/typography.css';
+@import './tokens/spacing.css';
+@import './tokens/effects.css';
+@import './tokens/motion.css';
+@import './tokens/base.css';
+@import './elements.css';
+@import './components/core.css';
+@import './components/forms.css';
+@import './components/navigation.css';
+@import './components/overlay.css';
+@import './components/feedback.css';
+@import './components/app.css';

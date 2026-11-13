@@ -1,0 +1,107 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Plain HTML controls in the look of the design system (`.st-btn`, `.st-input`, …), so that screens
+   not yet moved to the `st-*` classes still match. `:where()` keeps specificity at zero: a
+   component's own styles always win. */
+
+:where(h1) {
+	margin: 0 0 var(--space-4);
+	font-size: var(--text-lg);
+	font-weight: var(--weight-semibold);
+	line-height: var(--leading-tight);
+	letter-spacing: var(--tracking-tight);
+}
+:where(h2) {
+	font-size: var(--text-md);
+	font-weight: var(--weight-semibold);
+	line-height: var(--leading-snug);
+}
+:where(h3) {
+	font-size: var(--text-base);
+	font-weight: var(--weight-semibold);
+}
+
+:where(button:not([class*='st-'])) {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-1-5);
+	min-height: var(--control-sm);
+	padding: 0 var(--space-2-5);
+	border: var(--border-width) solid var(--color-border-strong);
+	border-radius: var(--radius-sm);
+	background: var(--color-surface);
+	color: var(--color-text);
+	font: inherit;
+	font-size: var(--text-sm);
+	font-weight: var(--weight-medium);
+	line-height: var(--leading-tight);
+	cursor: pointer;
+	transition:
+		background-color var(--motion-instant) var(--ease-out),
+		transform var(--motion-instant) var(--ease-out);
+}
+:where(button:not([class*='st-']):hover) {
+	background: color-mix(in oklab, var(--color-surface), var(--color-text) 5%);
+}
+:where(button:not([class*='st-']):active) {
+	transform: scale(0.98);
+}
+:where(button:not([class*='st-']):focus-visible) {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+:where(button:not([class*='st-']):disabled) {
+	cursor: not-allowed;
+	transform: none;
+	background: var(--color-surface-sunken);
+	color: var(--color-text-disabled);
+	border-color: var(--color-border);
+}
+
+:where(
+	input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
+	select,
+	textarea
+) {
+	min-height: var(--control-sm);
+	padding: 0 var(--space-2);
+	border: var(--border-width) solid var(--color-border-input);
+	border-radius: var(--radius-sm);
+	background: var(--color-surface);
+	color: var(--color-text);
+	font: inherit;
+	font-size: var(--text-base);
+	transition:
+		border-color var(--motion-instant) var(--ease-out),
+		box-shadow var(--motion-instant) var(--ease-out);
+}
+:where(textarea) {
+	padding-block: var(--space-1-5);
+}
+:where(input:hover:not(:disabled), select:hover:not(:disabled), textarea:hover:not(:disabled)) {
+	border-color: var(--color-text-subtle);
+}
+:where(input:focus-visible, select:focus-visible, textarea:focus-visible) {
+	outline: none;
+	border-color: var(--color-focus);
+	box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-focus), transparent 75%);
+}
+:where(input:disabled, select:disabled, textarea:disabled) {
+	background: var(--color-surface-sunken);
+	color: var(--color-text-disabled);
+	cursor: not-allowed;
+}
+:where(input)::placeholder {
+	color: var(--color-text-subtle);
+}
+:where(input[type='checkbox'], input[type='radio']) {
+	accent-color: var(--color-accent);
+}
+
+:where(summary) {
+	cursor: pointer;
+}
+:where(hr) {
+	border: 0;
+	border-top: var(--border-width) solid var(--color-border);
+}

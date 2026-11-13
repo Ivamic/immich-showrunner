@@ -1,0 +1,28 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Type: one variable family for UI, one mono for coordinates. Base 14px — dense working tool.
+   Fallback chain covers scripts Plex does not: Noto (if installed) → system UI fonts. */
+:root {
+	--font-sans:
+		'IBM Plex Sans', 'Noto Sans', 'Noto Sans Arabic', 'Noto Sans Hebrew', 'Noto Sans CJK SC',
+		system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--font-mono:
+		'IBM Plex Mono', 'Noto Sans Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+	--text-xs: 0.75rem; /* 12 — meta, kbd, legend */
+	--text-sm: 0.8125rem; /* 13 — secondary rows, chips */
+	--text-base: 0.875rem; /* 14 — body, buttons, inputs */
+	--text-md: 1rem; /* 16 — section headings */
+	--text-lg: 1.25rem; /* 20 — page titles */
+	--text-xl: 1.5rem; /* 24 — login, empty states */
+	--text-display: 2rem; /* 32 — reserved for marketing/landing */
+	--leading-tight: 1.2;
+	--leading-snug: 1.35;
+	--leading-normal: 1.5;
+	--weight-regular: 400;
+	--weight-medium: 500;
+	--weight-semibold: 600;
+	--weight-bold: 680;
+	--tracking-tight: -0.01em;
+	--tracking-normal: 0;
+	--tracking-wide: 0.02em;
+	--numeric: tabular-nums; /* @kind other */
+}

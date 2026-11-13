@@ -1,0 +1,51 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Minimal element defaults. */
+html {
+	font-family: var(--font-sans);
+	font-size: 100%;
+	-webkit-text-size-adjust: 100%;
+}
+body {
+	margin: 0;
+	background: var(--color-bg);
+	color: var(--color-text);
+	font-size: var(--text-base);
+	line-height: var(--leading-normal);
+	-webkit-font-smoothing: antialiased;
+}
+a {
+	color: var(--color-accent-text);
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+	text-decoration-thickness: 1px;
+}
+a:hover {
+	color: var(--color-accent-hover);
+}
+:focus-visible {
+	outline: 2px solid var(--color-focus);
+	outline-offset: 2px;
+}
+code,
+kbd,
+samp,
+.st-mono {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+}
+.st-coords {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+	direction: ltr;
+	unicode-bidi: isolate;
+}
+.st-num {
+	font-variant-numeric: tabular-nums;
+}
+[dir='rtl'] [data-mirror='rtl'] {
+	transform: scaleX(-1);
+}
+::selection {
+	background: var(--moss-200);
+	color: var(--gray-1000);
+}
