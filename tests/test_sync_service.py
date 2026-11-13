@@ -59,10 +59,10 @@ def family() -> tuple[FakeImmich, UUID]:
 
 FOLDER = "Family [imm-00000001]"
 FILES = [
-    f"{FOLDER}/Season 2023/2023-06-10 VID_1 [00000001].mp4",
-    f"{FOLDER}/Season 2023/2023-06-10 VID_1 [00000001].nfo",
-    f"{FOLDER}/Season 2024/2024-07-15 VID_2 [00000002].mp4",
-    f"{FOLDER}/Season 2024/2024-07-15 VID_2 [00000002].nfo",
+    f"{FOLDER}/Season 2023/20230610-090000 VID_1 [00000001].mp4",
+    f"{FOLDER}/Season 2023/20230610-090000 VID_1 [00000001].nfo",
+    f"{FOLDER}/Season 2024/20240715-143200 VID_2 [00000002].mp4",
+    f"{FOLDER}/Season 2024/20240715-143200 VID_2 [00000002].nfo",
     f"{FOLDER}/tvshow.nfo",
 ]
 

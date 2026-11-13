@@ -47,11 +47,24 @@ def season_folder_name(season: int) -> str:
     return f"Season {season:02d}"
 
 
+# A date with separators anywhere in a file name makes Jellyfin take the file for a daily episode
+# of that date, and videos filmed on the same day for versions of one episode (checked on 12.4).
+# Dates are therefore written without separators.
+_DATE_YMD = re.compile(r"(\d{4})[._ -](\d{2})[._ -](\d{2})")
+_DATE_DMY = re.compile(r"(\d{2})[._ -](\d{2})[._ -](\d{4})")
+
+
+def without_dated_separators(text: str) -> str:
+    """`Screen 2023-05-01 at 10` -> `Screen 20230501 at 10`; `29.07.2017` -> `29072017`."""
+    return _DATE_DMY.sub(r"\1\2\3", _DATE_YMD.sub(r"\1\2\3", text))
+
+
 def episode_file_stem(filmed_at: datetime, original_file_name: str, asset_id: UUID) -> str:
-    """`2024-07-15 VID_20240715_143211 [712f0482]`: sorts by date in a file manager and is unique
-    by the id."""
+    """`20240715-143211 VID_20240715_143211 [712f0482]`: sorts by the time of filming in a file
+    manager, is unique by the id, and holds no date that Jellyfin would read."""
     stem = PurePosixPath(original_file_name.replace("\\", "/")).stem
-    return f"{filmed_at:%Y-%m-%d} {safe_name(stem, max_bytes=120)} [{short_id(asset_id)}]"
+    stem = without_dated_separators(safe_name(stem, max_bytes=120))
+    return f"{filmed_at:%Y%m%d-%H%M%S} {stem} [{short_id(asset_id)}]"
 
 
 def file_extension(path: str) -> str:

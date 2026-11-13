@@ -112,11 +112,21 @@ def test_folder_and_file_names() -> None:
     assert season_folder_name(1) == "Season 01"
     when = datetime(2024, 7, 15, 14, 32, tzinfo=UTC)
     assert episode_file_stem(when, "VID_20240715.mp4", uid(0x712F0482)) == (
-        "2024-07-15 VID_20240715 [712f0482]"
+        "20240715-143200 VID_20240715 [712f0482]"
     )
     # A name that came from Windows or holds a path does not leak folders into the name.
     assert episode_file_stem(when, "C:\\dir\\clip.final.mov", uid(1)) == (
-        "2024-07-15 clip.final [00000001]"
+        "20240715-143200 clip.final [00000001]"
+    )
+    # Dates with separators would make Jellyfin merge videos of the same day into one episode.
+    assert episode_file_stem(when, "Screen 2023-05-01 at 10.30.mp4", uid(2)) == (
+        "20240715-143200 Screen 20230501 at 10.30 [00000002]"
+    )
+    assert episode_file_stem(when, "clip 29.07.2017 (2).mp4", uid(3)) == (
+        "20240715-143200 clip 29072017 (2) [00000003]"
+    )
+    assert episode_file_stem(when, "2017_07_29 trip.mp4", uid(4)) == (
+        "20240715-143200 20170729 trip [00000004]"
     )
 
 
@@ -184,7 +194,7 @@ def test_episodes_in_order_of_filming_with_seasons_by_year() -> None:
     ]
     first = show.episodes[0]
     assert first.plot == "In the living room."
-    assert first.file_stem == "2023-06-10 VID_1 [00000001]"
+    assert first.file_stem == "20230610-090000 VID_1 [00000001]"
     assert first.extension == ".mp4"
     assert first.link_target == PurePosixPath("/mnt/immich/upload/owner/aa/bb/file1.MP4")
     assert show.episodes[1].plot == "z" * 100
