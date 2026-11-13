@@ -19,12 +19,13 @@ from showrunner.targets.jellyfin.client import JellyfinClient
 log = logging.getLogger(__name__)
 
 
-def cleaned(item: dict[str, Any]) -> dict[str, Any]:
-    """The item of a person with what Jellyfin found elsewhere removed, and locked."""
+def cleaned(item: dict[str, Any], description: str = "") -> dict[str, Any]:
+    """The item of a person with what Jellyfin found elsewhere removed, our description, and
+    locked."""
     result = dict(item)
     result["ProviderIds"] = {key: "" for key in item.get("ProviderIds") or {}}
     result["ProductionLocations"] = []
-    result["Overview"] = ""
+    result["Overview"] = description
     result["PremiereDate"] = None
     result["EndDate"] = None
     result["LockData"] = True
@@ -36,12 +37,14 @@ async def tend_people(
     immich: ImmichClient,
     prefix: str,
     people: Mapping[str, UUID],
+    descriptions: Mapping[UUID, str] | None = None,
 ) -> list[str]:
     """Take care of the new people of the app. `people` maps every name the app wrote into
     metadata (with the prefix) to the person in Immich. A person with the prefix that the app did
     not write is left alone. Returns notes for the log."""
     if not prefix.strip():
         return []
+    descriptions = descriptions or {}
     notes: list[str] = []
     user_id: str | None = None
     for person in await jellyfin.persons():
@@ -52,7 +55,12 @@ async def tend_people(
         if user_id is None:
             user_id = await jellyfin.admin_user_id()
         item = await jellyfin.item(str(person["Id"]), user_id)
+        description = descriptions.get(immich_id, "")
         if item.get("LockData"):
+            # Taken care of earlier; only a description changed on the page is written again.
+            if (item.get("Overview") or "") != description:
+                await jellyfin.update_item(str(person["Id"]), {**item, "Overview": description})
+                notes.append(f"wrote the description of {name}")
             continue
         try:
             face = await immich.person_picture(immich_id)
@@ -61,6 +69,6 @@ async def tend_people(
         else:
             # Replaces the photo Jellyfin may have taken from TMDB for a namesake.
             await jellyfin.set_primary_image(str(person["Id"]), face)
-        await jellyfin.update_item(str(person["Id"]), cleaned(item))
+        await jellyfin.update_item(str(person["Id"]), cleaned(item, description))
         notes.append(f"took care of the person {name}")
     return notes

@@ -12,7 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from showrunner.model.naming import show_folder_name
 from showrunner.model.show import EpisodeEdit, ShowEdit
-from showrunner.store.models import EpisodeEditRow, FileRow, PersonRow, ShowRow
+from showrunner.store.models import (
+    EpisodeEditRow,
+    FileRow,
+    PersonDescriptionRow,
+    PersonRow,
+    ShowRow,
+)
 from showrunner.sync.plan import Entry
 from showrunner.targets.base import DesiredFile, FileKind
 
@@ -149,6 +155,22 @@ class Registry:
     @staticmethod
     def show_edit(row: ShowRow) -> ShowEdit:
         return ShowEdit(title=row.title)
+
+    async def descriptions(self) -> dict[UUID, str]:
+        rows = await self._session.scalars(select(PersonDescriptionRow))
+        return {row.immich_id: row.text for row in rows}
+
+    async def set_description(self, immich_id: UUID, text: str | None) -> None:
+        """Keep the description of a person; None or an empty text removes it."""
+        row = await self._session.get(PersonDescriptionRow, immich_id)
+        if not text or not text.strip():
+            if row is not None:
+                await self._session.delete(row)
+            return
+        if row is None:
+            row = PersonDescriptionRow(immich_id=immich_id)
+            self._session.add(row)
+        row.text = text.strip()
 
     async def commit(self) -> None:
         await self._session.commit()

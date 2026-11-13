@@ -135,3 +135,21 @@ async def test_a_person_the_app_did_not_write_is_left_alone() -> None:
         notes = await tend_people(jf, im, "◈ ", {"◈ Anna": ANNA})
     assert notes == ["took care of the person ◈ Anna"]
     assert jellyfin.items["p-noface"]["LockData"] is False
+
+
+async def test_descriptions_reach_new_and_taken_care_of_people() -> None:
+    jellyfin = Jellyfin()
+    async with jellyfin.client() as jf, immich({ANNA: b"face"}) as im:
+        await tend_people(jf, im, "◈ ", {"◈ Anna": ANNA}, {ANNA: "Grandmother."})
+        assert jellyfin.items["p-anna"]["Overview"] == "Grandmother."
+
+        # Changed on the page later: written to the person that is already locked.
+        notes = await tend_people(jf, im, "◈ ", {"◈ Anna": ANNA}, {ANNA: "Loves apples."})
+        assert notes == ["wrote the description of ◈ Anna"]
+        assert jellyfin.items["p-anna"]["Overview"] == "Loves apples."
+        assert jellyfin.items["p-anna"]["LockData"] is True
+
+        # Unchanged: nothing written.
+        jellyfin.calls.clear()
+        await tend_people(jf, im, "◈ ", {"◈ Anna": ANNA}, {ANNA: "Loves apples."})
+        assert not [c for c in jellyfin.calls if c.startswith("POST")]

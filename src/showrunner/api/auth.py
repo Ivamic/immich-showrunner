@@ -43,6 +43,7 @@ SESSION_COOKIE = "showrunner_session"
 KEY_NAME_PREFIX = "immich-showrunner"
 # What the page does in Immich, and nothing else.
 WRITE_PERMISSIONS = (
+    "clusterGroup.read",
     "clusterGroupRequest.create",
     "clusterGroupRequest.read",
     "person.read",

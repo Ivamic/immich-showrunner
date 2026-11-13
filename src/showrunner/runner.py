@@ -121,7 +121,11 @@ async def sync_once(
                 async with immich_client(settings) as immich:
                     notes.extend(
                         await tend_people(
-                            jellyfin, immich, settings.person_prefix, await registry.people()
+                            jellyfin,
+                            immich,
+                            settings.person_prefix,
+                            await registry.people(),
+                            await registry.descriptions(),
                         )
                     )
         except JellyfinError as exc:

@@ -31,6 +31,7 @@ class ImmichUser(ImmichModel):
     id: UUID
     name: str
     email: str
+    cluster_group_id: UUID | None = None
 
 
 class LoginResult(ImmichModel):
@@ -69,6 +70,36 @@ class Album(ImmichModel):
 class Person(ImmichModel):
     id: UUID
     name: str = ""
+
+
+class OtherName(ImmichModel):
+    """The name another user gave a shared person."""
+
+    shared_by_id: UUID
+    name: str = ""
+
+
+class PersonUser(ImmichModel):
+    id: UUID
+    name: str
+
+
+class SharedPerson(ImmichModel):
+    """A person as the user of the key sees it in the list of people."""
+
+    id: UUID
+    name: str = ""
+    is_hidden: bool = False
+    other_people: list[OtherName] = Field(default_factory=list)
+    shared_by: list[PersonUser] = Field(default_factory=list)
+
+
+class GroupRequest(ImmichModel):
+    """An invitation into the cluster group of another user."""
+
+    id: UUID
+    cluster_group_id: UUID
+    user_id: UUID
 
 
 class ExifInfo(ImmichModel):

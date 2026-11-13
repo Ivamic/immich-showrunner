@@ -13,10 +13,12 @@ from showrunner.immich.models import (
     Album,
     ApiKeyInfo,
     Asset,
+    GroupRequest,
     ImmichUser,
     LoginResult,
     SearchPage,
     ServerVersion,
+    SharedPerson,
 )
 
 DEFAULT_TIMEOUT_S = 30.0
@@ -162,6 +164,37 @@ class ImmichClient:
             headers={"Accept": "image/*"},
         )
         return _jpeg(response, f"the preview of asset {asset_id}")
+
+    async def people(self) -> list[SharedPerson]:
+        """Every person the user of the key sees: its own and the ones shared with it."""
+        result: list[SharedPerson] = []
+        page = 1
+        while True:
+            response = await self._request(
+                "GET", "/people", params={"withHidden": "true", "size": 500, "page": page}
+            )
+            body = response.json()
+            result.extend(SharedPerson.model_validate(p) for p in body.get("people", []))
+            if not body.get("hasNextPage"):
+                return result
+            page += 1
+
+    async def rename_person(self, person_id: UUID, name: str, user_id: UUID) -> None:
+        """Name a person for the user of the key only: `userId` keeps the name of the owner."""
+        await self._request(
+            "PUT", f"/people/{person_id}", json={"name": name, "userId": str(user_id)}
+        )
+
+    async def group_requests(self) -> list[GroupRequest]:
+        response = await self._request("GET", "/cluster-groups/requests")
+        return [GroupRequest.model_validate(r) for r in response.json()]
+
+    async def group_users(self, group_id: UUID) -> list[ImmichUser]:
+        response = await self._request("GET", f"/cluster-groups/{group_id}/users")
+        return [ImmichUser.model_validate(u) for u in response.json()]
+
+    async def accept_group_request(self, request_id: UUID) -> None:
+        await self._request("POST", f"/cluster-groups/requests/{request_id}/accept")
 
     async def thumbnail(self, asset_id: UUID, size: str = "thumbnail") -> tuple[bytes, str]:
         """A picture of an asset for the page, in whatever format Immich makes it."""

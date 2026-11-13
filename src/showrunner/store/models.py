@@ -99,6 +99,19 @@ class EpisodeEditRow(Base):
     )
 
 
+class PersonDescriptionRow(Base):
+    """The description of a person for Jellyfin, written on the page. Immich has no such field.
+    Kept by the id in Immich, so that it survives renaming the person."""
+
+    __tablename__ = "person_description"
+
+    immich_id: Mapped[UUID] = mapped_column(primary_key=True)
+    text: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class FileRow(Base):
     """A file the app created in the output folder. Only what is listed here is ever removed."""
 
