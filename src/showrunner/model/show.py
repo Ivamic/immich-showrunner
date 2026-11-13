@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """An album as a show: which videos are episodes, in which season, under which number and title."""
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -43,6 +43,24 @@ class Options:
 
 
 @dataclass(frozen=True)
+class EpisodeEdit:
+    """What the user changed on the page for one video; None leaves it to Immich."""
+
+    title: str | None = None
+    plot: str | None = None
+    # Where the episode stands in the order of its season, instead of its time of filming.
+    sort_at: datetime | None = None
+    hidden: bool = False
+
+
+@dataclass(frozen=True)
+class ShowEdit:
+    """What the user changed on the page for one album."""
+
+    title: str | None = None
+
+
+@dataclass(frozen=True)
 class EpisodePerson:
     id: UUID
     name: str  # with the prefix
@@ -62,6 +80,12 @@ class Episode:
     people: tuple[EpisodePerson, ...] = ()
     # Changes when the preview of the video changes in Immich.
     picture_version: str = ""
+    # The title and plot from Immich, before the edits of the user.
+    auto_title: str = ""
+    auto_plot: str = ""
+    # Where it stands in the order of its season.
+    sort_at: datetime | None = None
+    original_file_name: str = ""
 
 
 @dataclass(frozen=True)
@@ -81,6 +105,9 @@ class Show:
     skipped: tuple[Skipped, ...] = field(default=())
     # The asset whose picture is the cover of the album, if it has one.
     cover_asset_id: UUID | None = None
+    album_name: str = ""
+    # Videos the user hid on the page.
+    hidden: tuple[Episode, ...] = ()
 
     @property
     def seasons(self) -> tuple[int, ...]:
@@ -114,8 +141,16 @@ def skip_reason(asset: Asset) -> SkipReason | None:
     return None
 
 
-def build_show(album: Album, assets: Iterable[Asset], options: Options) -> Show:
-    """Turn the videos of an album into the episodes of a show, in the order of filming."""
+def build_show(
+    album: Album,
+    assets: Iterable[Asset],
+    options: Options,
+    edits: Mapping[UUID, EpisodeEdit] | None = None,
+    show_edit: ShowEdit | None = None,
+) -> Show:
+    """Turn the videos of an album into the episodes of a show, in the order of filming, with
+    the edits of the user on top."""
+    edits = edits or {}
     skipped: list[Skipped] = []
     drafts: list[tuple[Asset, PurePosixPath, str]] = []
     seen: set[UUID] = set()
@@ -137,36 +172,55 @@ def build_show(album: Album, assets: Iterable[Asset], options: Options) -> Show:
             continue
         drafts.append((asset, target, extension))
 
-    # The id breaks ties, so that the order is the same on every run.
-    drafts.sort(key=lambda d: (d[0].local_date_time, d[0].id.hex))
+    def season_of(asset: Asset) -> int:
+        if options.season_mode is SeasonMode.YEAR:
+            return asset.local_date_time.year
+        return SINGLE_SEASON
+
+    def sort_key(draft: tuple[Asset, PurePosixPath, str]) -> tuple[int, datetime, str]:
+        asset = draft[0]
+        edit = edits.get(asset.id)
+        when = edit.sort_at if edit is not None and edit.sort_at is not None else None
+        # The season comes from the time of filming; the order within it may be moved by hand.
+        # The id breaks ties, so that the order is the same on every run.
+        return (season_of(asset), _naive(when or asset.local_date_time), asset.id.hex)
+
+    drafts.sort(key=sort_key)
 
     episodes: list[Episode] = []
+    hidden: list[Episode] = []
     counters: dict[int, int] = {}
     for asset, target, extension in drafts:
-        season = (
-            asset.local_date_time.year if options.season_mode is SeasonMode.YEAR else SINGLE_SEASON
+        edit = edits.get(asset.id, EpisodeEdit())
+        season = season_of(asset)
+        auto_title, auto_plot = split_description(asset.description, options.title_max_length)
+        auto_title = auto_title or asset.local_date_time.strftime(options.date_title_format)
+        number = 0 if edit.hidden else counters.get(season, 0) + 1
+        episode = Episode(
+            asset_id=asset.id,
+            title=edit.title if edit.title else auto_title,
+            plot=edit.plot if edit.plot is not None else auto_plot,
+            filmed_at=asset.local_date_time,
+            season=season,
+            number=number,
+            file_stem=episode_file_stem(asset.local_date_time, asset.original_file_name, asset.id),
+            extension=extension,
+            link_target=target,
+            people=_people(asset, options.person_prefix),
+            picture_version=asset.thumbhash or asset.updated_at.isoformat(),
+            auto_title=auto_title,
+            auto_plot=auto_plot,
+            sort_at=edit.sort_at,
+            original_file_name=asset.original_file_name,
         )
-        counters[season] = counters.get(season, 0) + 1
-        title, plot = split_description(asset.description, options.title_max_length)
-        episodes.append(
-            Episode(
-                asset_id=asset.id,
-                title=title or asset.local_date_time.strftime(options.date_title_format),
-                plot=plot,
-                filmed_at=asset.local_date_time,
-                season=season,
-                number=counters[season],
-                file_stem=episode_file_stem(
-                    asset.local_date_time, asset.original_file_name, asset.id
-                ),
-                extension=extension,
-                link_target=target,
-                people=_people(asset, options.person_prefix),
-                picture_version=asset.thumbhash or asset.updated_at.isoformat(),
-            )
-        )
+        if edit.hidden:
+            hidden.append(episode)
+            continue
+        counters[season] = number
+        episodes.append(episode)
 
-    name = album.album_name.strip() or "Untitled album"
+    album_name = album.album_name.strip() or "Untitled album"
+    name = (show_edit.title if show_edit and show_edit.title else None) or album_name
     return Show(
         album_id=album.id,
         title=f"{options.show_prefix}{name}",
@@ -175,7 +229,14 @@ def build_show(album: Album, assets: Iterable[Asset], options: Options) -> Show:
         episodes=tuple(episodes),
         skipped=tuple(skipped),
         cover_asset_id=album.album_thumbnail_asset_id,
+        album_name=album_name,
+        hidden=tuple(hidden),
     )
+
+
+def _naive(value: datetime) -> datetime:
+    """Times of filming are local times written as UTC; compare them without the zone."""
+    return value.replace(tzinfo=None)
 
 
 def _people(asset: Asset, prefix: str) -> tuple[EpisodePerson, ...]:

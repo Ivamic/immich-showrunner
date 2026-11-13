@@ -58,6 +58,9 @@ class Plan:
     unchanged: int = 0
     # Albums whose files change in any way: the media server has to be told about them.
     changed_albums: frozenset[UUID] = field(default_factory=frozenset)
+    # Links removed because the user asked for it (a show hidden on the page): they do not count
+    # towards a mass removal.
+    links_removed_on_purpose: int = 0
 
     def of_type(self, action_type: ActionType) -> tuple[Action, ...]:
         return tuple(a for a in self.actions if a.type is action_type)
@@ -74,10 +77,8 @@ class Plan:
 
     @property
     def is_mass_removal(self) -> bool:
-        return (
-            self.links_removed > MASS_REMOVAL_MIN
-            and self.links_removed > self.links_before * MASS_REMOVAL_SHARE
-        )
+        unexpected = self.links_removed - self.links_removed_on_purpose
+        return unexpected > MASS_REMOVAL_MIN and unexpected > self.links_before * MASS_REMOVAL_SHARE
 
 
 class DuplicatePathError(ValueError):
@@ -89,6 +90,7 @@ def make_plan(
     registry: Iterable[Entry],
     *,
     untouched_albums: Collection[UUID] = (),
+    removed_on_purpose: Collection[UUID] = (),
 ) -> Plan:
     """Compare what should exist with what the registry holds.
 
@@ -137,6 +139,13 @@ def make_plan(
         links_before=links_before,
         unchanged=unchanged,
         changed_albums=frozenset(a.album_id for a in actions),
+        links_removed_on_purpose=sum(
+            1
+            for a in actions
+            if a.type is ActionType.REMOVE
+            and a.kind is FileKind.LINK
+            and a.album_id in removed_on_purpose
+        ),
     )
 
 

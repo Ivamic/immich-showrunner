@@ -11,7 +11,8 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from showrunner.model.naming import show_folder_name
-from showrunner.store.models import FileRow, PersonRow, ShowRow
+from showrunner.model.show import EpisodeEdit, ShowEdit
+from showrunner.store.models import EpisodeEditRow, FileRow, PersonRow, ShowRow
 from showrunner.sync.plan import Entry
 from showrunner.targets.base import DesiredFile, FileKind
 
@@ -116,6 +117,38 @@ class Registry:
     async def people(self) -> dict[str, UUID]:
         rows = await self._session.execute(select(PersonRow.name, PersonRow.immich_id))
         return {name: immich_id for name, immich_id in rows}
+
+    async def episode_edits(self, album_id: UUID) -> dict[UUID, EpisodeEdit]:
+        rows = await self._session.scalars(
+            select(EpisodeEditRow).where(EpisodeEditRow.album_id == album_id)
+        )
+        return {
+            row.asset_id: EpisodeEdit(
+                title=row.title, plot=row.plot, sort_at=row.sort_at, hidden=row.hidden
+            )
+            for row in rows
+        }
+
+    async def save_episode_edit(self, album_id: UUID, asset_id: UUID, edit: EpisodeEdit) -> None:
+        """Keep `edit`; an edit that changes nothing is removed."""
+        row = await self._session.get(EpisodeEditRow, (album_id, asset_id))
+        if edit == EpisodeEdit():
+            if row is not None:
+                await self._session.delete(row)
+            return
+        if row is None:
+            row = EpisodeEditRow(album_id=album_id, asset_id=asset_id)
+            self._session.add(row)
+        row.title, row.plot, row.sort_at, row.hidden = (
+            edit.title,
+            edit.plot,
+            edit.sort_at,
+            edit.hidden,
+        )
+
+    @staticmethod
+    def show_edit(row: ShowRow) -> ShowEdit:
+        return ShowEdit(title=row.title)
 
     async def commit(self) -> None:
         await self._session.commit()

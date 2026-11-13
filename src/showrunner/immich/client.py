@@ -163,6 +163,16 @@ class ImmichClient:
         )
         return _jpeg(response, f"the preview of asset {asset_id}")
 
+    async def thumbnail(self, asset_id: UUID, size: str = "thumbnail") -> tuple[bytes, str]:
+        """A picture of an asset for the page, in whatever format Immich makes it."""
+        response = await self._request(
+            "GET",
+            f"/assets/{asset_id}/thumbnail",
+            params={"size": size},
+            headers={"Accept": "image/*"},
+        )
+        return response.content, response.headers.get("content-type", "image/jpeg")
+
     async def person_picture(self, person_id: UUID) -> bytes:
         """The face of a person, as Immich shows it in the list of people."""
         response = await self._request(

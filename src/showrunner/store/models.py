@@ -30,6 +30,10 @@ class ShowRow(Base):
     # Set once; renaming the album does not change it.
     folder_name: Mapped[str] = mapped_column(Text, unique=True)
     season_mode: Mapped[str] = mapped_column(String(16), default="year", server_default="year")
+    # Set on the page: the title of the show instead of the name of the album, and whether the
+    # show is left out of the media server.
+    title: Mapped[str | None] = mapped_column(Text)
+    hidden: Mapped[bool] = mapped_column(default=False, server_default=false())
     # What the album looked like when its files were last brought in line; both unchanged means
     # that a quick sync may leave the album alone.
     album_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -77,6 +81,22 @@ class UiSession(Base):
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class EpisodeEditRow(Base):
+    """What the user changed on the page for one video of an album."""
+
+    __tablename__ = "episode_edit"
+
+    album_id: Mapped[UUID] = mapped_column(ForeignKey("show.album_id"), primary_key=True)
+    asset_id: Mapped[UUID] = mapped_column(primary_key=True)
+    title: Mapped[str | None] = mapped_column(Text)
+    plot: Mapped[str | None] = mapped_column(Text)
+    sort_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    hidden: Mapped[bool] = mapped_column(default=False, server_default=false())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class FileRow(Base):

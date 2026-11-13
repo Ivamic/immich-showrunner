@@ -15,7 +15,7 @@ from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
 from showrunner import __version__
-from showrunner.api import auth, status
+from showrunner.api import auth, shows, status
 from showrunner.api.errors import ApiError, api_error_handler
 from showrunner.config import Settings, get_settings
 from showrunner.scheduler import State, scheduler
@@ -72,6 +72,8 @@ def create_app(
     app.add_exception_handler(ApiError, api_error_handler)
     app.include_router(auth.router, prefix="/api")
     app.include_router(status.router, prefix="/api")
+    app.include_router(shows.router, prefix="/api")
+    app.include_router(shows.thumbnails, prefix="/api")
 
     @app.get("/api/health")
     async def health() -> dict[str, Any]:

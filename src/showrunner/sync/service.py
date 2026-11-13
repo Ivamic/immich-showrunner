@@ -86,6 +86,7 @@ async def run_sync(
 
     desired: list[DesiredFile] = []
     untouched: set[UUID] = set()
+    hidden_shows: set[UUID] = set()
     folders: dict[UUID, str] = {}
     read: list[Album] = []
     for album in albums:
@@ -103,9 +104,21 @@ async def run_sync(
         folder = (
             row.folder_name if row is not None else show_folder_name(album.album_name, album.id)
         )
+        if row is not None and row.hidden:
+            # Hidden on the page: no files, as if the album were not shared.
+            hidden_shows.add(album.id)
+            folders[album.id] = row.folder_name
+            read.append(album)
+            continue
         mode = SeasonMode(row.season_mode) if row is not None else options.season_mode
         videos = [video async for video in immich.album_videos(album.id)]
-        show = build_show(album, videos, replace(options, season_mode=mode))
+        show = build_show(
+            album,
+            videos,
+            replace(options, season_mode=mode),
+            await registry.episode_edits(album.id) if row is not None else {},
+            Registry.show_edit(row) if row is not None else None,
+        )
         report.skipped.extend((album.album_name, item) for item in show.skipped)
         for episode in show.episodes:
             report.people.update((person.name, person.id) for person in episode.people)
@@ -114,7 +127,12 @@ async def run_sync(
         read.append(album)
     report.albums_read = len(read)
 
-    plan = make_plan(desired, await registry.entries(), untouched_albums=untouched)
+    plan = make_plan(
+        desired,
+        await registry.entries(),
+        untouched_albums=untouched,
+        removed_on_purpose=hidden_shows,
+    )
     report.plan = plan
     report.changed_folders = {
         album_id: folders[album_id] for album_id in plan.changed_albums if album_id in folders
