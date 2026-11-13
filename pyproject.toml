@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+[project]
+name = "showrunner"
+version = "0.1.0.dev0"
+description = "Showrunner for Immich: Immich albums as TV shows in Jellyfin, without copying files."
+license = "AGPL-3.0-or-later"
+authors = [{ name = "Ivamic" }]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx2>=2.13",
+    "pydantic-settings>=2.8",
+]
+
+[build-system]
+requires = ["uv_build>=0.8,<0.14"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.15",
+    "pip-licenses>=5.0",
+    "pytest>=8.3",
+    "ruff>=0.11",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "ASYNC", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["showrunner"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = ["src"]
+packages = ["showrunner"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

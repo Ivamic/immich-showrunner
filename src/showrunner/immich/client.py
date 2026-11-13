@@ -1,0 +1,153 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""Async HTTP client for the Immich API. It only reads: the API key it is meant to be used with
+has no permission to change anything."""
+
+from collections.abc import AsyncIterator
+from types import TracebackType
+from typing import Any, Self
+from uuid import UUID
+
+import httpx2
+
+from showrunner.immich.models import Album, ApiKeyInfo, Asset, SearchPage, ServerVersion
+
+DEFAULT_TIMEOUT_S = 30.0
+SEARCH_PAGE_SIZE = 500
+
+# What the app reads with. `user.read` tells whose key it is.
+REQUIRED_PERMISSIONS = frozenset(
+    {"album.read", "asset.read", "asset.view", "person.read", "user.read"}
+)
+ALL_PERMISSIONS = "all"
+
+
+class ImmichError(Exception):
+    """Base class for errors talking to Immich."""
+
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        # HTTP status of the answer of Immich; None when there was no answer.
+        self.status = status
+
+
+class ImmichUnreachableError(ImmichError):
+    """The server did not answer (wrong URL, network problem, timeout)."""
+
+
+class ImmichAuthError(ImmichError):
+    """The API key was rejected."""
+
+
+class ImmichPermissionError(ImmichError):
+    """The API key lacks a permission required by the endpoint."""
+
+
+def api_base_url(url: str) -> str:
+    url = url.rstrip("/")
+    return url if url.endswith("/api") else url + "/api"
+
+
+class ImmichClient:
+    """Thin wrapper over the Immich REST API. Use as an async context manager."""
+
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        *,
+        timeout: float = DEFAULT_TIMEOUT_S,
+        transport: httpx2.AsyncBaseTransport | None = None,
+    ) -> None:
+        self._http = httpx2.AsyncClient(
+            base_url=api_base_url(base_url),
+            headers={"x-api-key": api_key, "Accept": "application/json"},
+            timeout=timeout,
+            transport=transport,
+        )
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        await self.aclose()
+
+    async def aclose(self) -> None:
+        await self._http.aclose()
+
+    async def _request(self, method: str, path: str, **kwargs: Any) -> httpx2.Response:
+        try:
+            response = await self._http.request(method, path, **kwargs)
+        except httpx2.HTTPError as exc:
+            raise ImmichUnreachableError(f"Immich did not answer: {exc!r}") from exc
+        if response.status_code == 401:
+            raise ImmichAuthError("Immich rejected the API key", 401)
+        if response.status_code == 403:
+            raise ImmichPermissionError(_message(response), 403)
+        if response.status_code >= 400:
+            raise ImmichError(
+                f"Immich answered {response.status_code} to {method} {path}: {_message(response)}",
+                response.status_code,
+            )
+        return response
+
+    async def server_version(self) -> ServerVersion:
+        response = await self._request("GET", "/server/version")
+        return ServerVersion.model_validate(response.json())
+
+    async def api_key_info(self) -> ApiKeyInfo:
+        response = await self._request("GET", "/api-keys/me")
+        return ApiKeyInfo.model_validate(response.json())
+
+    async def albums(self) -> list[Album]:
+        """Every album the user of the key can see: its own and the ones shared with it."""
+        response = await self._request("GET", "/albums")
+        return [Album.model_validate(item) for item in response.json()]
+
+    async def album_videos(self, album_id: UUID) -> AsyncIterator[Asset]:
+        """The videos of an album, with their descriptions and the people that the user of the
+        key may see. Immich does not return trashed and hidden assets here."""
+        page: str | None = "1"
+        while page is not None:
+            response = await self._request(
+                "POST",
+                "/search/metadata",
+                json={
+                    "albumIds": [str(album_id)],
+                    "type": "VIDEO",
+                    "withExif": True,
+                    "withPeople": True,
+                    "size": SEARCH_PAGE_SIZE,
+                    "page": int(page),
+                },
+            )
+            result = SearchPage.model_validate(response.json()["assets"])
+            for asset in result.items:
+                yield asset
+            page = result.next_page
+
+
+def missing_permissions(info: ApiKeyInfo) -> frozenset[str]:
+    """Permissions the key needs and does not have."""
+    if ALL_PERMISSIONS in info.permissions:
+        return frozenset()
+    return REQUIRED_PERMISSIONS - set(info.permissions)
+
+
+def excess_permissions(info: ApiKeyInfo) -> frozenset[str]:
+    """Permissions the key has and the app never uses. A key with them could change the library;
+    the app reports them, so that the key can be replaced by a read-only one."""
+    return frozenset(info.permissions) - REQUIRED_PERMISSIONS
+
+
+def _message(response: httpx2.Response) -> str:
+    try:
+        body = response.json()
+    except ValueError:
+        return response.text[:200]
+    message = body.get("message") if isinstance(body, dict) else None
+    return str(message) if message else response.text[:200]

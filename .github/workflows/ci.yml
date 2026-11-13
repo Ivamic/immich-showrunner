@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Core (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # setup-uv publishes exact version tags only (no floating major tag).
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - name: Lint
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Type check
+        run: |
+          uv run mypy
+          uv run mypy tests
+      - name: Tests
+        run: uv run pytest
+      - name: Licenses
+        # Only licenses compatible with AGPL-3.0-or-later are allowed.
+        run: >-
+          uv run pip-licenses --partial-match --ignore-packages showrunner
+          --allow-only "MIT;BSD;Apache;ISC;MPL;PSF;Python Software Foundation;HPND;LGPL;PostgreSQL"
