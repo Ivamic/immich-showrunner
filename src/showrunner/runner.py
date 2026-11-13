@@ -3,7 +3,9 @@
 scheduler of the server."""
 
 import logging
+from collections.abc import Collection
 from pathlib import PurePosixPath
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -91,28 +93,54 @@ async def sync_once(
             options=options_from(settings),
             full=full,
             force=force,
+            notify_media_server=jellyfin_client(settings) is not None,
         )
         if dry_run:
             await session.rollback()
-    if dry_run or report.held:
+    if dry_run:
         return report, notes
 
     jellyfin = jellyfin_client(settings)
-    changed = set(report.changed_folders)
     if jellyfin is None:
-        if changed or report.gone_albums:
+        if report.changed_folders or report.gone_albums:
             notes.append("Jellyfin is not configured: it will notice the changes on its own scan")
         return report, notes
-    try:
-        async with jellyfin:
-            notes.extend(
-                await tell_jellyfin(
-                    jellyfin, jellyfin_output_path(settings), changed, set(report.gone_albums)
+    async with sessions() as session:
+        registry = Registry(session)
+        try:
+            async with jellyfin:
+                notes.extend(
+                    await catch_up_jellyfin(
+                        jellyfin,
+                        registry,
+                        jellyfin_output_path(settings),
+                        report.visible_albums,
+                    )
                 )
-            )
-    except JellyfinError as exc:
-        # The folder is right; only Jellyfin has not been told. The next full pass does not
-        # repeat it, so say it loudly.
-        report.errors.append(f"Jellyfin was not told about the changes: {exc}")
-        log.error("Jellyfin was not told about the changes: %s", exc)
+        except JellyfinError as exc:
+            # The folder is right; only Jellyfin has not been told. The shows stay marked and
+            # the next pass tries again.
+            await session.rollback()
+            report.errors.append(f"Jellyfin was not told about the changes, will retry: {exc}")
+            log.error("Jellyfin was not told about the changes, will retry: %s", exc)
+        report.media_server_pending = len(await registry.pending())
     return report, notes
+
+
+async def catch_up_jellyfin(
+    client: JellyfinClient,
+    registry: Registry,
+    output_folder: PurePosixPath,
+    visible_albums: Collection[UUID],
+) -> list[str]:
+    """Tell Jellyfin about every show marked as pending, then clear the marks. A show whose album
+    is still visible is refreshed; one whose album is gone needs a scan of the library. Raises
+    JellyfinError, and keeps the marks, when Jellyfin does not answer."""
+    pending = await registry.pending()
+    if not pending:
+        return []
+    visible = set(visible_albums)
+    done = await tell_jellyfin(client, output_folder, pending & visible, pending - visible)
+    await registry.clear_pending(pending)
+    await registry.commit()
+    return done

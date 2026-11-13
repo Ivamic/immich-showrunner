@@ -41,6 +41,10 @@ class SyncReport:
     changed_folders: dict[UUID, str] = field(default_factory=dict)
     # Albums that are no longer visible and whose files were removed.
     gone_albums: frozenset[UUID] = field(default_factory=frozenset)
+    # Albums the Immich user can see in this pass.
+    visible_albums: frozenset[UUID] = field(default_factory=frozenset)
+    # Shows the media server still has to be told about, after this pass.
+    media_server_pending: int = 0
 
     @property
     def ok(self) -> bool:
@@ -56,16 +60,20 @@ async def run_sync(
     options: Options,
     full: bool = True,
     force: bool = False,
+    notify_media_server: bool = False,
 ) -> SyncReport:
     """Bring the output folder in line with the albums the Immich user can see.
 
     Without an `executor` this is a dry run: the plan is made and nothing is written, neither to
     the disk nor to the database. A quick pass (`full=False`) leaves alone the albums that have
-    not changed since their files were last written. `force` carries out a mass removal."""
+    not changed since their files were last written. `force` carries out a mass removal.
+    With `notify_media_server`, the shows whose files changed are marked in the same transaction
+    as the files, so that the media server is told about them even if it is down right now."""
     report = SyncReport(dry_run=executor is None)
     albums = await immich.albums()
     shows = await registry.shows()
     report.albums = len(albums)
+    report.visible_albums = frozenset(album.id for album in albums)
 
     desired: list[DesiredFile] = []
     untouched: set[UUID] = set()
@@ -137,6 +145,8 @@ async def run_sync(
             else:
                 report.removed += 1
 
+    if notify_media_server:
+        await registry.mark_pending(plan.changed_albums)
     for album in read:
         if album.id not in failed:
             await registry.set_stamps(

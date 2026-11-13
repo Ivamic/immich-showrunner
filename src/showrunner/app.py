@@ -33,6 +33,8 @@ class State:
     last_error: str = ""
     held: bool = False
     shows: int = 0
+    # Shows whose changes Jellyfin has not yet confirmed.
+    jellyfin_pending: int = 0
     notes: list[str] = field(default_factory=list)
 
 
@@ -62,6 +64,7 @@ async def scheduler(settings: Settings, state: State, app: FastAPI) -> None:
                 else ""
             )
             state.shows = report.albums
+            state.jellyfin_pending = report.media_server_pending
             state.notes = notes
             if full and not report.held:
                 state.last_full_sync_at = now
@@ -108,6 +111,7 @@ def create_app() -> FastAPI:
             "held": state.held,
             "error": state.last_error,
             "shows": state.shows,
+            "jellyfin_pending": state.jellyfin_pending,
             "last_sync_at": state.last_sync_at.isoformat() if state.last_sync_at else None,
             "last_full_sync_at": (
                 state.last_full_sync_at.isoformat() if state.last_full_sync_at else None

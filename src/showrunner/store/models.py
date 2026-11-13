@@ -4,7 +4,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, MetaData, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, MetaData, String, Text, false, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 # Names for constraints, so that migrations can refer to them.
@@ -34,6 +34,9 @@ class ShowRow(Base):
     # that a quick sync may leave the album alone.
     album_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     assets_modified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The files of the show changed and the media server has not yet confirmed that it knows.
+    # Set together with the files, cleared only after the media server answered.
+    media_server_pending: Mapped[bool] = mapped_column(default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

@@ -60,6 +60,8 @@ def print_report(report: SyncReport, notes: list[str]) -> None:
         print(f"  left alone: {outcome.action.path} ({outcome.detail})")
     for error in report.errors:
         print(f"  ERROR: {error}")
+    if report.media_server_pending:
+        print(f"  Jellyfin still has to be told about {report.media_server_pending} show(s)")
     for note in notes:
         print(f"  note: {note}")
 

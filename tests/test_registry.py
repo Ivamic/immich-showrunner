@@ -33,7 +33,18 @@ def link(path: str = "show/Season 2024/v1.mp4", target: str = "/mnt/immich/v1.mp
 
 async def test_migrations_created_the_tables(session: AsyncSession) -> None:
     version = await session.scalar(text("SELECT version_num FROM alembic_version"))
-    assert version == "0001"
+    assert version == "0002"
+
+
+async def test_pending_marks(registry: Registry) -> None:
+    await registry.add_show(A1, "Summer")
+    await registry.add_show(A2, "Winter")
+    assert await registry.pending() == set()
+    await registry.mark_pending({A1, A2})
+    await registry.mark_pending(set())
+    assert await registry.pending() == {A1, A2}
+    await registry.clear_pending({A1})
+    assert await registry.pending() == {A2}
 
 
 async def test_show_folder_is_set_once(registry: Registry) -> None:

@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """The registry: which shows there are and which files the app created for them."""
 
+from collections.abc import Collection
 from datetime import datetime
 from pathlib import PurePosixPath
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -75,6 +76,29 @@ class Registry:
         if row is not None:
             row.album_updated_at = album_updated_at
             row.assets_modified_at = assets_modified_at
+
+    async def mark_pending(self, album_ids: Collection[UUID]) -> None:
+        """The media server has to be told about these shows."""
+        if album_ids:
+            await self._session.execute(
+                update(ShowRow)
+                .where(ShowRow.album_id.in_(list(album_ids)))
+                .values(media_server_pending=True)
+            )
+
+    async def pending(self) -> set[UUID]:
+        rows = await self._session.scalars(
+            select(ShowRow.album_id).where(ShowRow.media_server_pending)
+        )
+        return set(rows)
+
+    async def clear_pending(self, album_ids: Collection[UUID]) -> None:
+        if album_ids:
+            await self._session.execute(
+                update(ShowRow)
+                .where(ShowRow.album_id.in_(list(album_ids)))
+                .values(media_server_pending=False)
+            )
 
     async def commit(self) -> None:
         await self._session.commit()
