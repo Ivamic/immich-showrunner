@@ -53,3 +53,35 @@ jobs:
         run: >-
           uv run pip-licenses --partial-match --ignore-packages showrunner
           --allow-only "MIT;BSD;Apache;ISC;MPL;PSF;Python Software Foundation;HPND;LGPL;PostgreSQL"
+
+  image:
+    name: Docker image
+    runs-on: ubuntu-latest
+    needs: [core]
+    steps:
+      - uses: actions/checkout@v7
+      - name: compose.yaml works with only the required settings
+        run: |
+          printf 'SHOWRUNNER_IMMICH_URL=http://127.0.0.1:9
+SHOWRUNNER_IMMICH_API_KEY=k
+SHOWRUNNER_PATH_MAP=/data=/srv
+SHOWRUNNER_OUTPUT_LOCATION=/tmp/out
+DB_PASSWORD=ci
+' > .env
+          docker compose config -q
+          # Without a required setting it stops with a clear message.
+          grep -v SHOWRUNNER_PATH_MAP .env > /tmp/partial.env
+          if docker compose --env-file /tmp/partial.env config -q 2>/tmp/err; then exit 1; fi
+          grep -q "set SHOWRUNNER_PATH_MAP" /tmp/err
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          tags: immich-showrunner:ci
+          load: true
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: The image starts
+        run: docker run --rm immich-showrunner:ci --version

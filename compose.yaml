@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# immich-showrunner: the app and its database.
+# Copy example.env (.env.example in the source) to .env, set the required values, then run:
+#   docker compose up -d
+# Update: docker compose pull && docker compose up -d. This file stays the same within a major
+# version; the settings live in .env.
+
+name: immich-showrunner
+
+services:
+  app:
+    image: ghcr.io/ivamic/immich-showrunner:${SHOWRUNNER_VERSION:-0}
+    restart: unless-stopped
+    # The owner of the links and files the app creates. The media server must be able to read them.
+    user: "${PUID:-1000}:${PGID:-1000}"
+    ports:
+      - "${SHOWRUNNER_BIND:-127.0.0.1}:${SHOWRUNNER_PORT:-8790}:8080"
+    env_file: .env
+    environment:
+      SHOWRUNNER_DATABASE_URL: "postgresql+asyncpg://${DB_USER:-showrunner}:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/${DB_NAME:-showrunner}"
+      SHOWRUNNER_IMMICH_URL: "${SHOWRUNNER_IMMICH_URL:?set SHOWRUNNER_IMMICH_URL in .env}"
+      SHOWRUNNER_IMMICH_API_KEY: "${SHOWRUNNER_IMMICH_API_KEY:?set SHOWRUNNER_IMMICH_API_KEY in .env}"
+      SHOWRUNNER_PATH_MAP: "${SHOWRUNNER_PATH_MAP:?set SHOWRUNNER_PATH_MAP in .env}"
+      SHOWRUNNER_OUTPUT_DIR: /output
+      # Where Jellyfin sees the output folder: the folder on the host, unless Jellyfin runs in a
+      # container that mounts it somewhere else.
+      SHOWRUNNER_JELLYFIN_OUTPUT_PATH: "${SHOWRUNNER_JELLYFIN_OUTPUT_PATH:-${SHOWRUNNER_OUTPUT_LOCATION}}"
+    volumes:
+      # The only folder the app writes to. The Immich library is not mounted at all.
+      - "${SHOWRUNNER_OUTPUT_LOCATION:?set SHOWRUNNER_OUTPUT_LOCATION in .env}:/output"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${DB_USER:-showrunner}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?set DB_PASSWORD in .env}"
+      POSTGRES_DB: "${DB_NAME:-showrunner}"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db-data:
