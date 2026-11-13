@@ -76,8 +76,11 @@ docker compose up -d
 Add a library (Dashboard → Libraries):
 
 - Content type: **Shows**; folder: the output folder.
-- Turn off every metadata downloader and image fetcher for shows, seasons and episodes; keep
-  **Nfo** as the metadata reader.
+- Turn off every metadata downloader for shows, seasons and episodes, and every image fetcher
+  that downloads from the internet; keep **Nfo** as the metadata reader.
+- For episodes, keep the image fetcher **Screen Grabber**: it takes a frame of the video for the
+  picture of the episode. Jellyfin keeps that picture in its own data folder, not next to the
+  links.
 - Turn off "Save artwork into media folders" and the NFO metadata saver: the output folder
   belongs to the app.
 
