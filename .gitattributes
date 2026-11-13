@@ -1,0 +1,21 @@
+# Normalize line endings: LF in the repository and in the working tree
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.heic binary
+*.mp4 binary
+*.m4v binary
+*.mov binary
+*.mkv binary
+*.webm binary

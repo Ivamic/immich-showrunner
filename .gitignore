@@ -1,0 +1,89 @@
+# ------------------------------------------------------------------
+# Private development notes — NEVER commit
+# ------------------------------------------------------------------
+_dev/
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+*.private.md
+
+# ------------------------------------------------------------------
+# Secrets and local configuration
+# ------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ------------------------------------------------------------------
+# Runtime data: databases, caches, generated Jellyfin folders
+# ------------------------------------------------------------------
+/data/
+/volumes/
+/output/
+*.sqlite
+*.sqlite3
+*.db
+
+# ------------------------------------------------------------------
+# Personal media — never in the repository.
+# Synthetic test fixtures are added on purpose with `git add -f`.
+# ------------------------------------------------------------------
+/media/
+/library/
+/photos/
+/videos/
+*.mp4
+*.m4v
+*.mov
+*.mkv
+*.avi
+*.3gp
+*.mts
+*.m2ts
+*.wmv
+*.webm
+*.mpg
+*.mpeg
+*.heic
+*.heif
+*.dng
+
+# ------------------------------------------------------------------
+# Python
+# ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ------------------------------------------------------------------
+# Node / frontend
+# ------------------------------------------------------------------
+node_modules/
+.svelte-kit/
+.vite/
+npm-debug.log*
+pnpm-debug.log*
+
+# ------------------------------------------------------------------
+# Editors and OS
+# ------------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
