@@ -39,6 +39,8 @@ class SyncReport:
     errors: list[str] = field(default_factory=list)
     # Folders of the shows whose files changed, for telling the media server.
     changed_folders: dict[UUID, str] = field(default_factory=dict)
+    # Albums that are no longer visible and whose files were removed.
+    gone_albums: frozenset[UUID] = field(default_factory=frozenset)
 
     @property
     def ok(self) -> bool:
@@ -98,6 +100,7 @@ async def run_sync(
     report.changed_folders = {
         album_id: folders[album_id] for album_id in plan.changed_albums if album_id in folders
     }
+    report.gone_albums = frozenset(plan.changed_albums - folders.keys())
     if plan.is_mass_removal and not force:
         report.held = True
         log.error(

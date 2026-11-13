@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     # separated by `;`. A video in a folder without a mapping is skipped.
     path_map: str = ""
 
+    # Jellyfin: the server, an API key (Dashboard, API keys) and the output folder as Jellyfin
+    # sees it, when that differs from SHOWRUNNER_OUTPUT_DIR. Without a URL and a key the app
+    # only writes the folder, and changes show up in Jellyfin late or not at all.
+    jellyfin_url: str = ""
+    jellyfin_api_key: SecretStr = SecretStr("")
+    jellyfin_output_path: str = ""
+
     # A short mark before the title of a show and before the name of a person. Empty: no mark.
     show_prefix: str = "◈ "
     person_prefix: str = "◈ "
