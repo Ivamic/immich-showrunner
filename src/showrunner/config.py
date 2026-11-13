@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     # The first line of a video description is its title when it is not longer than this.
     title_max_length: int = Field(default=80, ge=1)
 
+    # The title of a video without a usable description: its time of filming in this strftime
+    # format.
+    title_date_format: str = "%Y-%m-%d %H:%M"
+
     sync_interval_seconds: int = Field(default=300, ge=30)
 
     @field_validator("immich_url")
