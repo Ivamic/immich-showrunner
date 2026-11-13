@@ -41,6 +41,8 @@ def parse_path_map(value: str) -> tuple[PathMapping, ...]:
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix=ENV_PREFIX, env_file=".env", extra="ignore")
 
+    database_url: str = "postgresql+asyncpg://showrunner:showrunner@localhost:5432/showrunner"
+
     # Immich: the server and the API key of the user that albums are shared with.
     immich_url: str
     immich_api_key: SecretStr

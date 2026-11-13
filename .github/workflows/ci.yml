@@ -17,6 +17,20 @@ jobs:
   core:
     name: Core (Python)
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:17
+        env:
+          POSTGRES_USER: showrunner
+          POSTGRES_PASSWORD: showrunner
+          POSTGRES_DB: showrunner_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U showrunner"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # The tests drop everything in this database before they run.
+      SHOWRUNNER_TEST_DATABASE_URL: postgresql+asyncpg://showrunner:showrunner@localhost:5432/showrunner_test
     steps:
       - uses: actions/checkout@v7
       # setup-uv publishes exact version tags only (no floating major tag).
