@@ -19,7 +19,7 @@
 	});
 </script>
 
-<h1>{m.shows_heading()}</h1>
+<h1>{m.albums_heading()}</h1>
 <p class="hint">{m.shows_hint()}</p>
 
 {#if error}
@@ -34,7 +34,7 @@
 	<ul class="grid">
 		{#each shows as show (show.album_id)}
 			<li class:hidden={show.hidden}>
-				<a href={resolve('/shows/[id]', { id: show.album_id })}>
+				<a href={resolve('/albums/[id]', { id: show.album_id })}>
 					<div class="cover">
 						{#if show.cover_asset_id}
 							<img src={thumbnailUrl(show.cover_asset_id)} alt="" loading="lazy" />

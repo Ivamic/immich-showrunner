@@ -121,7 +121,7 @@
 </script>
 
 <p class="back">
-	<a href={resolve('/shows')}><Icon name="arrow-left" size={14} /> {m.shows_heading()}</a>
+	<a href={resolve('/albums')}><Icon name="arrow-left" size={14} /> {m.albums_heading()}</a>
 </p>
 
 {#if error}
