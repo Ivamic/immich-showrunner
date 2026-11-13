@@ -21,8 +21,9 @@ Typical use case: a family video archive kept in Immich, watched on the TV throu
 - **Album = show, video = episode.** Seasons are the years of filming, or one season per album.
   The title of an episode is the first line of the video's description in Immich, or the date
   it was filmed.
-- **People from Immich**, under the names the media server's user gave them, marked with a short
-  prefix so that they never mix with the actors of your film library.
+- **People from Immich**, under names of their own for the media server ("Mum" can stay "Mum"
+  in your library), marked with a short prefix so that they never mix with the actors of your
+  film library.
 - **Works by itself**, with a small web page for the cases where it guessed wrong: rename an
   episode, change the order, hide a video.
 - **Jellyfin first.** Kodi is planned as the second target.
@@ -32,7 +33,9 @@ Typical use case: a family video archive kept in Immich, watched on the TV throu
 - **No copies.** Not a single video file is duplicated.
 - **The Immich library is read-only.** The app never changes, moves or deletes files of Immich.
   It writes only to its own folder and removes only what it created there.
-- **Nothing is written to Immich.** Your corrections are kept in the app's own database.
+- **Nothing is written to Immich on its own.** The background sync uses a read-only API key,
+  and your corrections are kept in the app's own database. The one exception is what you do
+  yourself on the app's page for the media server's user: naming a person shared with it.
 - **Rebuildable.** The folder for the media server can be deleted and built again.
 
 ## Installation
