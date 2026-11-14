@@ -1,12 +1,14 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """A small Immich for the tests: albums with videos, answered the way Immich 3.4 answers."""
 
+import io
 import json
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
 import httpx2
+from PIL import Image
 
 from showrunner.immich.client import ImmichClient
 
@@ -19,6 +21,14 @@ def album_id(n: int) -> UUID:
 
 def asset_id(n: int) -> UUID:
     return UUID(f"{n:08x}-0000-4000-8000-000000000000")
+
+
+def webp_picture(mode: str = "RGB") -> bytes:
+    """A small real WebP picture, the way Immich makes previews when set to WebP."""
+    out = io.BytesIO()
+    color = (200, 30, 30, 128) if mode == "RGBA" else (200, 30, 30)
+    Image.new(mode, (64, 36), color).save(out, "WEBP")
+    return out.getvalue()
 
 
 @dataclass
@@ -88,7 +98,11 @@ class FakeImmich:
                 ),
                 "cover",
             )
-            body = f"JPEG {asset} {version}".encode()
+            body = (
+                webp_picture()
+                if self.preview_type == "image/webp"
+                else f"JPEG {asset} {version}".encode()
+            )
             return httpx2.Response(200, content=body, headers={"content-type": self.preview_type})
         if path == "/api/search/metadata":
             body = json.loads(request.content)

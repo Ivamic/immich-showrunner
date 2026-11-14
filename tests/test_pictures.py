@@ -1,17 +1,20 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Pictures from Immich: downloaded when new or changed there, never over a hand edit."""
 
+import io
 import os
 from pathlib import Path, PurePosixPath
 from uuid import UUID
 
 import httpx2
 import pytest
+from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fake_immich import FakeImmich, asset_id
+from fake_immich import FakeImmich, asset_id, webp_picture
 from showrunner.config import parse_path_map
-from showrunner.immich.client import ImmichClient, NotJpegError
+from showrunner.immich.client import ImmichClient, NotPictureError
+from showrunner.immich.pictures import PictureError, as_jpeg
 from showrunner.model.show import Options
 from showrunner.store.registry import Registry
 from showrunner.sync.executor import Executor
@@ -28,6 +31,7 @@ ALBUM = UUID("00000000-0000-4000-8000-0000000000a1")
 FOLDER = "Family [imm-00000001]"
 THUMB = f"{FOLDER}/Season 2024/20240105-120000 VID_1 [00000001]-thumb.jpg"
 POSTER = f"{FOLDER}/poster.jpg"
+JPEG_START = bytes.fromhex("ffd8")
 
 
 # --- the plan ---------------------------------------------------------------------------------
@@ -75,13 +79,48 @@ def test_a_picture_needs_a_source() -> None:
 # --- the client -------------------------------------------------------------------------------
 
 
-async def test_preview_must_be_jpeg() -> None:
-    def webp(request: httpx2.Request) -> httpx2.Response:
-        return httpx2.Response(200, content=b"RIFF", headers={"content-type": "image/webp"})
+def answering(content: bytes, media_type: str) -> httpx2.MockTransport:
+    return httpx2.MockTransport(
+        lambda request: httpx2.Response(200, content=content, headers={"content-type": media_type})
+    )
 
-    async with ImmichClient("http://i.test", "k", transport=httpx2.MockTransport(webp)) as c:
-        with pytest.raises(NotJpegError, match="not JPEG"):
-            await c.preview(UUID(int=1))
+
+async def test_a_jpeg_preview_is_kept_byte_for_byte() -> None:
+    async with ImmichClient("http://i.test", "k", transport=answering(b"JPEG", "image/jpeg")) as c:
+        assert await c.preview(UUID(int=1)) == b"JPEG"
+
+
+@pytest.mark.parametrize("mode", ["RGB", "RGBA"])
+async def test_a_webp_preview_becomes_jpeg(mode: str) -> None:
+    transport = answering(webp_picture(mode), "image/webp")
+    async with ImmichClient("http://i.test", "k", transport=transport) as c:
+        content = await c.preview(UUID(int=1))
+    with Image.open(io.BytesIO(content)) as picture:
+        assert (picture.format, picture.size, picture.mode) == ("JPEG", (64, 36), "RGB")
+
+
+async def test_what_is_not_a_picture_is_an_error() -> None:
+    for content, media_type, message in [
+        (b"<html>", "text/html", "not a picture"),
+        (b"RIFF", "image/webp", "could not be read"),
+    ]:
+        async with ImmichClient(
+            "http://i.test", "k", transport=answering(content, media_type)
+        ) as c:
+            with pytest.raises(NotPictureError, match=message):
+                await c.preview(UUID(int=1))
+
+
+async def test_a_person_picture_in_webp_becomes_jpeg_too() -> None:
+    transport = answering(webp_picture(), "image/webp; charset=binary")
+    async with ImmichClient("http://i.test", "k", transport=transport) as c:
+        content = await c.person_picture(UUID(int=1))
+    assert content.startswith(JPEG_START)
+
+
+async def test_no_type_is_not_a_picture() -> None:
+    with pytest.raises(PictureError, match="of no type"):
+        await as_jpeg(b"x", "")
 
 
 # --- a whole sync -----------------------------------------------------------------------------
@@ -156,15 +195,25 @@ async def test_a_picture_replaced_by_hand_stays(session: AsyncSession, out: Path
 
 
 @needs_links
+async def test_webp_previews_are_written_as_jpeg(session: AsyncSession, out: Path) -> None:
+    immich, _ = immich_with_one_video(cover=True)
+    immich.preview_type = "image/webp"
+    report = await sync(immich, session, out)
+    assert report.pictures_failed == []
+    for path in (THUMB, POSTER):
+        assert (out / path).read_bytes().startswith(JPEG_START)
+
+
+@needs_links
 async def test_a_picture_immich_can_not_give_does_not_stop_the_sync(
     session: AsyncSession, out: Path
 ) -> None:
     immich, _ = immich_with_one_video()
-    immich.preview_type = "image/webp"
+    immich.preview_type = "text/html"
     report = await sync(immich, session, out)
     assert report.ok
     assert report.created == 3  # tvshow.nfo, the link and its NFO
-    assert len(report.pictures_failed) == 1 and "JPEG" in report.pictures_failed[0]
+    assert len(report.pictures_failed) == 1 and "not a picture" in report.pictures_failed[0]
     assert not (out / THUMB).exists()
 
     # Tried again on the next pass, and taken once Immich gives it.

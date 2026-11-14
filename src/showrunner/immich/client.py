@@ -20,6 +20,7 @@ from showrunner.immich.models import (
     ServerVersion,
     SharedPerson,
 )
+from showrunner.immich.pictures import PictureError, as_jpeg
 
 DEFAULT_TIMEOUT_S = 30.0
 SEARCH_PAGE_SIZE = 500
@@ -52,8 +53,8 @@ class ImmichPermissionError(ImmichError):
     """The API key lacks a permission required by the endpoint."""
 
 
-class NotJpegError(ImmichError):
-    """The preview is not a JPEG picture (Immich can be set to make WebP previews)."""
+class NotPictureError(ImmichError):
+    """Immich gave something that can not be read as a picture."""
 
 
 def api_base_url(url: str) -> str:
@@ -156,14 +157,15 @@ class ImmichClient:
         return [Album.model_validate(item) for item in response.json()]
 
     async def preview(self, asset_id: UUID) -> bytes:
-        """The preview picture of an asset: the same picture Immich shows, as JPEG."""
+        """The preview picture of an asset: the same picture Immich shows, as JPEG even when
+        Immich makes its previews in another format."""
         response = await self._request(
             "GET",
             f"/assets/{asset_id}/thumbnail",
             params={"size": "preview"},
             headers={"Accept": "image/*"},
         )
-        return _jpeg(response, f"the preview of asset {asset_id}")
+        return await _jpeg(response, f"the preview of asset {asset_id}")
 
     async def people(self) -> list[SharedPerson]:
         """Every person the user of the key sees: its own and the ones shared with it."""
@@ -211,7 +213,7 @@ class ImmichClient:
         response = await self._request(
             "GET", f"/people/{person_id}/thumbnail", headers={"Accept": "image/*"}
         )
-        return _jpeg(response, f"the picture of person {person_id}")
+        return await _jpeg(response, f"the picture of person {person_id}")
 
     async def album_videos(self, album_id: UUID) -> AsyncIterator[Asset]:
         """The videos of an album, with their descriptions and the people that the user of the
@@ -253,15 +255,11 @@ def _bearer(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _jpeg(response: httpx2.Response, what: str) -> bytes:
-    media_type = response.headers.get("content-type", "").split(";")[0].strip()
-    if media_type != "image/jpeg":
-        raise NotJpegError(
-            f"{what} is {media_type or 'of no type'}, not JPEG; "
-            "set the preview format of Immich to JPEG",
-            response.status_code,
-        )
-    return response.content
+async def _jpeg(response: httpx2.Response, what: str) -> bytes:
+    try:
+        return await as_jpeg(response.content, response.headers.get("content-type", ""))
+    except PictureError as exc:
+        raise NotPictureError(f"{what}: {exc}", response.status_code) from exc
 
 
 def _message(response: httpx2.Response) -> str:
