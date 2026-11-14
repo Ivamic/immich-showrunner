@@ -2,7 +2,7 @@
 
 [project]
 name = "showrunner"
-version = "0.1.0rc1"
+version = "0.1.0"
 description = "Showrunner for Immich: Immich albums as TV shows in Jellyfin, without copying files."
 license = "AGPL-3.0-or-later"
 authors = [{ name = "Ivamic" }]

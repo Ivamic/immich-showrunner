@@ -7,7 +7,9 @@ between releases.
 
 ## [Unreleased]
 
-The first release, 0.1.0.
+## [0.1.0] - 2026-11-14
+
+The first release.
 
 ### Added
 
@@ -35,7 +37,8 @@ The first release, 0.1.0.
 - **Safety.** The app writes only to its output folder and removes only what it created; a file
   changed by hand is left alone. Nothing is removed when Immich does not answer, and a sync that
   would remove most of the links is held until it is forced.
-- Docker image, `compose.yaml` and an example `.env`; [installation](docs/install.md).
+- Docker image for `amd64` and `arm64` on ghcr.io, `compose.yaml` and an example `.env`;
+  [installation](docs/install.md). README in English, German, French, Italian and Russian.
 
 ### Security
 

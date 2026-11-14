@@ -1,7 +1,22 @@
+<p align="center">
+  <img src="docs/images/logo.svg" width="96" height="96" alt="Showrunner for Immich logo">
+</p>
+
 <h1 align="center">Showrunner for Immich</h1>
 
 <p align="center">
   Your Immich albums as TV shows in Jellyfin — every video an episode, no files copied.
+</p>
+
+<p align="center">
+  <a href="https://github.com/Ivamic/immich-showrunner/releases"><img src="https://img.shields.io/github/v/release/Ivamic/immich-showrunner?include_prereleases&sort=semver" alt="Release"></a>
+  <a href="https://github.com/Ivamic/immich-showrunner/actions/workflows/ci.yml"><img src="https://github.com/Ivamic/immich-showrunner/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Ivamic/immich-showrunner" alt="License: AGPL-3.0"></a>
+  <img src="https://img.shields.io/badge/self--hosted-Docker%20Compose-2496ED?logo=docker&logoColor=white" alt="Self-hosted with Docker Compose">
+</p>
+
+<p align="center">
+  <b>English</b> · <a href="README.de.md">Deutsch</a> · <a href="README.fr.md">Français</a> · <a href="README.it.md">Italiano</a> · <a href="README.ru.md">Русский</a>
 </p>
 
 > **Status: early development.** Shared albums become shows in Jellyfin with posters, pictures
@@ -92,8 +107,9 @@ Copyright (C) 2026 Ivamic.
 
 [GNU Affero General Public License v3.0 or later](LICENSE) (`AGPL-3.0-or-later`).
 
-**Name and logo.** The name "Showrunner for Immich" and its logo, once there is one, are not
-licensed under the AGPL; all rights are reserved by the author. You may use them to refer to
+**Name and logo.** The name "Showrunner for Immich" and its logo (`docs/images/logo.svg`,
+`frontend/src/lib/assets/favicon.svg` and the mark drawn in `frontend/src/lib/ui/Brand.svelte`) are
+not licensed under the AGPL; all rights are reserved by the author. You may use them to refer to
 this project. Forks and modified versions must use a different name and logo.
 
 ## AI assistance
