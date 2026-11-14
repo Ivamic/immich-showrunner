@@ -74,7 +74,7 @@ Status page.
 
 | Setting | Default | What it is |
 |---|---|---|
-| `SHOWRUNNER_SHOW_PREFIX`, `SHOWRUNNER_PERSON_PREFIX` | `◈ ` | A short mark before the title of a show and the name of a person. The default skin of Kodi has no such character and shows a box; `• ` or `» ` work there |
+| `SHOWRUNNER_SHOW_PREFIX`, `SHOWRUNNER_PERSON_PREFIX` | `§ `, `• ` | A short mark before the title of a show and the name of a person. Use characters that are in the fonts of every client: the default skin of Kodi, for one, shows `◈` as a box |
 | `SHOWRUNNER_TITLE_DATE_FORMAT` | `%Y-%m-%d %H:%M` | The title of a video without a description, e.g. `%d.%m.%Y, %H:%M` |
 | `SHOWRUNNER_SYNC_INTERVAL_SECONDS` | `300` | Seconds between syncs; a full pass runs once an hour |
 | `SHOWRUNNER_VERSION` | `0` | The version of the image; see [Updating](#updating) |

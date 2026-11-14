@@ -7,6 +7,15 @@ between releases.
 
 ## [Unreleased]
 
+### Changed
+
+- **Pictures when Immich makes WebP previews.** Such previews are now turned into JPEG, so
+  posters and pictures of episodes are there without changing the preview format of Immich.
+  JPEG previews are written as before, byte for byte.
+- **Default marks** are now `§ ` before the title of a show and `• ` before the name of a person
+  (were `◈ ` for both): the default skin of Kodi has no `◈` and showed a box. A mark you set in
+  `.env` stays as it is.
+
 ## [0.1.0] - 2026-11-14
 
 The first release.

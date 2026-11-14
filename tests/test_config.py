@@ -14,7 +14,7 @@ def settings(**values: str) -> Settings:
 
 def test_defaults() -> None:
     s = settings()
-    assert s.show_prefix == "◈ "
+    assert (s.show_prefix, s.person_prefix) == ("§ ", "• ")
     assert s.title_max_length == 80
     assert s.path_mappings == ()
 

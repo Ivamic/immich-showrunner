@@ -63,8 +63,9 @@ class Settings(BaseSettings):
     jellyfin_output_path: str = ""
 
     # A short mark before the title of a show and before the name of a person. Empty: no mark.
-    show_prefix: str = "◈ "
-    person_prefix: str = "◈ "
+    # Both are in the fonts of every client, Kodi included.
+    show_prefix: str = "§ "
+    person_prefix: str = "• "
 
     # The first line of a video description is its title when it is not longer than this.
     title_max_length: int = Field(default=80, ge=1)
