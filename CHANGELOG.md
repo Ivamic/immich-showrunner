@@ -7,6 +7,8 @@ between releases.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-14
+
 ### Changed
 
 - **Pictures when Immich makes WebP previews.** Such previews are now turned into JPEG, so
@@ -15,6 +17,11 @@ between releases.
 - **Default marks** are now `§ ` before the title of a show and `• ` before the name of a person
   (were `◈ ` for both): the default skin of Kodi has no `◈` and showed a box. A mark you set in
   `.env` stays as it is.
+
+### Security
+
+- Dependencies that ship checked again, with Pillow added: no known vulnerabilities. The build
+  tools of the web page still have the two findings of 0.1.0, which do not reach the image.
 
 ## [0.1.0] - 2026-11-14
 
