@@ -40,6 +40,7 @@ Set in `.env`:
 | `SHOWRUNNER_PATH_MAP` | Where the media server sees the Immich library, see below |
 | `PUID`, `PGID` | Owner of the created files; the media server must be able to read them |
 | `SHOWRUNNER_JELLYFIN_URL`, `SHOWRUNNER_JELLYFIN_API_KEY` | Address of Jellyfin and an API key (Dashboard → API Keys) |
+| `SHOWRUNNER_JELLYFIN_OUTPUT_PATH` | Only with Jellyfin in Docker: where its container sees the output folder |
 | `DB_PASSWORD` | Any password of letters and digits for the app's own database |
 | `SHOWRUNNER_SECRET_KEY` | At least 32 random characters, for signing in to the web page (see below) |
 | `SHOWRUNNER_BIND` | `0.0.0.0` to open the web page to your home network; by default only this machine reaches it |
@@ -64,7 +65,22 @@ SHOWRUNNER_PATH_MAP=/data=/srv/immich/library
 ```
 
 External libraries of Immich have their own paths; add a pair for each, separated by `;`.
-A video in a folder without a mapping is skipped and listed by `sync --dry-run`.
+A video in a folder without a mapping is skipped and listed by `sync --dry-run` and on the
+Status page.
+
+### Other settings
+
+`example.env` describes them all. The ones you may want to change:
+
+| Setting | Default | What it is |
+|---|---|---|
+| `SHOWRUNNER_SHOW_PREFIX`, `SHOWRUNNER_PERSON_PREFIX` | `◈ ` | A short mark before the title of a show and the name of a person. The default skin of Kodi has no such character and shows a box; `• ` or `» ` work there |
+| `SHOWRUNNER_TITLE_DATE_FORMAT` | `%Y-%m-%d %H:%M` | The title of a video without a description, e.g. `%d.%m.%Y, %H:%M` |
+| `SHOWRUNNER_SYNC_INTERVAL_SECONDS` | `300` | Seconds between syncs; a full pass runs once an hour |
+| `SHOWRUNNER_VERSION` | `0` | The version of the image; see [Updating](#updating) |
+
+After changing a setting: `docker compose up -d`, then `docker compose run --rm app sync`, so that
+every album is written again at once.
 
 ## 4. Check, try, start
 
@@ -101,7 +117,9 @@ output folder.
 
 ## 6. The web page
 
-Open `http://<your-server>:8790` and sign in as the Immich user of the app (step 1), with its
+With `SHOWRUNNER_BIND=0.0.0.0` in `.env`, open `http://<your-server>:8790` from your home network
+(without it, the page is reachable only on the server itself). Sign in as the Immich user of the
+app (step 1), with its
 Immich email and password. Only that user can sign in. The password is checked by Immich and not
 stored; the app keeps its own Immich key, encrypted with `SHOWRUNNER_SECRET_KEY`, with just the
 permissions to name people and accept invitations. The sync keeps reading with the read-only key.
@@ -182,8 +200,21 @@ the sync with `--force`.
   mounted into its container.
 - When Immich does not answer, nothing is removed.
 - The folder of a show keeps its name when the album is renamed; the title changes in Jellyfin.
-  Watched marks survive renaming, new videos in the middle of an album, and an album that was
-  unshared and shared again.
+  Watched marks survive renaming, new videos in the middle of an album, episodes moved on the
+  page, and an album that was unshared and shared again. Switching a show between seasons by year
+  and one season numbers its episodes anew, and their watched marks may be lost.
+
+## When something does not work
+
+| What you see | What to do |
+|---|---|
+| `check` says FAIL for Immich | The address must be reachable from the app container: a LAN address, not `localhost`. The key needs the five permissions of step 1 |
+| `sync --dry-run` lists videos as `no_path_mapping` | The left side of `SHOWRUNNER_PATH_MAP` is not where Immich keeps them: `docker inspect immich_server` shows its mounts |
+| The show is in Jellyfin, but a video does not play | The media server can not read the file behind the link. With Jellyfin as a package: `sudo -u jellyfin head -c 16 <a link>`; if that fails, `namei -l` on the target shows the folder without read rights |
+| The last show stays in Jellyfin after its album is unshared | Fixed since 0.1.0 (the app keeps a hidden file `.showrunner` in the output folder; do not delete it). Run a library scan in Jellyfin once |
+| Changes do not reach Jellyfin | `SHOWRUNNER_JELLYFIN_URL` and `_API_KEY`; while Jellyfin is down the app keeps trying, see `jellyfin_pending` on the Status page |
+| The page says "Signing in is not set up" | Set `SHOWRUNNER_SECRET_KEY` in `.env` and run `docker compose up -d` |
+| People do not appear in Jellyfin | They need a name on the People page; see [People](#7-people) |
 
 ## Building from source
 

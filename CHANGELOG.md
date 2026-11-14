@@ -15,7 +15,8 @@ The first release, 0.1.0.
   output folder: a link per video and NFO files with the titles, for a Jellyfin library of the type
   "Shows". Seasons are the years of filming, episodes are numbered in the order of filming.
 - **Titles.** The first line of a video's description is its title, the rest is the plot; without
-  a description the title is the time of filming.
+  a description the title is the time of filming. With an own title given on the page, the whole
+  description is the plot.
 - **Sync on a schedule**, a quick pass that leaves unchanged albums alone and a full pass every
   hour. Jellyfin is told about every change through its API; when Jellyfin is down, the app
   keeps trying on every pass until it answers (`jellyfin_pending` in `/api/health`).

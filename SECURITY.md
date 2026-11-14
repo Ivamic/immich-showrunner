@@ -26,5 +26,6 @@ the advisory is published, with credit to you if you wish.
 
 Of particular interest: anything that makes the app write, move or delete files outside its own
 output folder; links that point outside the configured Immich library; access to the Immich API
-key or to the web page without signing in; and videos of an album that was never shared with the
-app showing up in the media server.
+key or to the key the app keeps for the signed-in user; access to the web page without signing
+in; anything written to Immich beyond a name for the app's own user and accepting an invitation;
+and videos of an album that was never shared with the app showing up in the media server.

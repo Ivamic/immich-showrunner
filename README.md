@@ -4,9 +4,11 @@
   Your Immich albums as TV shows in Jellyfin — every video an episode, no files copied.
 </p>
 
-> **Status: early development, no release yet.** Shared albums become shows in Jellyfin with
-> posters, pictures and people, follow the changes in Immich, and can be corrected on a web page.
-> Expect bugs and changes.
+> **Status: early development.** Shared albums become shows in Jellyfin with posters, pictures
+> and people, follow the changes in Immich, and can be corrected on a web page. Expect bugs and
+> changes between versions.
+
+Works with Immich 3 and Jellyfin 12; Jellyfin may run in Docker or be installed as a package.
 
 A self-hosted companion app for [Immich](https://immich.app). It makes the videos of your Immich
 albums appear in [Jellyfin](https://jellyfin.org) as ordinary library items: an album becomes a
@@ -20,15 +22,16 @@ Typical use case: a family video archive kept in Immich, watched on the TV throu
 - **You choose in Immich, not in another app.** Create one Immich user for the media server and
   share an album with it: its videos show up in Jellyfin. Stop sharing, and they are gone.
 - **Album = show, video = episode.** Seasons are the years of filming, or one season per album.
-  The title of an episode is the first line of the video's description in Immich, or the date
-  it was filmed.
+  The title of an episode is the first line of the video's description in Immich, or the time
+  it was filmed; the poster and the pictures of the episodes are those of Immich.
 - **People from Immich**, under names of their own for the media server ("Mum" can stay "Mum"
   in your library), marked with a short prefix so that they never mix with the actors of your
   film library.
 - **Works by itself**, with a web page for the cases where it guessed wrong: rename a show or
   an episode, change the order, hide a video, name people and describe them. In English, German,
   French, Italian and Russian.
-- **Jellyfin first.** Kodi is planned as the second target.
+- **Jellyfin first.** Kodi with the Jellyfin add-on sees the shows through Jellyfin; Kodi on its
+  own is planned as the second target.
 
 ## Principles
 
@@ -36,8 +39,9 @@ Typical use case: a family video archive kept in Immich, watched on the TV throu
 - **The Immich library is read-only.** The app never changes, moves or deletes files of Immich.
   It writes only to its own folder and removes only what it created there.
 - **Nothing is written to Immich on its own.** The background sync uses a read-only API key,
-  and your corrections are kept in the app's own database. The one exception is what you do
-  yourself on the app's page for the media server's user: naming a person shared with it.
+  and your corrections are kept in the app's own database. The exceptions are what you do
+  yourself on the app's page for the media server's user: naming a person shared with it, for
+  that user only, and accepting an invitation into a group.
 - **Rebuildable.** The folder for the media server can be deleted and built again.
 
 ## Installation
@@ -61,6 +65,7 @@ the user and the API key in Immich, the path mapping, the library in Jellyfin, t
 ## Architecture
 
 - Python (FastAPI), PostgreSQL; one container for the app and one for its database.
+- The web page is a SvelteKit app built into the image and served by the app.
 - The app container mounts only its output folder. It reads Immich over the API with a read-only
   key and never sees the files of the library.
 - A sync first makes a plan from what Immich reports and from the registry of the files the app
