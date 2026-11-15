@@ -34,6 +34,25 @@ files stay where they are; each media server gets a folder of links with metadat
 Typical use case: a family video archive kept in Immich, watched on the TV through Jellyfin or
 Kodi.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-shows.webp"><img src="docs/images/screenshots/jellyfin-shows.webp" alt="Jellyfin: albums as shows"></a><br><sub>Jellyfin: albums as shows</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-season.webp"><img src="docs/images/screenshots/jellyfin-season.webp" alt="Jellyfin: a season, titles from the descriptions in Immich"></a><br><sub>Jellyfin: a season, titles from the descriptions in Immich</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/kodi-shows.webp"><img src="docs/images/screenshots/kodi-shows.webp" alt="Kodi: the same shows, from a folder of its own"></a><br><sub>Kodi: the same shows, from a folder of its own</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/kodi-episode.webp"><img src="docs/images/screenshots/kodi-episode.webp" alt="Kodi: people with their faces from Immich"></a><br><sub>Kodi: people with their faces from Immich</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/app-album.webp"><img src="docs/images/screenshots/app-album.webp" alt="The page: an album, its seasons and episodes"></a><br><sub>The page: an album, its seasons and episodes</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/app-people.webp"><img src="docs/images/screenshots/app-people.webp" alt="The page: people and their names"></a><br><sub>The page: people and their names</sub></td>
+  </tr>
+</table>
+
+<sub>The videos in the screenshots are made from pictures of Wikimedia Commons in the public domain or under CC0.</sub>
+
 ## Idea
 
 - **You choose in Immich, not in another app.** Create one Immich user for the media server and

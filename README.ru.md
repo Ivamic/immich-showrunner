@@ -35,6 +35,25 @@ Kodi читает свою папку по SMB.
 Типичный случай: семейный видеоархив хранится в Immich, а смотрят его на телевизоре через
 Jellyfin или Kodi.
 
+## Снимки экрана
+
+<table>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-shows.webp"><img src="docs/images/screenshots/jellyfin-shows.webp" alt="Jellyfin: альбомы как сериалы"></a><br><sub>Jellyfin: альбомы как сериалы</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-season.webp"><img src="docs/images/screenshots/jellyfin-season.webp" alt="Jellyfin: сезон, названия из описаний в Immich"></a><br><sub>Jellyfin: сезон, названия из описаний в Immich</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/kodi-shows.webp"><img src="docs/images/screenshots/kodi-shows.webp" alt="Kodi: те же сериалы, из своей папки"></a><br><sub>Kodi: те же сериалы, из своей папки</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/kodi-episode.webp"><img src="docs/images/screenshots/kodi-episode.webp" alt="Kodi: люди с лицами из Immich"></a><br><sub>Kodi: люди с лицами из Immich</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/app-album.webp"><img src="docs/images/screenshots/app-album.webp" alt="Страница: альбом, его сезоны и эпизоды"></a><br><sub>Страница: альбом, его сезоны и эпизоды</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/app-people.webp"><img src="docs/images/screenshots/app-people.webp" alt="Страница: люди и их имена"></a><br><sub>Страница: люди и их имена</sub></td>
+  </tr>
+</table>
+
+<sub>Видео на снимках сделаны из картинок Wikimedia Commons в общественном достоянии или под CC0.</sub>
+
 ## Идея
 
 - **Выбор — в Immich, а не в ещё одном приложении.** Заведите в Immich пользователя для

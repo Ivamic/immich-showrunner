@@ -35,6 +35,25 @@ reçoit un dossier de liens avec les métadonnées à côté.
 Cas typique : des archives vidéo familiales conservées dans Immich, regardées à la télévision via
 Jellyfin ou Kodi.
 
+## Captures d’écran
+
+<table>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-shows.webp"><img src="docs/images/screenshots/jellyfin-shows.webp" alt="Jellyfin : les albums comme séries"></a><br><sub>Jellyfin : les albums comme séries</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-season.webp"><img src="docs/images/screenshots/jellyfin-season.webp" alt="Jellyfin : une saison, titres tirés des descriptions dans Immich"></a><br><sub>Jellyfin : une saison, titres tirés des descriptions dans Immich</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/kodi-shows.webp"><img src="docs/images/screenshots/kodi-shows.webp" alt="Kodi : les mêmes séries, depuis un dossier à lui"></a><br><sub>Kodi : les mêmes séries, depuis un dossier à lui</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/kodi-episode.webp"><img src="docs/images/screenshots/kodi-episode.webp" alt="Kodi : les personnes avec leur visage venu d’Immich"></a><br><sub>Kodi : les personnes avec leur visage venu d’Immich</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/app-album.webp"><img src="docs/images/screenshots/app-album.webp" alt="La page : un album, ses saisons et ses épisodes"></a><br><sub>La page : un album, ses saisons et ses épisodes</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/app-people.webp"><img src="docs/images/screenshots/app-people.webp" alt="La page : les personnes et leurs noms"></a><br><sub>La page : les personnes et leurs noms</sub></td>
+  </tr>
+</table>
+
+<sub>Les vidéos des captures sont faites à partir d’images de Wikimedia Commons du domaine public ou sous CC0.</sub>
+
 ## Idée
 
 - **Vous choisissez dans Immich, pas dans une application de plus.** Créez un utilisateur Immich

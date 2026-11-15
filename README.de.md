@@ -35,6 +35,25 @@ Ordner mit Verknüpfungen und Metadaten daneben.
 Typischer Einsatz: ein Familien-Videoarchiv in Immich, angeschaut auf dem Fernseher über Jellyfin
 oder Kodi.
 
+## Bildschirmfotos
+
+<table>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-shows.webp"><img src="docs/images/screenshots/jellyfin-shows.webp" alt="Jellyfin: Alben als Serien"></a><br><sub>Jellyfin: Alben als Serien</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-season.webp"><img src="docs/images/screenshots/jellyfin-season.webp" alt="Jellyfin: eine Staffel, Titel aus den Beschreibungen in Immich"></a><br><sub>Jellyfin: eine Staffel, Titel aus den Beschreibungen in Immich</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/kodi-shows.webp"><img src="docs/images/screenshots/kodi-shows.webp" alt="Kodi: dieselben Serien, aus einem eigenen Ordner"></a><br><sub>Kodi: dieselben Serien, aus einem eigenen Ordner</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/kodi-episode.webp"><img src="docs/images/screenshots/kodi-episode.webp" alt="Kodi: Personen mit ihren Gesichtern aus Immich"></a><br><sub>Kodi: Personen mit ihren Gesichtern aus Immich</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/app-album.webp"><img src="docs/images/screenshots/app-album.webp" alt="Die Seite: ein Album, seine Staffeln und Folgen"></a><br><sub>Die Seite: ein Album, seine Staffeln und Folgen</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/app-people.webp"><img src="docs/images/screenshots/app-people.webp" alt="Die Seite: Personen und ihre Namen"></a><br><sub>Die Seite: Personen und ihre Namen</sub></td>
+  </tr>
+</table>
+
+<sub>Die Videos auf den Bildschirmfotos sind aus gemeinfreien oder CC0-Bildern von Wikimedia Commons gemacht.</sub>
+
 ## Idee
 
 - **Sie wählen in Immich, nicht in einer weiteren App.** Legen Sie in Immich einen Benutzer für
