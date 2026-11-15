@@ -7,6 +7,21 @@ between releases.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-15
+
+### Fixed
+
+- **Episodes on the Albums page** were counted twice when both Jellyfin and Kodi have a folder: the
+  page counted the links of both. The videos are counted now. The sync itself was not affected.
+
+### Added
+
+- Screenshots of Jellyfin, Kodi and the web page in the READMEs.
+
+### Security
+
+- Dependencies that ship checked again: no known vulnerabilities.
+
 ## [0.2.0] - 2026-11-15
 
 ### Added

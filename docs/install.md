@@ -257,7 +257,7 @@ docker compose up -d
 
 `compose.yaml` pulls the newest release of the major version (`0` for now), so these two commands
 are all an update needs; the database is brought to the new version when the app starts. To stay
-on one version, set `SHOWRUNNER_VERSION=0.2.0` in `.env`. Read the release notes before an update:
+on one version, set `SHOWRUNNER_VERSION=0.2.1` in `.env`. Read the release notes before an update:
 they say when anything else is needed.
 
 ## Commands
