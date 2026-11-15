@@ -10,6 +10,10 @@ from uuid import UUID
 
 from showrunner.model.show import Show
 
+# Names of the targets, as the registry keeps them.
+JELLYFIN = "jellyfin"
+KODI = "kodi"
+
 
 class FileKind(StrEnum):
     LINK = "link"  # a symbolic link to a video of the Immich library

@@ -17,7 +17,7 @@ The image is published on GitHub Container Registry (`ghcr.io/ivamic/immich-show
 
 ## 2. The output folder
 
-Create an empty folder for the links and metadata, for example `/srv/showrunner`. The app writes
+Create an empty folder for the links and metadata, for example `/srv/showrunner/jellyfin`. The app writes
 only there. It must be on the machine where the media server can read both this folder and the
 Immich library.
 
@@ -36,7 +36,7 @@ Set in `.env`:
 |---|---|
 | `SHOWRUNNER_IMMICH_URL` | Address of Immich as seen from this machine, e.g. `http://192.0.2.10:2283` (not `localhost`) |
 | `SHOWRUNNER_IMMICH_API_KEY` | The API key from step 1 |
-| `SHOWRUNNER_OUTPUT_LOCATION` | The output folder from step 2 |
+| `SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION` | The output folder from step 2. Called `SHOWRUNNER_OUTPUT_LOCATION` before 0.2; that name still works |
 | `SHOWRUNNER_PATH_MAP` | Where the media server sees the Immich library, see below |
 | `PUID`, `PGID` | Owner of the created files; the media server must be able to read them |
 | `SHOWRUNNER_JELLYFIN_URL`, `SHOWRUNNER_JELLYFIN_API_KEY` | Address of Jellyfin and an API key (Dashboard → API Keys) |

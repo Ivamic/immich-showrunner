@@ -48,16 +48,19 @@ class Settings(BaseSettings):
     immich_url: str
     immich_api_key: SecretStr
 
-    # The folder of links and metadata that the media server scans. The app writes only here.
-    output_dir: Path = Path("/output")
+    # The folders of links and metadata that the media servers scan, one per target; the app
+    # writes only there. At least one is needed. SHOWRUNNER_OUTPUT_DIR is the name the Jellyfin
+    # folder had before 0.2 and is read when SHOWRUNNER_JELLYFIN_OUTPUT_DIR is not set.
+    jellyfin_output_dir: Path | None = None
+    output_dir: Path | None = None
 
     # Where the media server sees the folders of the Immich library, as `/from=/to` pairs
     # separated by `;`. A video in a folder without a mapping is skipped.
     path_map: str = ""
 
     # Jellyfin: the server, an API key (Dashboard, API keys) and the output folder as Jellyfin
-    # sees it, when that differs from SHOWRUNNER_OUTPUT_DIR. Without a URL and a key the app
-    # only writes the folder, and changes show up in Jellyfin late or not at all.
+    # sees it, when that differs from SHOWRUNNER_JELLYFIN_OUTPUT_DIR. Without a URL and a key the
+    # app only writes the folder, and changes show up in Jellyfin late or not at all.
     jellyfin_url: str = ""
     jellyfin_api_key: SecretStr = SecretStr("")
     jellyfin_output_path: str = ""
@@ -102,11 +105,21 @@ class Settings(BaseSettings):
             raise ValueError(f"must be at least {MIN_SECRET_KEY_LENGTH} characters long")
         return value
 
+    @field_validator("jellyfin_output_dir", "output_dir", mode="before")
+    @classmethod
+    def _empty_is_none(cls, value: object) -> object:
+        return None if isinstance(value, str) and not value.strip() else value
+
     @field_validator("path_map")
     @classmethod
     def _check_path_map(cls, value: str) -> str:
         parse_path_map(value)
         return value
+
+    @property
+    def jellyfin_dir(self) -> Path | None:
+        """The output folder for Jellyfin, under its name or the name it had before."""
+        return self.jellyfin_output_dir or self.output_dir
 
     @property
     def path_mappings(self) -> tuple[PathMapping, ...]:

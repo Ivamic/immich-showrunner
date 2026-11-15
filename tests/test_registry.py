@@ -33,7 +33,7 @@ def link(path: str = "show/Season 2024/v1.mp4", target: str = "/mnt/immich/v1.mp
 
 async def test_migrations_created_the_tables(session: AsyncSession) -> None:
     version = await session.scalar(text("SELECT version_num FROM alembic_version"))
-    assert version == "0007"
+    assert version == "0008"
 
 
 async def test_people(registry: Registry) -> None:
@@ -103,3 +103,22 @@ async def test_stamps(registry: Registry) -> None:
     await registry.commit()
     row = (await registry.shows())[A1]
     assert (row.album_updated_at, row.assets_modified_at) == (updated, modified)
+
+
+async def test_files_and_marks_are_kept_per_target(registry: Registry) -> None:
+    await registry.add_show(A1, "Summer")
+    await registry.record(link(), "jellyfin")
+    await registry.record(link(target="/mnt/immich/other.mp4"), "kodi")
+    await registry.commit()
+    jellyfin, kodi = await registry.entries("jellyfin"), await registry.entries("kodi")
+    assert [str(e.link_target) for e in jellyfin] == ["/mnt/immich/v1.mp4"]
+    assert [str(e.link_target) for e in kodi] == ["/mnt/immich/other.mp4"]
+
+    await registry.forget(PurePosixPath("show/Season 2024/v1.mp4"), "kodi")
+    assert len(await registry.entries("jellyfin")) == 1 and await registry.entries("kodi") == []
+
+    await registry.mark_pending({A1}, "kodi")
+    await registry.mark_pending({A1}, "kodi")  # twice is the same as once
+    assert await registry.pending("kodi") == {A1} and await registry.pending("jellyfin") == set()
+    await registry.clear_pending({A1}, "kodi")
+    assert await registry.pending("kodi") == set()

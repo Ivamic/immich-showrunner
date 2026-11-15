@@ -30,12 +30,22 @@ from showrunner.targets.jellyfin.client import JellyfinError
 MAX_LISTED = 40
 
 
-def print_report(report: SyncReport, notes: list[str]) -> None:
+def print_reports(reports: list[SyncReport], notes: list[str]) -> None:
+    first = reports[0]
+    print("Dry run: nothing was written." if first.dry_run else "Sync finished.")
+    print(f"  albums: {first.albums} (read: {first.albums_read})")
+    for album, skipped in first.skipped:
+        print(f"  skipped: {album} / {skipped.file_name} ({skipped.reason.value})")
+    for report in reports:
+        print(f"{report.target}:")
+        print_report(report)
+    for note in notes:
+        print(f"  note: {note}")
+
+
+def print_report(report: SyncReport) -> None:
     plan = report.plan
     counts = Counter(a.type for a in plan.actions)
-    head = "Dry run: nothing was written." if report.dry_run else "Sync finished."
-    print(head)
-    print(f"  albums: {report.albums} (read: {report.albums_read})")
     print(
         f"  planned: {counts[ActionType.CREATE]} to create, {counts[ActionType.REPLACE]} to "
         f"replace, {counts[ActionType.REMOVE]} to remove, {plan.unchanged} unchanged"
@@ -54,8 +64,6 @@ def print_report(report: SyncReport, notes: list[str]) -> None:
             "which looks like a wrong API key or user. Nothing was changed. If it is right, run "
             "the sync again with --force."
         )
-    for album, skipped in report.skipped:
-        print(f"  skipped: {album} / {skipped.file_name} ({skipped.reason.value})")
     for failed in report.pictures_failed:
         print(f"  picture not taken: {failed}")
     for outcome in report.foreign:
@@ -63,15 +71,14 @@ def print_report(report: SyncReport, notes: list[str]) -> None:
     for error in report.errors:
         print(f"  ERROR: {error}")
     if report.media_server_pending:
-        print(f"  Jellyfin still has to be told about {report.media_server_pending} show(s)")
-    for note in notes:
-        print(f"  note: {note}")
+        pending = report.media_server_pending
+        print(f"  the media server still has to be told about {pending} show(s)")
 
 
 async def cmd_sync(settings: Settings, args: argparse.Namespace) -> int:
     engine = make_engine(settings.database_url)
     try:
-        report, notes = await sync_once(
+        reports, notes = await sync_once(
             settings,
             make_session_factory(engine),
             dry_run=args.dry_run,
@@ -80,8 +87,8 @@ async def cmd_sync(settings: Settings, args: argparse.Namespace) -> int:
         )
     finally:
         await engine.dispose()
-    print_report(report, notes)
-    return 0 if report.ok else 1
+    print_reports(reports, notes)
+    return 0 if all(report.ok for report in reports) else 1
 
 
 async def cmd_check(settings: Settings) -> int:
@@ -104,11 +111,21 @@ async def cmd_check(settings: Settings) -> int:
         line(False, f"Immich: {exc}")
 
     line(bool(settings.path_mappings), f"path mappings: {settings.path_map or '(none)'}")
-    out = settings.output_dir
-    line(out.is_dir() and os.access(out, os.W_OK), f"output folder {out} exists and is writable")
+    folders = {"Jellyfin": settings.jellyfin_dir}
+    line(
+        any(folders.values()),
+        "an output folder is set (SHOWRUNNER_JELLYFIN_OUTPUT_DIR)",
+    )
+    for name, out in folders.items():
+        if out is not None:
+            writable = out.is_dir() and os.access(out, os.W_OK)
+            line(writable, f"{name} output folder {out} exists and is writable")
 
     jellyfin = jellyfin_client(settings)
-    if jellyfin is None:
+    if settings.jellyfin_dir is None:
+        if jellyfin is not None:
+            print("note  Jellyfin is configured, but it has no output folder")
+    elif jellyfin is None:
         print("note  Jellyfin is not configured (SHOWRUNNER_JELLYFIN_URL and _API_KEY)")
     else:
         try:

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 import pytest
 from pydantic import ValidationError
@@ -44,3 +44,21 @@ def test_bad_path_map_is_rejected(value: str) -> None:
         parse_path_map(value)
     with pytest.raises(ValidationError):
         settings(path_map=value)
+
+
+def test_jellyfin_output_folder_under_its_old_name() -> None:
+    assert settings().jellyfin_dir is None
+    assert str(settings(output_dir="/output").jellyfin_dir) == str(Path("/output"))
+    both = settings(output_dir="/old", jellyfin_output_dir="/new")
+    assert str(both.jellyfin_dir) == str(Path("/new"))
+    # compose.yaml passes an empty value for a folder that is not set.
+    assert settings(jellyfin_output_dir="", output_dir=" ").jellyfin_dir is None
+
+
+def test_a_sync_needs_an_output_folder() -> None:
+    from showrunner.runner import SetupError, outputs_from
+
+    with pytest.raises(SetupError, match="SHOWRUNNER_JELLYFIN_OUTPUT_DIR"):
+        outputs_from(settings(path_map="/data=/mnt/immich"), dry_run=True)
+    outputs = outputs_from(settings(path_map="/data=/mnt/immich", output_dir="/x"), dry_run=True)
+    assert [(o.target.name, o.executor, o.notify) for o in outputs] == [("jellyfin", None, False)]

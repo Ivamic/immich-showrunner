@@ -14,7 +14,8 @@ from showrunner.immich.client import ImmichClient, excess_permissions, missing_p
 from showrunner.model.show import Options
 from showrunner.store.registry import Registry
 from showrunner.sync.executor import Executor
-from showrunner.sync.service import SyncReport, run_sync
+from showrunner.sync.service import Output, SyncReport, sync_outputs
+from showrunner.targets.base import JELLYFIN
 from showrunner.targets.jellyfin.client import JellyfinClient, JellyfinError, tell_jellyfin
 from showrunner.targets.jellyfin.layout import JellyfinLayout
 from showrunner.targets.jellyfin.people import tend_people
@@ -48,7 +49,29 @@ def jellyfin_client(settings: Settings) -> JellyfinClient | None:
 
 
 def jellyfin_output_path(settings: Settings) -> PurePosixPath:
-    return PurePosixPath(settings.jellyfin_output_path or settings.output_dir.as_posix())
+    """The Jellyfin output folder as Jellyfin sees it."""
+    folder = settings.jellyfin_dir
+    return PurePosixPath(settings.jellyfin_output_path or (folder.as_posix() if folder else ""))
+
+
+def outputs_from(settings: Settings, *, dry_run: bool) -> list[Output]:
+    """The targets that have an output folder. Raises SetupError when none has."""
+    roots = [m.target for m in settings.path_mappings]
+    outputs: list[Output] = []
+    if settings.jellyfin_dir is not None:
+        outputs.append(
+            Output(
+                JellyfinLayout(),
+                None if dry_run else Executor(settings.jellyfin_dir, roots),
+                notify=jellyfin_client(settings) is not None,
+            )
+        )
+    if not outputs:
+        raise SetupError(
+            "no output folder: set SHOWRUNNER_JELLYFIN_OUTPUT_DIR (in compose.yaml: "
+            "SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION)"
+        )
+    return outputs
 
 
 async def check_api_key(immich: ImmichClient) -> list[str]:
@@ -76,36 +99,44 @@ async def sync_once(
     dry_run: bool = False,
     full: bool = True,
     force: bool = False,
-) -> tuple[SyncReport, list[str]]:
-    """Run one pass and tell Jellyfin. Returns the report and notes for the log."""
+) -> tuple[list[SyncReport], list[str]]:
+    """Run one pass for every target and tell their media servers. Returns a report per target
+    and notes for the log."""
     if not settings.path_mappings:
         raise SetupError("SHOWRUNNER_PATH_MAP is empty: the app would not know where to link")
+    outputs = outputs_from(settings, dry_run=dry_run)
     notes: list[str] = []
-    executor = None
-    if not dry_run:
-        executor = Executor(settings.output_dir, [m.target for m in settings.path_mappings])
     async with immich_client(settings) as immich, sessions() as session:
         notes.extend(await check_api_key(immich))
-        report = await run_sync(
+        reports = await sync_outputs(
             immich=immich,
             registry=Registry(session),
-            executor=executor,
-            target=JellyfinLayout(),
+            outputs=outputs,
             options=options_from(settings),
             full=full,
             force=force,
-            notify_media_server=jellyfin_client(settings) is not None,
         )
         if dry_run:
             await session.rollback()
     if dry_run:
-        return report, notes
+        return reports, notes
+    for report in reports:
+        if report.target == JELLYFIN:
+            notes.extend(await tell_jellyfin_of(settings, sessions, report))
+    return reports, notes
 
+
+async def tell_jellyfin_of(
+    settings: Settings, sessions: async_sessionmaker[AsyncSession], report: SyncReport
+) -> list[str]:
+    """Tell Jellyfin what the pass changed and take care of its people. A failure is noted in
+    the report; the shows stay queued for the next pass."""
     jellyfin = jellyfin_client(settings)
     if jellyfin is None:
         if report.changed_folders or report.gone_albums:
-            notes.append("Jellyfin is not configured: it will notice the changes on its own scan")
-        return report, notes
+            return ["Jellyfin is not configured: it will notice the changes on its own scan"]
+        return []
+    notes: list[str] = []
     async with sessions() as session:
         registry = Registry(session)
         try:
@@ -134,8 +165,8 @@ async def sync_once(
             await session.rollback()
             report.errors.append(f"Jellyfin was not told about the changes, will retry: {exc}")
             log.error("Jellyfin was not told about the changes, will retry: %s", exc)
-        report.media_server_pending = len(await registry.pending())
-    return report, notes
+        report.media_server_pending = len(await registry.pending(JELLYFIN))
+    return notes
 
 
 async def catch_up_jellyfin(
@@ -147,11 +178,11 @@ async def catch_up_jellyfin(
     """Tell Jellyfin about every show marked as pending, then clear the marks. A show whose album
     is still visible is refreshed; one whose album is gone needs a scan of the library. Raises
     JellyfinError, and keeps the marks, when Jellyfin does not answer."""
-    pending = await registry.pending()
+    pending = await registry.pending(JELLYFIN)
     if not pending:
         return []
     visible = set(visible_albums)
     done = await tell_jellyfin(client, output_folder, pending & visible, pending - visible)
-    await registry.clear_pending(pending)
+    await registry.clear_pending(pending, JELLYFIN)
     await registry.commit()
     return done

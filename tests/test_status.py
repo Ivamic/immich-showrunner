@@ -52,7 +52,9 @@ def sign_in(client: TestClient) -> None:
 
 def report() -> SyncReport:
     action = Action(ActionType.CREATE, PurePosixPath("Show/tvshow.nfo"), FileKind.SHOW_NFO, ALBUM)
-    result = SyncReport(dry_run=False, plan=Plan(actions=(action,)), albums=3, created=5)
+    result = SyncReport(
+        dry_run=False, target="jellyfin", plan=Plan(actions=(action,)), albums=3, created=5
+    )
     result.skipped = [("Summer", Skipped(UUID(int=2), "VID_1.mp4", SkipReason.NO_PATH_MAPPING))]
     result.foreign = [Outcome(action, Result.FOREIGN, "the file was changed by somebody else")]
     result.pictures_failed = ["Show/x-thumb.jpg: not JPEG"]
@@ -67,7 +69,7 @@ def test_status_needs_sign_in(client: TestClient) -> None:
 def test_status_shows_the_last_pass(client: TestClient) -> None:
     sign_in(client)
     state: State = client.app.state.status  # type: ignore[attr-defined]
-    state.record(report(), ["refreshed the show"])
+    state.record([report()], ["refreshed the show"])
     data: dict[str, Any] = client.get("/api/status").json()
     assert data["ok"] is True and data["shows"] == 3 and data["created"] == 5
     assert data["skipped"] == [
@@ -94,9 +96,9 @@ def test_a_pass_uses_and_clears_the_request(monkeypatch: pytest.MonkeyPatch) -> 
 
     async def fake_sync(
         settings: Any, sessions: Any, **kwargs: bool
-    ) -> tuple[SyncReport, list[str]]:
+    ) -> tuple[list[SyncReport], list[str]]:
         seen.append(kwargs)
-        return report(), []
+        return [report()], []
 
     monkeypatch.setattr(scheduler_module, "sync_once", fake_sync)
     state = State()
@@ -110,7 +112,9 @@ def test_a_pass_uses_and_clears_the_request(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_a_failed_pass_is_shown(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def broken(settings: Any, sessions: Any, **kwargs: bool) -> tuple[SyncReport, list[str]]:
+    async def broken(
+        settings: Any, sessions: Any, **kwargs: bool
+    ) -> tuple[list[SyncReport], list[str]]:
         raise OSError("disk full")
 
     monkeypatch.setattr(scheduler_module, "sync_once", broken)
@@ -118,3 +122,16 @@ def test_a_failed_pass_is_shown(monkeypatch: pytest.MonkeyPatch) -> None:
     asyncio.run(one_pass(None, None, state))  # type: ignore[arg-type]
     assert state.last_ok is False and state.errors == ["disk full"]
     assert state.last_sync_at is not None
+
+
+def test_a_pass_with_two_targets_is_summed() -> None:
+    jellyfin, kodi = report(), report()
+    kodi.target, kodi.created, kodi.media_server_pending = "kodi", 2, 4
+    jellyfin.media_server_pending = 1
+    kodi.errors = ["kodi: create x: denied"]
+    state = State()
+    state.record([jellyfin, kodi], [])
+    assert (state.created, state.shows, state.jellyfin_pending) == (7, 3, 1)
+    assert state.last_ok is False and state.errors == ["kodi: create x: denied"]
+    # Videos skipped in Immich are the same for every target and are listed once.
+    assert len(state.skipped) == 1 and len(state.pictures_failed) == 2

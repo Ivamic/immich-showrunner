@@ -89,7 +89,7 @@ jobs:
             echo "SHOWRUNNER_IMMICH_URL=http://127.0.0.1:9"
             echo "SHOWRUNNER_IMMICH_API_KEY=k"
             echo "SHOWRUNNER_PATH_MAP=/data=/srv"
-            echo "SHOWRUNNER_OUTPUT_LOCATION=/tmp/out"
+            echo "SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION=/tmp/out"
             echo "DB_PASSWORD=ci"
           } > .env
           docker compose config -q

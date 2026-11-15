@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import PurePosixPath
 from uuid import UUID
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,12 +15,13 @@ from showrunner.model.show import EpisodeEdit, ShowEdit
 from showrunner.store.models import (
     EpisodeEditRow,
     FileRow,
+    PendingRow,
     PersonDescriptionRow,
     PersonRow,
     ShowRow,
 )
 from showrunner.sync.plan import Entry
-from showrunner.targets.base import DesiredFile, FileKind
+from showrunner.targets.base import JELLYFIN, DesiredFile, FileKind
 
 
 class Registry:
@@ -42,8 +43,10 @@ class Registry:
         await self._session.flush()
         return row
 
-    async def entries(self) -> list[Entry]:
-        rows = await self._session.scalars(select(FileRow).order_by(FileRow.path))
+    async def entries(self, target: str = JELLYFIN) -> list[Entry]:
+        rows = await self._session.scalars(
+            select(FileRow).where(FileRow.target == target).order_by(FileRow.path)
+        )
         return [
             Entry(
                 path=PurePosixPath(row.path),
@@ -57,8 +60,8 @@ class Registry:
             for row in rows
         ]
 
-    async def record(self, file: DesiredFile) -> None:
-        """Remember that `file` now exists as described."""
+    async def record(self, file: DesiredFile, target: str = JELLYFIN) -> None:
+        """Remember that `file` now exists as described in the output folder of `target`."""
         values = {
             "kind": file.kind.value,
             "album_id": file.album_id,
@@ -67,16 +70,18 @@ class Registry:
             "content_hash": file.content_hash,
             "source_version": file.source_version,
         }
-        statement = insert(FileRow).values(path=str(file.path), **values)
+        statement = insert(FileRow).values(target=target, path=str(file.path), **values)
         await self._session.execute(
             statement.on_conflict_do_update(
-                index_elements=[FileRow.path],
+                index_elements=[FileRow.target, FileRow.path],
                 set_={**values, "updated_at": statement.excluded.updated_at},
             )
         )
 
-    async def forget(self, path: PurePosixPath) -> None:
-        await self._session.execute(delete(FileRow).where(FileRow.path == str(path)))
+    async def forget(self, path: PurePosixPath, target: str = JELLYFIN) -> None:
+        await self._session.execute(
+            delete(FileRow).where(FileRow.target == target, FileRow.path == str(path))
+        )
 
     async def set_stamps(
         self, album_id: UUID, album_updated_at: datetime | None, assets_modified_at: datetime | None
@@ -86,27 +91,26 @@ class Registry:
             row.album_updated_at = album_updated_at
             row.assets_modified_at = assets_modified_at
 
-    async def mark_pending(self, album_ids: Collection[UUID]) -> None:
-        """The media server has to be told about these shows."""
+    async def mark_pending(self, album_ids: Collection[UUID], target: str = JELLYFIN) -> None:
+        """The media server of `target` has to be told about these shows."""
         if album_ids:
-            await self._session.execute(
-                update(ShowRow)
-                .where(ShowRow.album_id.in_(list(album_ids)))
-                .values(media_server_pending=True)
+            statement = insert(PendingRow).values(
+                [{"target": target, "album_id": album_id} for album_id in album_ids]
             )
+            await self._session.execute(statement.on_conflict_do_nothing())
 
-    async def pending(self) -> set[UUID]:
+    async def pending(self, target: str = JELLYFIN) -> set[UUID]:
         rows = await self._session.scalars(
-            select(ShowRow.album_id).where(ShowRow.media_server_pending)
+            select(PendingRow.album_id).where(PendingRow.target == target)
         )
         return set(rows)
 
-    async def clear_pending(self, album_ids: Collection[UUID]) -> None:
+    async def clear_pending(self, album_ids: Collection[UUID], target: str = JELLYFIN) -> None:
         if album_ids:
             await self._session.execute(
-                update(ShowRow)
-                .where(ShowRow.album_id.in_(list(album_ids)))
-                .values(media_server_pending=False)
+                delete(PendingRow).where(
+                    PendingRow.target == target, PendingRow.album_id.in_(list(album_ids))
+                )
             )
 
     async def remember_people(self, people: Mapping[str, UUID]) -> None:

@@ -38,9 +38,6 @@ class ShowRow(Base):
     # that a quick sync may leave the album alone.
     album_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     assets_modified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # The files of the show changed and the media server has not yet confirmed that it knows.
-    # Set together with the files, cleared only after the media server answered.
-    media_server_pending: Mapped[bool] = mapped_column(default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -117,7 +114,9 @@ class FileRow(Base):
 
     __tablename__ = "file"
 
-    # Relative to the output folder, with forward slashes.
+    # The target whose output folder holds the file: `jellyfin` or `kodi`.
+    target: Mapped[str] = mapped_column(String(16), primary_key=True)
+    # Relative to the output folder of the target, with forward slashes.
     path: Mapped[str] = mapped_column(Text, primary_key=True)
     kind: Mapped[str] = mapped_column(String(16))
     album_id: Mapped[UUID] = mapped_column(ForeignKey("show.album_id"), index=True)
@@ -130,3 +129,13 @@ class FileRow(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class PendingRow(Base):
+    """A show whose files changed and that the media server of a target has not yet confirmed it
+    knows about. Written together with the files, removed only after the media server answered."""
+
+    __tablename__ = "media_server_pending"
+
+    target: Mapped[str] = mapped_column(String(16), primary_key=True)
+    album_id: Mapped[UUID] = mapped_column(ForeignKey("show.album_id"), primary_key=True)

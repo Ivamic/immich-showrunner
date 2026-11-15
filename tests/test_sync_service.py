@@ -14,7 +14,7 @@ from showrunner.immich.client import ImmichError
 from showrunner.model.show import Options, SkipReason
 from showrunner.store.registry import Registry
 from showrunner.sync.executor import MARKER_NAME, Executor
-from showrunner.sync.service import SyncReport, run_sync
+from showrunner.sync.service import Output, SyncReport, run_sync, sync_outputs
 from showrunner.targets.jellyfin.layout import JellyfinLayout
 
 pytestmark = pytest.mark.anyio
@@ -216,3 +216,45 @@ async def test_moved_original_gets_a_new_link_target(session: AsyncSession, out:
     report = await sync(immich, session, out)
     assert report.replaced == 1
     assert os.readlink(out / FILES[0]) == "/mnt/immich/library/2023/06/VID_1.mp4"
+
+
+class SecondTarget(JellyfinLayout):
+    """The Jellyfin layout under another name: a second output folder with its own registry."""
+
+    name = "kodi"
+
+
+@needs_links
+async def test_two_targets_read_immich_once(session: AsyncSession, tmp_path: Path) -> None:
+    immich, album = family()
+    first, second = tmp_path / "jellyfin", tmp_path / "kodi"
+    first.mkdir()
+    second.mkdir()
+    roots = [PurePosixPath("/mnt/immich")]
+    outputs = [
+        Output(JellyfinLayout(), Executor(first, roots), notify=True),
+        Output(SecondTarget(), Executor(second, roots)),
+    ]
+    async with immich.client() as client:
+        reports = await sync_outputs(
+            immich=client, registry=Registry(session), outputs=outputs, options=OPTIONS
+        )
+    assert [r.target for r in reports] == ["jellyfin", "kodi"]
+    assert tree(first) == ALL and tree(second) == ALL
+    assert all(r.created == len(ALL) for r in reports)
+    # Every album and every picture is read from Immich once for both targets.
+    assert sum(r.endswith("/thumbnail") for r in immich.requests) == len(THUMBS)
+    assert sum(r == "POST /api/search/metadata" for r in immich.requests) == 1
+    registry = Registry(session)
+    assert await registry.pending("jellyfin") == {album}
+    assert await registry.pending("kodi") == set()
+
+    # A file removed from one folder by hand is the business of that folder only.
+    (second / FILES[4]).unlink()
+    immich.add_video(album, 3, "2024-08-01T10:00:00")
+    async with immich.client() as client:
+        reports = await sync_outputs(
+            immich=client, registry=Registry(session), outputs=outputs, options=OPTIONS
+        )
+    assert [r.created for r in reports] == [3, 3]
+    assert not (second / FILES[4]).exists() and (first / FILES[4]).exists()

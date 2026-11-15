@@ -13,6 +13,7 @@ from showrunner.config import Settings
 from showrunner.immich.client import ImmichError
 from showrunner.runner import SetupError, sync_once
 from showrunner.sync.service import SyncReport
+from showrunner.targets.base import JELLYFIN
 
 log = logging.getLogger(__name__)
 
@@ -64,24 +65,31 @@ class State:
     force_next: bool = False
     full_next: bool = False
 
-    def record(self, report: SyncReport, notes: list[str]) -> None:
-        self.last_ok = report.ok
-        self.held = report.held
-        self.held_links_removed = report.plan.links_removed if report.held else 0
-        self.held_links_before = report.plan.links_before if report.held else 0
-        self.errors = list(report.errors)
-        self.last_error = "; ".join(report.errors) or (
-            "held: the sync would remove most of the links" if report.held else ""
+    def record(self, reports: list[SyncReport], notes: list[str]) -> None:
+        """Keep what a pass did, summed over its targets."""
+        held = [r for r in reports if r.held]
+        self.last_ok = all(r.ok for r in reports)
+        self.held = bool(held)
+        self.held_links_removed = sum(r.plan.links_removed for r in held)
+        self.held_links_before = sum(r.plan.links_before for r in held)
+        self.errors = [e for r in reports for e in r.errors]
+        self.last_error = "; ".join(self.errors) or (
+            "held: the sync would remove most of the links" if held else ""
         )
-        self.shows = report.albums
-        self.jellyfin_pending = report.media_server_pending
-        self.created, self.replaced, self.removed = report.created, report.replaced, report.removed
+        first = reports[0]
+        self.shows = first.albums
+        self.jellyfin_pending = sum(r.media_server_pending for r in reports if r.target == JELLYFIN)
+        self.created = sum(r.created for r in reports)
+        self.replaced = sum(r.replaced for r in reports)
+        self.removed = sum(r.removed for r in reports)
         self.notes = notes
-        self.skipped = [Skip(album, s.file_name, s.reason.value) for album, s in report.skipped][
+        self.skipped = [Skip(album, s.file_name, s.reason.value) for album, s in first.skipped][
             :MAX_LISTED
         ]
-        self.pictures_failed = report.pictures_failed[:MAX_LISTED]
-        self.foreign = [Foreign(str(o.action.path), o.detail) for o in report.foreign][:MAX_LISTED]
+        self.pictures_failed = [p for r in reports for p in r.pictures_failed][:MAX_LISTED]
+        self.foreign = [Foreign(str(o.action.path), o.detail) for r in reports for o in r.foreign][
+            :MAX_LISTED
+        ]
 
     def failed(self, message: str) -> None:
         self.last_ok, self.last_error, self.errors = False, message, [message]
@@ -105,7 +113,7 @@ async def one_pass(
     force, state.force_next, state.full_next = state.force_next, False, False
     state.running = True
     try:
-        report, notes = await sync_once(settings, sessions, full=full, force=force)
+        reports, notes = await sync_once(settings, sessions, full=full, force=force)
     except (ImmichError, SetupError, OSError) as exc:
         state.failed(str(exc))
         log.error("sync failed: %s", exc)
@@ -113,16 +121,18 @@ async def one_pass(
         state.failed(repr(exc))
         log.exception("sync failed")
     else:
-        state.record(report, notes)
-        if full and not report.held:
+        state.record(reports, notes)
+        if full and not state.held:
             state.last_full_sync_at = now
-        if not report.plan.is_empty:
-            log.info(
-                "sync: %d created, %d replaced, %d removed",
-                report.created,
-                report.replaced,
-                report.removed,
-            )
+        for report in reports:
+            if not report.plan.is_empty:
+                log.info(
+                    "sync %s: %d created, %d replaced, %d removed",
+                    report.target,
+                    report.created,
+                    report.replaced,
+                    report.removed,
+                )
         for note in notes:
             log.info("%s", note)
     finally:
