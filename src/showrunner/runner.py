@@ -15,10 +15,11 @@ from showrunner.model.show import Options
 from showrunner.store.registry import Registry
 from showrunner.sync.executor import Executor
 from showrunner.sync.service import Output, SyncReport, sync_outputs
-from showrunner.targets.base import JELLYFIN
+from showrunner.targets.base import JELLYFIN, KODI
 from showrunner.targets.jellyfin.client import JellyfinClient, JellyfinError, tell_jellyfin
 from showrunner.targets.jellyfin.layout import JellyfinLayout
 from showrunner.targets.jellyfin.people import tend_people
+from showrunner.targets.kodi.client import KodiClient, KodiError, tell_kodi
 from showrunner.targets.kodi.layout import KodiLayout
 
 log = logging.getLogger(__name__)
@@ -49,6 +50,14 @@ def jellyfin_client(settings: Settings) -> JellyfinClient | None:
     return JellyfinClient(settings.jellyfin_url, key)
 
 
+def kodi_client(settings: Settings) -> KodiClient | None:
+    if not settings.kodi_url:
+        return None
+    return KodiClient(
+        settings.kodi_url, settings.kodi_username, settings.kodi_password.get_secret_value()
+    )
+
+
 def jellyfin_output_path(settings: Settings) -> PurePosixPath:
     """The Jellyfin output folder as Jellyfin sees it."""
     folder = settings.jellyfin_dir
@@ -69,7 +78,11 @@ def outputs_from(settings: Settings, *, dry_run: bool) -> list[Output]:
         )
     if settings.kodi_output_dir is not None:
         outputs.append(
-            Output(KodiLayout(), None if dry_run else Executor(settings.kodi_output_dir, roots))
+            Output(
+                KodiLayout(),
+                None if dry_run else Executor(settings.kodi_output_dir, roots),
+                notify=kodi_client(settings) is not None,
+            )
         )
     if not outputs:
         raise SetupError(
@@ -129,7 +142,51 @@ async def sync_once(
     for report in reports:
         if report.target == JELLYFIN:
             notes.extend(await tell_jellyfin_of(settings, sessions, report))
+        elif report.target == KODI:
+            notes.extend(await tell_kodi_of(settings, sessions, report))
     return reports, notes
+
+
+async def tell_kodi_of(
+    settings: Settings, sessions: async_sessionmaker[AsyncSession], report: SyncReport
+) -> list[str]:
+    """Tell Kodi about every show queued for it. A failure is noted in the report; the shows
+    stay queued for the next pass (Kodi on a TV box is often off)."""
+    kodi = kodi_client(settings)
+    if kodi is None:
+        if report.changed_folders or report.gone_albums:
+            return ["Kodi is not configured: it shows the changes after an update of its library"]
+        return []
+    if not settings.kodi_output_path:
+        report.errors.append("SHOWRUNNER_KODI_OUTPUT_PATH is not set: Kodi was not told")
+        return []
+    notes: list[str] = []
+    async with sessions() as session:
+        registry = Registry(session)
+        try:
+            async with kodi:
+                notes.extend(await catch_up_kodi(kodi, registry, settings.kodi_output_path))
+        except KodiError as exc:
+            await session.rollback()
+            report.errors.append(f"Kodi was not told about the changes, will retry: {exc}")
+            log.warning("Kodi was not told about the changes, will retry: %s", exc)
+        report.media_server_pending = len(await registry.pending(KODI))
+    return notes
+
+
+async def catch_up_kodi(client: KodiClient, registry: Registry, output_path: str) -> list[str]:
+    """Tell Kodi about every show queued for it, then clear the queue. A show that has no files
+    any more (its album is no longer shared, or it is hidden on the page) is removed from Kodi."""
+    pending = await registry.pending(KODI)
+    if not pending:
+        return []
+    with_files = {entry.album_id for entry in await registry.entries(KODI)}
+    folders = {album: row.folder_name for album, row in (await registry.shows()).items()}
+    changed = {album: folders[album] for album in pending & with_files if album in folders}
+    done = await tell_kodi(client, output_path, changed, pending - with_files)
+    await registry.clear_pending(pending, KODI)
+    await registry.commit()
+    return done
 
 
 async def tell_jellyfin_of(

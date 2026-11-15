@@ -48,6 +48,7 @@
 	"status_last_changes": "Last changes",
 	"status_changes": "{created} added, {replaced} updated, {removed} removed",
 	"status_jellyfin_pending_label": "Waiting for Jellyfin",
+	"status_kodi_pending_label": "Waiting for Kodi",
 	"status_interval": "The app syncs every {minutes} min, and fully once an hour.",
 	"status_held_title": "The sync is held",
 	"status_held_text": "It would remove {removed} of {before} links. That looks like a wrong API key or user rather than albums that are no longer shared, so nothing was changed.",

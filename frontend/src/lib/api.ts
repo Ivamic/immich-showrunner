@@ -58,7 +58,9 @@ export interface Health {
 	held: boolean;
 	error: string;
 	shows: number;
+	targets: string[];
 	jellyfin_pending: number;
+	kodi_pending: number;
 	last_sync_at: string | null;
 	last_full_sync_at: string | null;
 	notes: string[];
@@ -76,7 +78,9 @@ export interface Status {
 	held_links_removed: number;
 	held_links_before: number;
 	shows: number;
+	targets: string[];
 	jellyfin_pending: number;
+	kodi_pending: number;
 	created: number;
 	replaced: number;
 	removed: number;

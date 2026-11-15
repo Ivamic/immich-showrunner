@@ -48,6 +48,7 @@
 	"status_last_changes": "Derniers changements",
 	"status_changes": "{created} ajoutés, {replaced} mis à jour, {removed} supprimés",
 	"status_jellyfin_pending_label": "En attente de Jellyfin",
+	"status_kodi_pending_label": "En attente de Kodi",
 	"status_interval": "L’application synchronise toutes les {minutes} min, et complètement une fois par heure.",
 	"status_held_title": "La synchronisation est retenue",
 	"status_held_text": "Elle supprimerait {removed} liens sur {before}. Cela ressemble plus à une mauvaise clé d’API ou à un mauvais utilisateur qu’à des albums qui ne sont plus partagés : rien n’a été modifié.",

@@ -106,8 +106,14 @@
 					removed: String(status.removed)
 				})}
 			</dd>
-			<dt>{m.status_jellyfin_pending_label()}</dt>
-			<dd>{status.jellyfin_pending}</dd>
+			{#if status.targets.includes('jellyfin')}
+				<dt>{m.status_jellyfin_pending_label()}</dt>
+				<dd>{status.jellyfin_pending}</dd>
+			{/if}
+			{#if status.targets.includes('kodi')}
+				<dt>{m.status_kodi_pending_label()}</dt>
+				<dd>{status.kodi_pending}</dd>
+			{/if}
 		</dl>
 		<p class="hint">
 			{m.status_interval({ minutes: String(Math.round(status.sync_interval_seconds / 60)) })}

@@ -48,6 +48,7 @@
 	"status_last_changes": "Letzte Änderungen",
 	"status_changes": "{created} hinzugefügt, {replaced} aktualisiert, {removed} entfernt",
 	"status_jellyfin_pending_label": "Warten auf Jellyfin",
+	"status_kodi_pending_label": "Warten auf Kodi",
 	"status_interval": "Die App synchronisiert alle {minutes} Min. und einmal pro Stunde vollständig.",
 	"status_held_title": "Die Synchronisierung ist angehalten",
 	"status_held_text": "Sie würde {removed} von {before} Verknüpfungen entfernen. Das sieht eher nach einem falschen API-Schlüssel oder Benutzer aus als nach nicht mehr geteilten Alben, daher wurde nichts geändert.",

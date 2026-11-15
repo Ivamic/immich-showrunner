@@ -48,6 +48,7 @@
 	"status_last_changes": "Последние изменения",
 	"status_changes": "добавлено {created}, обновлено {replaced}, удалено {removed}",
 	"status_jellyfin_pending_label": "Ждут Jellyfin",
+	"status_kodi_pending_label": "Ждут Kodi",
 	"status_interval": "Мост синхронизирует каждые {minutes} мин, полностью — раз в час.",
 	"status_held_title": "Синхронизация остановлена",
 	"status_held_text": "Она удалила бы {removed} из {before} ссылок. Это больше похоже на неверный ключ или пользователя, чем на альбомы, которыми перестали делиться, поэтому ничего не изменено.",

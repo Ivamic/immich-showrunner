@@ -13,7 +13,7 @@ from showrunner.config import Settings
 from showrunner.immich.client import ImmichError
 from showrunner.runner import SetupError, sync_once
 from showrunner.sync.service import SyncReport
-from showrunner.targets.base import JELLYFIN
+from showrunner.targets.base import JELLYFIN, KODI
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +51,10 @@ class State:
     held_links_removed: int = 0
     held_links_before: int = 0
     shows: int = 0
+    # The targets of the last pass, and the shows their media servers still have to be told about.
+    targets: list[str] = field(default_factory=list)
     jellyfin_pending: int = 0
+    kodi_pending: int = 0
     created: int = 0
     replaced: int = 0
     removed: int = 0
@@ -78,7 +81,9 @@ class State:
         )
         first = reports[0]
         self.shows = first.albums
+        self.targets = [r.target for r in reports]
         self.jellyfin_pending = sum(r.media_server_pending for r in reports if r.target == JELLYFIN)
+        self.kodi_pending = sum(r.media_server_pending for r in reports if r.target == KODI)
         self.created = sum(r.created for r in reports)
         self.replaced = sum(r.replaced for r in reports)
         self.removed = sum(r.removed for r in reports)

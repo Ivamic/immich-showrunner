@@ -20,12 +20,14 @@ from showrunner.runner import (
     immich_client,
     jellyfin_client,
     jellyfin_output_path,
+    kodi_client,
     sync_once,
 )
 from showrunner.store.db import make_engine, make_session_factory, upgrade
 from showrunner.sync.plan import ActionType
 from showrunner.sync.service import SyncReport
 from showrunner.targets.jellyfin.client import JellyfinError
+from showrunner.targets.kodi.client import KodiError, folder_path
 
 MAX_LISTED = 40
 
@@ -136,6 +138,25 @@ async def cmd_check(settings: Settings) -> int:
                 line(library is not None, f"Jellyfin has a library with the folder {folder}")
         except JellyfinError as exc:
             line(False, f"Jellyfin: {exc}")
+
+    kodi = kodi_client(settings)
+    if settings.kodi_output_dir is None:
+        if kodi is not None:
+            print("note  Kodi is configured, but it has no output folder")
+    elif kodi is None:
+        print("note  Kodi is not configured (SHOWRUNNER_KODI_URL): it is not told about changes")
+    else:
+        try:
+            async with kodi:
+                line(True, f"Kodi {await kodi.version()} at {settings.kodi_url}")
+                path = settings.kodi_output_path
+                if not path:
+                    line(False, "SHOWRUNNER_KODI_OUTPUT_PATH: where Kodi sees the output folder")
+                else:
+                    reaches = await kodi.can_open(folder_path(path))
+                    line(reaches, f"Kodi opens the folder {folder_path(path)}")
+        except KodiError as exc:
+            line(False, f"Kodi: {exc}")
     return 1 if failed else 0
 
 

@@ -34,7 +34,9 @@ class Status(BaseModel):
     held_links_removed: int
     held_links_before: int
     shows: int
+    targets: list[str]
     jellyfin_pending: int
+    kodi_pending: int
     created: int
     replaced: int
     removed: int
@@ -69,7 +71,9 @@ async def status(request: Request, user: CurrentUser) -> Status:
         held_links_removed=s.held_links_removed,
         held_links_before=s.held_links_before,
         shows=s.shows,
+        targets=s.targets,
         jellyfin_pending=s.jellyfin_pending,
+        kodi_pending=s.kodi_pending,
         created=s.created,
         replaced=s.replaced,
         removed=s.removed,

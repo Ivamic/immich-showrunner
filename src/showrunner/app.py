@@ -78,15 +78,17 @@ def create_app(
 
     @app.get("/api/health")
     async def health() -> dict[str, Any]:
-        """Always answers 200 while the server runs: a problem with Immich or Jellyfin is in the
-        body, so that a container health check does not restart the app because of them."""
+        """Always answers 200 while the server runs: a problem with Immich or a media server is
+        in the body, so that a container health check does not restart the app because of them."""
         return {
             "version": __version__,
             "ok": state.last_ok,
             "held": state.held,
             "error": state.last_error,
             "shows": state.shows,
+            "targets": state.targets,
             "jellyfin_pending": state.jellyfin_pending,
+            "kodi_pending": state.kodi_pending,
             "last_sync_at": state.last_sync_at.isoformat() if state.last_sync_at else None,
             "last_full_sync_at": (
                 state.last_full_sync_at.isoformat() if state.last_full_sync_at else None

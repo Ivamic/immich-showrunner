@@ -66,6 +66,15 @@ class Settings(BaseSettings):
     jellyfin_api_key: SecretStr = SecretStr("")
     jellyfin_output_path: str = ""
 
+    # Kodi: its address with the web server on (Settings, Services, Control), the user name and
+    # password set there, and the output folder as Kodi sees it, usually a network share such as
+    # `smb://server/share/kodi`. Without a URL the app only writes the folder, and Kodi shows
+    # changes only after an update of its library, changed titles not at all.
+    kodi_url: str = ""
+    kodi_username: str = "kodi"
+    kodi_password: SecretStr = SecretStr("")
+    kodi_output_path: str = ""
+
     # A short mark before the title of a show and before the name of a person. Empty: no mark.
     # Both are in the fonts of every client, Kodi included.
     show_prefix: str = "§ "
