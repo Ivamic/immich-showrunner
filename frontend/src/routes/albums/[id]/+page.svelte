@@ -47,7 +47,7 @@
 		if (id) load();
 	});
 
-	/** Runs a change, reloads the show and says that it is on its way to Jellyfin. */
+	/** Runs a change, reloads the show and says that it is on its way to the media server. */
 	async function change(action: () => Promise<unknown>) {
 		busy = true;
 		try {

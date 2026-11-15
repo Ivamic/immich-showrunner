@@ -147,7 +147,7 @@ export const thumbnailUrl = (assetId: string) => `/api/thumbnails/${assetId}`;
 
 export interface Person {
 	id: string;
-	/** The name for Jellyfin; empty: the person is not in Jellyfin. */
+	/** The name for the media server; empty: the person is not in it. */
 	name: string;
 	owner_names: string[];
 	shared_by: string[];

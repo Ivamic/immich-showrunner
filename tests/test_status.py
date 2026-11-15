@@ -135,3 +135,29 @@ def test_a_pass_with_two_targets_is_summed() -> None:
     assert state.last_ok is False and state.errors == ["kodi: create x: denied"]
     # Videos skipped in Immich are the same for every target and are listed once.
     assert len(state.skipped) == 1 and len(state.pictures_failed) == 2
+
+
+def test_access_log_leaves_out_reads_that_succeed() -> None:
+    import logging
+
+    from showrunner.app import QuietAccessLog
+
+    def record(method: str, path: str, status: int) -> logging.LogRecord:
+        return logging.LogRecord(
+            "uvicorn.access",
+            logging.INFO,
+            "",
+            0,
+            '%s - "%s %s HTTP/%s" %d',
+            ("192.0.2.5:5000", method, path, "1.1", status),
+            None,
+        )
+
+    quiet = QuietAccessLog()
+    assert not quiet.filter(record("GET", "/api/status", 200))
+    assert not quiet.filter(record("GET", "/_app/immutable/x.js", 200))
+    assert not quiet.filter(record("GET", "/albums/1", 304))
+    assert quiet.filter(record("PATCH", "/api/shows/1", 200))
+    assert quiet.filter(record("POST", "/api/sync", 202))
+    assert quiet.filter(record("GET", "/api/status", 401))
+    assert quiet.filter(record("GET", "/api/health", 500))

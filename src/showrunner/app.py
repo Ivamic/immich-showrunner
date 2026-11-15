@@ -2,6 +2,7 @@
 """The server: syncs on a schedule, serves the page and its API, answers `GET /api/health`."""
 
 import asyncio
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
@@ -20,6 +21,25 @@ from showrunner.api.errors import ApiError, api_error_handler
 from showrunner.config import Settings, get_settings
 from showrunner.scheduler import State, scheduler
 from showrunner.store.db import make_engine, make_session_factory, upgrade_async
+
+
+class QuietAccessLog(logging.Filter):
+    """Leaves out of the log the requests that only read and succeed: the files of the page, and
+    the status it asks for every few seconds. Changes and every error stay."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if isinstance(args, tuple) and len(args) >= 5:
+            method, status = args[1], args[4]
+            if method in ("GET", "HEAD") and isinstance(status, int) and status < 400:
+                return False
+        return True
+
+
+def quiet_access_log() -> None:
+    access = logging.getLogger("uvicorn.access")
+    if not any(isinstance(f, QuietAccessLog) for f in access.filters):
+        access.addFilter(QuietAccessLog())
 
 
 class SPAStaticFiles(StaticFiles):
@@ -44,6 +64,8 @@ def create_app(
 ) -> FastAPI:
     """The server. Tests pass their own settings, no scheduler and a fake Immich."""
     settings = settings or get_settings()
+    # uvicorn has set its logging up by now: it builds the app after that.
+    quiet_access_log()
     state = State()
 
     @asynccontextmanager

@@ -17,6 +17,8 @@ import httpx2
 from showrunner.targets.nfo import UNIQUE_ID_TYPE
 
 DEFAULT_TIMEOUT_S = 30.0
+# Kodi on a TV box is often off: the pass should not wait long for it.
+CONNECT_TIMEOUT_S = 5.0
 
 
 class KodiError(Exception):
@@ -50,12 +52,16 @@ class KodiClient:
         password: str,
         *,
         timeout: float = DEFAULT_TIMEOUT_S,
+        connect_timeout: float = CONNECT_TIMEOUT_S,
         transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
         token = base64.b64encode(f"{username}:{password}".encode()).decode()
         headers = {"Authorization": f"Basic {token}"} if username or password else {}
         self._http = httpx2.AsyncClient(
-            base_url=base_url.rstrip("/"), headers=headers, timeout=timeout, transport=transport
+            base_url=base_url.rstrip("/"),
+            headers=headers,
+            timeout=httpx2.Timeout(timeout, connect=connect_timeout),
+            transport=transport,
         )
         self._id = 0
 

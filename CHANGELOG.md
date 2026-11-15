@@ -24,6 +24,12 @@ between releases.
   `SHOWRUNNER_JELLYFIN_OUTPUT_DIR` outside compose.yaml). The old names `SHOWRUNNER_OUTPUT_LOCATION`
   and `SHOWRUNNER_OUTPUT_DIR` still work when the new ones are not set.
 - `/api/health` and the Status page show the targets and the queue of each media server.
+- **The web page speaks of the media server**, not of Jellyfin: the same words fit Jellyfin, Kodi or
+  both. The description of a person says that only Jellyfin shows it.
+- **A quieter log**: requests that only read and succeed (the files of the page, the status it asks
+  for every few seconds) are no longer logged; changes and errors are.
+- The app waits at most 5 seconds for Kodi to answer, so that a TV box that is off does not hold up
+  the sync.
 
 ### Fixed
 

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""People on the page: the people shared with the user of the app, their names for Jellyfin and
-their descriptions, and the invitations into a cluster group.
+"""People on the page: the people shared with the user of the app, their names for the media
+server and their descriptions, and the invitations into a cluster group.
 
 Reading is done with the read-only key of the sync. The two things that change Immich, a name and
 accepting an invitation, are done with the key the app keeps for the signed-in user, and only on
@@ -40,7 +40,7 @@ router = APIRouter(prefix="/people")
 
 class PersonOut(BaseModel):
     id: UUID
-    # The name for Jellyfin: the one the user of the app gave. Empty: not in Jellyfin.
+    # The name for the media server: the one the user of the app gave. Empty: not in it.
     name: str
     # What the owners call this person, for recognising them.
     owner_names: list[str]
@@ -66,7 +66,7 @@ class PeopleOut(BaseModel):
 
 
 class PersonPatch(BaseModel):
-    """A field that is sent changes. An empty name takes the person out of Jellyfin."""
+    """A field that is sent changes. An empty name takes the person out of the media server."""
 
     name: str | None = Field(default=None, max_length=200)
     description: str | None = Field(default=None, max_length=5000)

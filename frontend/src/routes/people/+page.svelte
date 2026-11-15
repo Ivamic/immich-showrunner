@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- People shared with the user of the app: their names for Jellyfin and their descriptions, and
+<!-- People shared with the user of the app: their names for the media server and their descriptions, and
      the invitations into a cluster group. -->
 <script lang="ts">
 	import {
@@ -140,7 +140,7 @@
 							</span>
 						{/if}
 						{#if !person.name}
-							<StatusBadge tone="neutral">{m.people_not_in_jellyfin()}</StatusBadge>
+							<StatusBadge tone="neutral">{m.people_not_in_media_server()}</StatusBadge>
 						{/if}
 						{#if person.description}<p class="description">{person.description}</p>{/if}
 					</div>

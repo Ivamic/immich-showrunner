@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Shows and episodes on the page: what the app makes of the shared albums, and the edits of the
-user on top. Every edit asks for a full pass, so that it reaches Jellyfin within seconds."""
+user on top. Every edit asks for a full pass, so that it reaches the media servers in seconds."""
 
 from dataclasses import replace
 from datetime import datetime, timedelta
