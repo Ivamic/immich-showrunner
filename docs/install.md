@@ -1,8 +1,11 @@
 # Installation
 
-Showrunner runs with Docker Compose on the machine that holds the Immich library. The media
-server (Jellyfin 12) must be able to read two folders: the Immich library and the output folder of
-Showrunner. It may run in Docker or be installed as a system package.
+Showrunner runs with Docker Compose on the machine that holds the Immich library. It writes a
+folder for Jellyfin 12, a folder for Kodi 21, or both. Jellyfin may run in Docker or be installed
+as a system package on the same machine, and must be able to read two folders: the Immich library
+and its output folder. Kodi runs anywhere on the home network and reads its folder over SMB.
+
+Kodi with the Jellyfin add-on needs no folder of its own: it shows what Jellyfin has.
 
 The image is published on GitHub Container Registry (`ghcr.io/ivamic/immich-showrunner`) for
 `amd64` and `arm64`. It can also be [built from the source](#building-from-source).
@@ -15,11 +18,11 @@ The image is published on GitHub Container Registry (`ghcr.io/ivamic/immich-show
    With such a key the app can not change anything in Immich.
 3. Share an album with that user. Every video of the album becomes an episode.
 
-## 2. The output folder
+## 2. The output folders
 
-Create an empty folder for the links and metadata, for example `/srv/showrunner/jellyfin`. The app writes
-only there. It must be on the machine where the media server can read both this folder and the
-Immich library.
+Create an empty folder for the links and metadata of each media server, for example
+`/srv/showrunner/jellyfin` and `/srv/showrunner/kodi`. The app writes only there. Jellyfin and
+Kodi need different file names, so each has a folder of its own; do not put one inside the other.
 
 ## 3. Settings
 
@@ -36,14 +39,31 @@ Set in `.env`:
 |---|---|
 | `SHOWRUNNER_IMMICH_URL` | Address of Immich as seen from this machine, e.g. `http://192.0.2.10:2283` (not `localhost`) |
 | `SHOWRUNNER_IMMICH_API_KEY` | The API key from step 1 |
-| `SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION` | The output folder from step 2. Called `SHOWRUNNER_OUTPUT_LOCATION` before 0.2; that name still works |
 | `SHOWRUNNER_PATH_MAP` | Where the media server sees the Immich library, see below |
 | `PUID`, `PGID` | Owner of the created files; the media server must be able to read them |
-| `SHOWRUNNER_JELLYFIN_URL`, `SHOWRUNNER_JELLYFIN_API_KEY` | Address of Jellyfin and an API key (Dashboard → API Keys) |
-| `SHOWRUNNER_JELLYFIN_OUTPUT_PATH` | Only with Jellyfin in Docker: where its container sees the output folder |
 | `DB_PASSWORD` | Any password of letters and digits for the app's own database |
 | `SHOWRUNNER_SECRET_KEY` | At least 32 random characters, for signing in to the web page (see below) |
 | `SHOWRUNNER_BIND` | `0.0.0.0` to open the web page to your home network; by default only this machine reaches it |
+
+For Jellyfin:
+
+| Setting | What it is |
+|---|---|
+| `SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION` | The Jellyfin folder from step 2. Called `SHOWRUNNER_OUTPUT_LOCATION` before 0.2; that name still works |
+| `SHOWRUNNER_JELLYFIN_URL`, `SHOWRUNNER_JELLYFIN_API_KEY` | Address of Jellyfin and an API key (Dashboard → API Keys) |
+| `SHOWRUNNER_JELLYFIN_OUTPUT_PATH` | Only with Jellyfin in Docker: where its container sees the folder |
+
+For Kodi (see [The library in Kodi](#6-the-library-in-kodi)):
+
+| Setting | What it is |
+|---|---|
+| `SHOWRUNNER_KODI_OUTPUT_LOCATION` | The Kodi folder from step 2 |
+| `SHOWRUNNER_KODI_URL` | Address of the web server of Kodi, e.g. `http://192.0.2.20:8080` |
+| `SHOWRUNNER_KODI_USERNAME`, `SHOWRUNNER_KODI_PASSWORD` | The user name and password set for that web server in Kodi |
+| `SHOWRUNNER_KODI_OUTPUT_PATH` | The folder as Kodi sees it: the path of the source in Kodi, e.g. `smb://192.0.2.10/showrunner-kodi` |
+
+Without a URL the app still writes the folder, and the media server shows the changes only after
+a scan of its library (changed titles not at all).
 
 ### The path mapping
 
@@ -54,9 +74,11 @@ Immich reports the path of a video as it is inside its container, for example
 - The left side is the folder inside the Immich container: `/data` since Immich 3 (the
   `UPLOAD_LOCATION` of Immich is mounted there).
 - The right side is the same folder as the media server sees it. With Jellyfin installed as a
-  package, that is the folder on the host: the value of `UPLOAD_LOCATION`. With Jellyfin in
-  Docker, it is the path where you mount the Immich library into the Jellyfin container
-  (read-only is enough).
+  package, and for Kodi, that is the folder on the host: the value of `UPLOAD_LOCATION` (Samba
+  follows the links on the host, see [step 6](#6-the-library-in-kodi)). With Jellyfin in Docker,
+  it is the path where you mount the Immich library into the Jellyfin container (read-only is
+  enough). Jellyfin in Docker together with Kodi needs the Immich library mounted in the Jellyfin
+  container at the same path as on the host.
 
 Example: Immich has `UPLOAD_LOCATION=/srv/immich/library`, Jellyfin is a system package:
 
@@ -85,14 +107,14 @@ every album is written again at once.
 ## 4. Check, try, start
 
 ```sh
-docker compose run --rm app check            # settings, Immich, Jellyfin, folders
+docker compose run --rm app check            # settings, Immich, Jellyfin, Kodi, folders
 docker compose run --rm app sync --dry-run   # what would be created; nothing is written
 docker compose up -d
 ```
 
 ## 5. The library in Jellyfin
 
-Add a library (Dashboard → Libraries) of the content type **Shows** with the output folder, and
+Add a library (Dashboard → Libraries) of the content type **Shows** with the Jellyfin folder, and
 set it up like this:
 
 | Setting | Value | Why |
@@ -115,7 +137,64 @@ leaves it alone: it removes only the files it created.
 Run `docker compose run --rm app check` again: it tells whether Jellyfin has a library with the
 output folder.
 
-## 6. The web page
+## 6. The library in Kodi
+
+Checked on Kodi 21.
+
+### Share the folder over SMB
+
+Kodi reads the folder over the network. The folder holds links into the Immich library, and Samba
+has to follow them on the server, outside the share. In `/etc/samba/smb.conf`:
+
+```ini
+[global]
+   allow insecure wide links = yes
+
+[showrunner-kodi]
+   path = /srv/showrunner/kodi
+   read only = yes
+   follow symlinks = yes
+   wide links = yes
+```
+
+Then `sudo systemctl restart smbd`. The user Kodi signs in with must be able to read the Immich
+library on the server, as the user of Jellyfin does. `wide links` lets the share follow any link
+in it; the folder holds only the links of the app, and the share is read-only. NFS does not work:
+there the client follows the links, and Kodi can not reach the paths of the server.
+
+### Add the source
+
+In Kodi: Videos → Files → Add videos → the share, e.g. `smb://192.0.2.10/showrunner-kodi`. Then
+set the content of the source:
+
+| Setting | Value |
+|---|---|
+| This directory contains | TV shows |
+| Choose information provider | Local information only |
+| Selected folder contains a single TV show | off |
+
+Every title, number, picture and face comes from the files of the app; Kodi looks nothing up on
+the internet. Set `SHOWRUNNER_KODI_OUTPUT_PATH` to the path of the source exactly as Kodi shows it.
+
+### Let the app tell Kodi
+
+Kodi does not read the files of a known episode again by itself: a new title or a removed video
+reaches it only when the app tells it. In Kodi: Settings → Services → Control:
+
+- Allow remote control via HTTP: on, with a user name and a password;
+- Allow remote control from applications on other systems: on.
+
+Set `SHOWRUNNER_KODI_URL`, `_USERNAME` and `_PASSWORD` in `.env` and run `check`. Kodi on a TV box
+is often off: the app keeps the changes until it answers (`kodi_pending` on the Status page).
+Every device with Kodi has its own library; the app tells one of them.
+
+### Names of files
+
+The files are named by the time of filming and an id, `2024-07-15 143211 [1898906754].mp4`; the
+season and the episode number are in the NFO file next to it. The name never holds the number:
+Kodi keeps its watched marks by file, and numbers move when a video is filmed between two others.
+
+## 7. The web page
 
 With `SHOWRUNNER_BIND=0.0.0.0` in `.env`, open `http://<your-server>:8790` from your home network
 (without it, the page is reachable only on the server itself). Sign in as the Immich user of the
@@ -132,37 +211,38 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
 On the page:
 
-- **Albums**: every shared album, as it will be a show in Jellyfin. Give a show its own title,
-  one season instead of a season per year of filming, or leave it out of Jellyfin. Rename the
+- **Albums**: every shared album, as it will be a show. Give a show its own title, one season
+  instead of a season per year of filming, or leave it out of the media server. Rename the
   episodes, give them a description, move them up and down within their season, or hide them.
-  Every change reaches Jellyfin within a minute, and can be reset to what Immich says.
-- **People**: the people shared with the user of the app (see below), their names for Jellyfin and
-  their descriptions.
+  Every change reaches Jellyfin and Kodi within a minute, and can be reset to what Immich says.
+- **People**: the people shared with the user of the app (see below), their names for the media
+  server and their descriptions.
 - **Status**: the last sync, what it could not do, and a button to sync now.
 
 If Immich signs in only through OAuth, sign in with an API key of the user of the app instead.
 To name people from the page, that key needs `person.update`, `clusterGroup.read`,
 `clusterGroupRequest.read` and `clusterGroupRequest.create`.
 
-## 7. People
+## 8. People
 
-People in Immich belong to the owner of the videos. To have them in Jellyfin under names of their
-own ("Mum" can stay "Mum" in the owner's library):
+People in Immich belong to the owner of the videos. To have them in the media server under names of
+their own ("Mum" can stay "Mum" in the owner's library):
 
 1. The owner invites the user of the app into their group: Account Settings → Sharing.
 2. On the People page of Showrunner, accept the invitation.
 3. The owner shares people with the user of the app: People → a person → Manage access.
-4. On the People page, give each of them a name for Jellyfin. The name is written to Immich for the
-   user of the app only.
+4. On the People page, give each of them a name for the media server. The name is written to
+   Immich for the user of the app only.
 
-A person without such a name is not in Jellyfin. People appear with the prefix
-(`SHOWRUNNER_PERSON_PREFIX`), with their face from Immich, and are locked in Jellyfin, so that it
-does not fill them in with a namesake from TMDB.
+A person without such a name is not in the media server. People appear with the prefix
+(`SHOWRUNNER_PERSON_PREFIX`) and with their face from Immich. In Jellyfin they are locked, so that
+it does not fill them in with a namesake from TMDB; Kodi with "Local information only" looks
+nothing up. The descriptions of people reach Jellyfin only.
 
 > **One group only.** An Immich user is in one group at a time. Accepting the invitation of
 > another group takes the user of the app out of the current one, and the people shared there are
-> lost for Jellyfin; in our tests they did not come back by joining again. All owners whose people
-> should be in Jellyfin have to be in the same group. The page accepts an invitation only while the
+> lost for the media server; in our tests they did not come back by joining again. All owners whose people
+> should be in the media server have to be in the same group. The page accepts an invitation only while the
 > user of the app is alone in its group.
 
 ## Updating
@@ -174,7 +254,7 @@ docker compose up -d
 
 `compose.yaml` pulls the newest release of the major version (`0` for now), so these two commands
 are all an update needs; the database is brought to the new version when the app starts. To stay
-on one version, set `SHOWRUNNER_VERSION=0.1.0` in `.env`. Read the release notes before an update:
+on one version, set `SHOWRUNNER_VERSION=0.2.0` in `.env`. Read the release notes before an update:
 they say when anything else is needed.
 
 ## Commands
@@ -194,12 +274,13 @@ the sync with `--force`.
 
 ## What the app will and will not do
 
-- It writes only to the output folder, and removes there only what it created. A file you put
+- It writes only to its output folders, and removes there only what it created. A file you put
   there or changed by hand is left alone.
 - It never opens, changes, moves or removes a file of the Immich library; the library is not even
   mounted into its container.
 - When Immich does not answer, nothing is removed.
-- The folder of a show keeps its name when the album is renamed; the title changes in Jellyfin.
+- The folder of a show keeps its name when the album is renamed; the title changes in the media
+  server.
   Watched marks survive renaming, new videos in the middle of an album, episodes moved on the
   page, and an album that was unshared and shared again. Switching a show between seasons by year
   and one season numbers its episodes anew, and their watched marks may be lost.
@@ -213,8 +294,13 @@ the sync with `--force`.
 | The show is in Jellyfin, but a video does not play | The media server can not read the file behind the link. With Jellyfin as a package: `sudo -u jellyfin head -c 16 <a link>`; if that fails, `namei -l` on the target shows the folder without read rights |
 | The last show stays in Jellyfin after its album is unshared | Fixed since 0.1.0 (the app keeps a hidden file `.showrunner` in the output folder; do not delete it). Run a library scan in Jellyfin once |
 | Changes do not reach Jellyfin | `SHOWRUNNER_JELLYFIN_URL` and `_API_KEY`; while Jellyfin is down the app keeps trying, see `jellyfin_pending` on the Status page |
+| Kodi shows many seasons, or every video twice | The source points at the Jellyfin folder; Kodi needs its own folder (`SHOWRUNNER_KODI_OUTPUT_LOCATION`) |
+| Kodi lists the files, but the videos do not play | Samba does not follow the links: `follow symlinks` and `wide links` in the share, `allow insecure wide links` in `[global]`, and the Samba user must be able to read the Immich library |
+| `check` says Kodi did not answer | The web server of Kodi is off, "Allow remote control from applications on other systems" is off, or Kodi is asleep; changes wait in `kodi_pending` |
+| `check` says Kodi can not open the folder | `SHOWRUNNER_KODI_OUTPUT_PATH` must be the path of the source exactly as Kodi shows it |
+| New titles do not reach Kodi | Kodi reads the files of a known episode again only when it is told: set `SHOWRUNNER_KODI_URL`, or refresh the show in Kodi (Information → Refresh) |
 | The page says "Signing in is not set up" | Set `SHOWRUNNER_SECRET_KEY` in `.env` and run `docker compose up -d` |
-| People do not appear in Jellyfin | They need a name on the People page; see [People](#7-people) |
+| People do not appear in the media server | They need a name on the People page; see [People](#8-people) |
 
 ## Building from source
 

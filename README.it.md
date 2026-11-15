@@ -5,7 +5,7 @@
 <h1 align="center">Showrunner for Immich</h1>
 
 <p align="center">
-  I tuoi album di Immich come serie in Jellyfin — ogni video un episodio, nessun file copiato.
+  I tuoi album di Immich come serie in Jellyfin e Kodi — ogni video un episodio, nessun file copiato.
 </p>
 
 <p align="center">
@@ -19,24 +19,26 @@
   <a href="README.md">English</a> · <a href="README.de.md">Deutsch</a> · <a href="README.fr.md">Français</a> · <b>Italiano</b> · <a href="README.ru.md">Русский</a>
 </p>
 
-> **Stato: sviluppo iniziale.** Gli album condivisi diventano serie in Jellyfin con locandine,
-> immagini e persone, seguono le modifiche in Immich e si correggono su una pagina web. Aspettati
+> **Stato: sviluppo iniziale.** Gli album condivisi diventano serie in Jellyfin e Kodi con
+> locandine, immagini e persone, seguono le modifiche in Immich e si correggono su una pagina web. Aspettati
 > errori e cambiamenti tra le versioni.
 
-Funziona con Immich 3 e Jellyfin 12; Jellyfin può girare in Docker o essere installato come
-pacchetto.
+Funziona con Immich 3, Jellyfin 12 e Kodi 21; Jellyfin può girare in Docker o essere installato
+come pacchetto, Kodi legge la sua cartella via SMB.
 
 Un’app di accompagnamento self-hosted per [Immich](https://immich.app). Fa comparire i video dei
-tuoi album di Immich in [Jellyfin](https://jellyfin.org) come normali elementi della libreria: un
-album diventa una serie, ogni video un episodio, nell’ordine delle riprese. I file video restano
-dove sono; il media server riceve una cartella di collegamenti con i metadati accanto.
+tuoi album di Immich in [Jellyfin](https://jellyfin.org) e [Kodi](https://kodi.tv) come normali
+elementi della libreria: un album diventa una serie, ogni video un episodio, nell’ordine delle
+riprese. I file video restano dove sono; ogni media server riceve una cartella di collegamenti con
+i metadati accanto.
 
-Caso tipico: un archivio video di famiglia tenuto in Immich, guardato in TV tramite Jellyfin.
+Caso tipico: un archivio video di famiglia tenuto in Immich, guardato in TV tramite Jellyfin o
+Kodi.
 
 ## Idea
 
 - **Scegli in Immich, non in un’altra app.** Crea in Immich un utente per il media server e
-  condividi un album con lui: i suoi video compaiono in Jellyfin. Smetti di condividerlo, e
+  condividi un album con lui: i suoi video compaiono nel media server. Smetti di condividerlo, e
   spariscono.
 - **Album = serie, video = episodio.** Le stagioni sono gli anni delle riprese, oppure una sola
   stagione per album. Il titolo di un episodio è la prima riga della descrizione del video in
@@ -47,30 +49,32 @@ Caso tipico: un archivio video di famiglia tenuto in Immich, guardato in TV tram
 - **Funziona da solo**, con una pagina web per i casi in cui ha indovinato male: rinominare una
   serie o un episodio, cambiare l’ordine, nascondere un video, dare un nome e una descrizione alle
   persone. In inglese, tedesco, francese, italiano e russo.
-- **Prima Jellyfin.** Kodi con l’add-on di Jellyfin vede le serie tramite Jellyfin; Kodi da solo è
-  previsto come secondo obiettivo.
+- **Jellyfin, Kodi o entrambi.** Una cartella per ciascuno, dagli stessi album e con le stesse
+  correzioni, ed entrambi vengono avvisati di ogni modifica. Kodi non ha bisogno di add-on e non
+  cerca nulla su internet; Kodi con l’add-on di Jellyfin vede le serie tramite Jellyfin.
 
 ## Principi
 
 - **Nessuna copia.** Nessun file video viene duplicato.
 - **La libreria di Immich è in sola lettura.** L’app non modifica, sposta o elimina mai i file di
-  Immich. Scrive solo nella propria cartella e lì rimuove solo ciò che ha creato.
+  Immich. Scrive solo nelle proprie cartelle e lì rimuove solo ciò che ha creato.
 - **Niente viene scritto in Immich da solo.** La sincronizzazione in background usa una chiave API
   in sola lettura e le tue correzioni restano nel database dell’app. Le eccezioni sono ciò che fai
   tu stesso sulla pagina per l’utente del media server: dare un nome a una persona condivisa con
   lui (solo per quell’utente) e accettare un invito in un gruppo.
-- **Ricostruibile.** La cartella per il media server può essere eliminata e ricostruita.
+- **Ricostruibile.** Le cartelle per i media server possono essere eliminate e ricostruite.
 
 ## Installazione
 
 Showrunner gira con Docker Compose sulla macchina che ospita la libreria di Immich; Jellyfin può
-girare in Docker o essere installato come pacchetto. L’immagine è già pronta, per `amd64` e `arm64`:
+girare in Docker o essere installato come pacchetto, e Kodi legge la sua cartella via SMB.
+L’immagine è già pronta, per `amd64` e `arm64`:
 
 ```sh
 mkdir immich-showrunner && cd immich-showrunner
 curl -L -o compose.yaml https://github.com/Ivamic/immich-showrunner/releases/latest/download/compose.yaml
 curl -L -o example.env https://github.com/Ivamic/immich-showrunner/releases/latest/download/example.env
-cp example.env .env      # indirizzi e chiavi di Immich e Jellyfin, cartelle
+cp example.env .env      # indirizzi e chiavi di Immich, Jellyfin e Kodi, cartelle
 docker compose run --rm app check
 docker compose run --rm app sync --dry-run
 docker compose up -d
@@ -78,13 +82,13 @@ docker compose up -d
 
 Aggiornamento: `docker compose pull && docker compose up -d`. [Installazione passo
 passo](docs/install.md) (in inglese): l’utente e la chiave API in Immich, la mappatura dei percorsi,
-la libreria in Jellyfin, la pagina web, le persone.
+le librerie in Jellyfin e Kodi, la pagina web, le persone.
 
 ## Architettura
 
 - Python (FastAPI), PostgreSQL; un container per l’app e uno per il suo database.
 - La pagina web è un’app SvelteKit inclusa nell’immagine e servita dall’app.
-- Il container dell’app monta solo la sua cartella di output. Legge Immich tramite l’API con una
+- Il container dell’app monta solo le sue cartelle di output. Legge Immich tramite l’API con una
   chiave in sola lettura e non vede mai i file della libreria.
 - Una sincronizzazione prima prepara un piano da ciò che riporta Immich e dal registro dei file
   creati dall’app, poi lo esegue; `sync --dry-run` si ferma dopo il piano.

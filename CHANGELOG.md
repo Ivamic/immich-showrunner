@@ -7,6 +7,24 @@ between releases.
 
 ## [Unreleased]
 
+### Added
+
+- **Kodi.** A folder of its own for Kodi 21 with "Local information only", next to the Jellyfin
+  one or instead of it (`SHOWRUNNER_KODI_OUTPUT_LOCATION`), shared over SMB. Files are named by the
+  time of filming (`2024-07-15 143211 [1898906754].mp4`), the season and the number are in the NFO,
+  so watched marks stay when a video is filmed between two others. The faces of people come from
+  Immich. With `SHOWRUNNER_KODI_URL` the app tells Kodi about every change over JSON-RPC, and keeps
+  the changes while Kodi is off (`kodi_pending`). `check` reaches Kodi and its folder.
+
+### Changed
+
+- **Jellyfin is optional**: the app needs a folder for Jellyfin, for Kodi, or both. Immich is read
+  once per pass for all of them.
+- **The Jellyfin folder** is set with `SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION` (and
+  `SHOWRUNNER_JELLYFIN_OUTPUT_DIR` outside compose.yaml). The old names `SHOWRUNNER_OUTPUT_LOCATION`
+  and `SHOWRUNNER_OUTPUT_DIR` still work when the new ones are not set.
+- `/api/health` and the Status page show the targets and the queue of each media server.
+
 ## [0.1.1] - 2026-11-14
 
 ### Changed
