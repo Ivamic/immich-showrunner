@@ -149,7 +149,8 @@ async def tell_kodi(
     """Make Kodi notice what changed. `changed` maps the albums whose files changed to their
     folders; `gone` are albums that are no longer shown. Kodi runs these as jobs one after
     another, in the order they are sent. Raises KodiError when Kodi can not be told now, or when
-    it can not open the output folder: a clean then would take every show for removed."""
+    it can not open the output folder or the folder of a changed show: a clean then would take
+    their episodes for removed."""
     done: list[str] = []
     if not changed and not gone:
         return done
@@ -161,6 +162,12 @@ async def tell_kodi(
         if album in known:
             await client.remove_show(known[album])
             done.append(f"Kodi: removed the show of album {album}")
+    for album in sorted(changed.keys() & known.keys(), key=str):
+        folder = folder_path(output_path, changed[album])
+        # A show with files that Kodi does not find: a clean now would remove its episodes, and
+        # their watched marks with them.
+        if not await client.can_open(folder):
+            raise KodiError(f"Kodi can not open {folder} now")
     for album in sorted(changed.keys() & known.keys(), key=str):
         await client.clean(folder_path(output_path, changed[album]))
     if changed:

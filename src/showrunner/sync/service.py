@@ -19,7 +19,7 @@ from showrunner.immich.models import Album
 from showrunner.model.naming import show_folder_name
 from showrunner.model.show import Options, SeasonMode, Show, Skipped, build_show
 from showrunner.store.registry import Registry
-from showrunner.sync.executor import Executor, Outcome, Result, UnsafePathError
+from showrunner.sync.executor import MARKER_NAME, Executor, Outcome, Result, UnsafePathError
 from showrunner.sync.plan import Action, ActionType, Plan, make_plan
 from showrunner.targets.base import DesiredFile, ImageSource, Target
 
@@ -61,10 +61,13 @@ class SyncReport:
     people: dict[str, UUID] = field(default_factory=dict)
     # Albums whose files could not all be written; their stamps are not moved on.
     failed_albums: set[UUID] = field(default_factory=set)
+    # The output folder has lost the files the app wrote there (a disk that is not mounted, a
+    # folder replaced): nothing was written to it.
+    folder_missing: bool = False
 
     @property
     def ok(self) -> bool:
-        return not self.held and not self.errors
+        return not self.held and not self.folder_missing and not self.errors
 
 
 @dataclass(frozen=True)
@@ -169,9 +172,10 @@ async def apply_output(
     desired: list[DesiredFile] = []
     for show, folder in view.shows:
         desired.extend(output.target.files(show, folder))
+    recorded = await registry.entries(name)
     plan = make_plan(
         desired,
-        await registry.entries(name),
+        recorded,
         untouched_albums=view.untouched,
         removed_on_purpose=view.hidden,
     )
@@ -193,6 +197,19 @@ async def apply_output(
         return report
     executor = output.executor
     if executor is None:
+        return report
+    if recorded and not executor.has_marker():
+        # The app wrote here before, and its marker is gone: most likely the disk is not mounted
+        # and this is the empty folder under it. Writing now would put files on another disk, and
+        # the media server would take every show for removed.
+        report.folder_missing = True
+        report.changed_folders, report.gone_albums = {}, frozenset()
+        message = (
+            f"{name}: the output folder has lost its {MARKER_NAME} file: is the disk mounted? "
+            "Nothing was written there"
+        )
+        report.errors.append(message)
+        log.error("%s", message)
         return report
 
     cache = {} if pictures is None else pictures
@@ -227,10 +244,10 @@ async def apply_output(
 
 async def finish_pass(view: ImmichView, registry: Registry, reports: Sequence[SyncReport]) -> None:
     """Remember the people and how the albums looked, then commit everything the targets wrote.
-    When a target held a mass removal, no album is stamped: the next quick pass must look at
-    them all again."""
+    When a target held a mass removal or could not reach its folder, no album is stamped: the next
+    quick pass must look at them all again."""
     await registry.remember_people(view.people)
-    if not any(report.held for report in reports):
+    if not any(report.held or report.folder_missing for report in reports):
         failed = set().union(*(report.failed_albums for report in reports))
         for album in view.read:
             if album.id not in failed:

@@ -22,7 +22,10 @@ The image is published on GitHub Container Registry (`ghcr.io/ivamic/immich-show
 
 Create an empty folder for the links and metadata of each media server, for example
 `/srv/showrunner/jellyfin` and `/srv/showrunner/kodi`. The app writes only there. Jellyfin and
-Kodi need different file names, so each has a folder of its own; do not put one inside the other.
+Kodi need different file names, so each has a folder of its own; do not put one inside the other. The
+folders may be on other disks than the Immich library; links work across disks. If a disk with an
+output folder is not mounted, the app finds the empty folder under it without its hidden file
+`.showrunner`, writes nothing there and says so on the Status page.
 
 ## 3. Settings
 

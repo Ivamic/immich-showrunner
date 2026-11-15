@@ -26,9 +26,10 @@ OUTPUT = "smb://server/bridge/kodi"
 
 
 class FakeKodi:
-    def __init__(self, *, reachable_folder: bool = True) -> None:
+    def __init__(self, *, reachable_folder: bool = True, missing: str = "") -> None:
         self.calls: list[tuple[str, dict[str, Any]]] = []
         self.reachable_folder = reachable_folder
+        self.missing = missing
         self.auth: str | None = None
 
     def handler(self, request: httpx2.Request) -> httpx2.Response:
@@ -46,7 +47,9 @@ class FakeKodi:
                     {"tvshowid": 14, "uniqueid": {"immich": "not-an-id"}},
                 ]
             }
-        elif method == "Files.GetDirectory" and not self.reachable_folder:
+        elif method == "Files.GetDirectory" and (
+            not self.reachable_folder or (self.missing and self.missing in params["directory"])
+        ):
             return httpx2.Response(
                 200, json={"id": body["id"], "jsonrpc": "2.0", "error": {"message": "Invalid"}}
             )
@@ -91,11 +94,13 @@ async def test_changed_shows_are_cleaned_scanned_and_refreshed() -> None:
     assert kodi.methods() == [
         "Files.GetDirectory",
         "VideoLibrary.GetTVShows",
+        "Files.GetDirectory",
         "VideoLibrary.Clean",
         "VideoLibrary.Scan",
         "VideoLibrary.RefreshTVShow",
     ]
-    clean, scan, refresh = (params for _, params in kodi.calls[2:])
+    assert kodi.calls[2][1]["directory"] == f"{OUTPUT}/Summer [imm-97769e09]/"
+    clean, scan, refresh = (params for _, params in kodi.calls[3:])
     # The clean is limited to the folder of the show: Kodi never cleans the rest of the library.
     assert clean["directory"] == f"{OUTPUT}/Summer [imm-97769e09]/"
     assert scan["directory"] == f"{OUTPUT}/"
@@ -143,3 +148,11 @@ async def test_kodi_off_or_wrong_password() -> None:
     async with KodiClient("http://kodi.test", "kodi", "x", transport=transport) as c:
         with pytest.raises(KodiAuthError):
             await c.version()
+
+
+async def test_nothing_is_cleaned_when_kodi_can_not_open_the_folder_of_a_show() -> None:
+    kodi = FakeKodi(missing="Summer")
+    async with kodi.client() as client:
+        with pytest.raises(KodiError, match="Summer"):
+            await tell_kodi(client, OUTPUT, {A1: "Summer [imm-97769e09]"}, set())
+    assert "VideoLibrary.Clean" not in kodi.methods()

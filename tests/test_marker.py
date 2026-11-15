@@ -19,3 +19,10 @@ def test_marker_does_not_replace_a_folder(tmp_path: Path) -> None:
     (tmp_path / MARKER_NAME).mkdir()
     Executor(tmp_path, [PurePosixPath("/mnt/immich")]).ensure_marker()
     assert (tmp_path / MARKER_NAME).is_dir()
+
+
+def test_has_marker(tmp_path: Path) -> None:
+    executor = Executor(tmp_path, [PurePosixPath("/mnt/immich")])
+    assert not executor.has_marker()
+    executor.ensure_marker()
+    assert executor.has_marker()

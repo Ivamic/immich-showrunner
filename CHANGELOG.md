@@ -25,6 +25,12 @@ between releases.
   and `SHOWRUNNER_OUTPUT_DIR` still work when the new ones are not set.
 - `/api/health` and the Status page show the targets and the queue of each media server.
 
+### Fixed
+
+- **A disk that is not mounted.** An output folder that has lost its hidden `.showrunner` file
+  while the app has files there is left alone, with "is the disk mounted?" on the Status page:
+  before, the app wrote into the empty mount point, on another disk.
+
 ## [0.1.1] - 2026-11-14
 
 ### Changed

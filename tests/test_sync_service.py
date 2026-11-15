@@ -285,3 +285,33 @@ async def test_a_kodi_folder_alone(session: AsyncSession, out: Path) -> None:
     assert (out / FOLDER / ".actors" / "Anna.jpg").read_bytes() == f"JPEG face {anna}".encode()
     assert report.target == "kodi" and report.created == 8 and report.ok
     assert await Registry(session).entries("jellyfin") == []
+
+
+@needs_links
+async def test_nothing_is_written_to_a_folder_that_lost_its_marker(
+    session: AsyncSession, tmp_path: Path
+) -> None:
+    """A disk that is not mounted leaves an empty folder: the app must not fill it."""
+    immich, album = family()
+    out = tmp_path / "disk"
+    out.mkdir()
+    await sync(immich, session, out)
+    assert tree(out) == ALL
+
+    # The disk is gone: the same path is now an empty folder on another disk.
+    mounted = tmp_path / "disk-away"
+    out.rename(mounted)
+    out.mkdir()
+    immich.add_video(album, 3, "2024-08-01T10:00:00")
+    report = await sync(immich, session, out)
+    assert report.folder_missing and not report.ok
+    assert "is the disk mounted" in report.errors[0]
+    assert report.created == report.removed == 0 and report.changed_folders == {}
+    assert list(out.iterdir()) == []
+    assert len(await Registry(session).entries()) == len(ALL)
+
+    # The disk is back: the pass goes on as if nothing had happened, the new video included.
+    out.rmdir()
+    mounted.rename(out)
+    report = await sync(immich, session, out)
+    assert report.ok and report.created == 3 and report.removed == 0

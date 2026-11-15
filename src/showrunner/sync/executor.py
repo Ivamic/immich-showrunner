@@ -80,6 +80,10 @@ class Executor:
         self._root = output_dir.resolve(strict=True)
         self._link_roots = tuple(link_roots)
 
+    def has_marker(self) -> bool:
+        path = self._root / MARKER_NAME
+        return path.is_symlink() or path.exists()
+
     def ensure_marker(self) -> None:
         """Put the marker file into the output folder, unless something is already at its name."""
         path = self._root / MARKER_NAME

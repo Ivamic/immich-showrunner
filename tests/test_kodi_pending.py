@@ -131,11 +131,12 @@ async def test_changed_show_is_refreshed_and_hidden_show_is_removed(
         "Files.GetDirectory",
         "VideoLibrary.GetTVShows",
         "VideoLibrary.RemoveTVShow",
+        "Files.GetDirectory",
         "VideoLibrary.Clean",
         "VideoLibrary.Scan",
         "VideoLibrary.RefreshTVShow",
     ]
     assert kodi.calls[2][1] == {"tvshowid": 22}
-    assert kodi.calls[3][1]["directory"] == f"{OUTPUT}/Kept [imm-00000001]/"
-    assert kodi.calls[5][1]["tvshowid"] == 21
+    assert kodi.calls[4][1]["directory"] == f"{OUTPUT}/Kept [imm-00000001]/"
+    assert kodi.calls[6][1]["tvshowid"] == 21
     assert f"Kodi: removed the show of album {hidden}" in done
