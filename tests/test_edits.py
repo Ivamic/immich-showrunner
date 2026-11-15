@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Edits made on the page: titles, plots, order, hidden episodes and shows."""
 
+import asyncio
 import os
 from collections.abc import Iterator
 from datetime import UTC, datetime
@@ -18,11 +19,12 @@ from showrunner.app import create_app
 from showrunner.config import Settings, parse_path_map
 from showrunner.immich.models import Album, Asset, ExifInfo
 from showrunner.model.show import EpisodeEdit, Options, ShowEdit, build_show
+from showrunner.store.db import make_engine, make_session_factory
 from showrunner.store.registry import Registry
 from showrunner.sync.executor import Executor
 from showrunner.sync.plan import Entry, make_plan
 from showrunner.sync.service import SyncReport, run_sync
-from showrunner.targets.base import FileKind
+from showrunner.targets.base import DesiredFile, FileKind
 from showrunner.targets.jellyfin.layout import JellyfinLayout
 from test_auth import APP_KEY, SECRET, Immich
 
@@ -299,3 +301,32 @@ async def test_hiding_a_big_show_removes_it_without_being_held(
     await session.commit()
     await sync()
     assert len(list(out.rglob("*.mp4"))) == 30
+
+
+def test_episodes_are_counted_once_for_two_targets(
+    client: TestClient, world: World, empty_database: str
+) -> None:
+    """Jellyfin and Kodi each have a link to the same video: the album still has one episode."""
+
+    async def record() -> None:
+        engine = make_engine(empty_database)
+        async with make_session_factory(engine)() as session:
+            registry = Registry(session)
+            await registry.add_show(world.album, "Family")
+            for target in ("jellyfin", "kodi"):
+                for n in (1, 2):
+                    await registry.record(
+                        DesiredFile(
+                            PurePosixPath(f"{target}/v{n}.mp4"),
+                            FileKind.LINK,
+                            world.album,
+                            asset_id(n),
+                            link_target=PurePosixPath(f"/mnt/immich/v{n}.mp4"),
+                        ),
+                        target,
+                    )
+            await registry.commit()
+        await engine.dispose()
+
+    asyncio.run(record())
+    assert [s["episodes"] for s in client.get("/api/shows").json()] == [2]

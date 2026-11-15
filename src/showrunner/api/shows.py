@@ -101,8 +101,10 @@ AlbumsDep = Annotated[dict[UUID, Album], Depends(visible_albums)]
 
 
 async def episode_counts(db: DbDep) -> dict[UUID, int]:
+    """Videos with a link, per album. Every target has a link of its own to the same video, so the
+    videos are counted, not the links."""
     rows = await db.execute(
-        select(FileRow.album_id, func.count())
+        select(FileRow.album_id, func.count(FileRow.asset_id.distinct()))
         .where(FileRow.kind == FileKind.LINK.value)
         .group_by(FileRow.album_id)
     )
