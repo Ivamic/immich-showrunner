@@ -7,6 +7,8 @@ between releases.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-15
+
 ### Added
 
 - **Kodi.** A folder of its own for Kodi 21 with "Local information only", next to the Jellyfin
@@ -36,6 +38,11 @@ between releases.
 - **A disk that is not mounted.** An output folder that has lost its hidden `.showrunner` file
   while the app has files there is left alone, with "is the disk mounted?" on the Status page:
   before, the app wrote into the empty mount point, on another disk.
+
+### Security
+
+- Dependencies that ship checked again: no known vulnerabilities. The build tools of the web page
+  still have the two findings of 0.1.0, which do not reach the image.
 
 ## [0.1.1] - 2026-11-14
 
