@@ -182,10 +182,10 @@ the internet. Set `SHOWRUNNER_KODI_OUTPUT_PATH` to the path of the source exactl
 ### Let the app tell Kodi
 
 Kodi does not read the files of a known episode again by itself: a new title or a removed video
-reaches it only when the app tells it. In Kodi: Settings → Services → Control:
-
-- Allow remote control via HTTP: on, with a user name and a password;
-- Allow remote control from applications on other systems: on.
+reaches it only when the app tells it. In Kodi: Settings → Services → Control → Allow remote
+control via HTTP: on, with a user name and a password. The app talks to that web server (port 8080
+by default) from another machine; "Allow remote control from applications on other systems" is not
+needed for it. A firewall on the machine of Kodi has to let the app reach that port.
 
 Set `SHOWRUNNER_KODI_URL`, `_USERNAME` and `_PASSWORD` in `.env` and run `check`. Kodi on a TV box
 is often off: the app keeps the changes until it answers (`kodi_pending` on the Status page).
@@ -299,7 +299,7 @@ the sync with `--force`.
 | Changes do not reach Jellyfin | `SHOWRUNNER_JELLYFIN_URL` and `_API_KEY`; while Jellyfin is down the app keeps trying, see `jellyfin_pending` on the Status page |
 | Kodi shows many seasons, or every video twice | The source points at the Jellyfin folder; Kodi needs its own folder (`SHOWRUNNER_KODI_OUTPUT_LOCATION`) |
 | Kodi lists the files, but the videos do not play | Samba does not follow the links: `follow symlinks` and `wide links` in the share, `allow insecure wide links` in `[global]`, and the Samba user must be able to read the Immich library |
-| `check` says Kodi did not answer | The web server of Kodi is off, "Allow remote control from applications on other systems" is off, or Kodi is asleep; changes wait in `kodi_pending` |
+| `check` says Kodi did not answer | The web server of Kodi is off, a firewall on its machine blocks the port, or Kodi is asleep; changes wait in `kodi_pending` |
 | `check` says Kodi can not open the folder | `SHOWRUNNER_KODI_OUTPUT_PATH` must be the path of the source exactly as Kodi shows it |
 | New titles do not reach Kodi | Kodi reads the files of a known episode again only when it is told: set `SHOWRUNNER_KODI_URL`, or refresh the show in Kodi (Information → Refresh) |
 | The page says "Signing in is not set up" | Set `SHOWRUNNER_SECRET_KEY` in `.env` and run `docker compose up -d` |
