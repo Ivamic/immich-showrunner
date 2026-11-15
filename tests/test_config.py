@@ -58,7 +58,9 @@ def test_jellyfin_output_folder_under_its_old_name() -> None:
 def test_a_sync_needs_an_output_folder() -> None:
     from showrunner.runner import SetupError, outputs_from
 
-    with pytest.raises(SetupError, match="SHOWRUNNER_JELLYFIN_OUTPUT_DIR"):
+    with pytest.raises(SetupError, match="SHOWRUNNER_KODI_OUTPUT_DIR"):
         outputs_from(settings(path_map="/data=/mnt/immich"), dry_run=True)
     outputs = outputs_from(settings(path_map="/data=/mnt/immich", output_dir="/x"), dry_run=True)
     assert [(o.target.name, o.executor, o.notify) for o in outputs] == [("jellyfin", None, False)]
+    kodi_only = outputs_from(settings(path_map="/data=/m", kodi_output_dir="/k"), dry_run=True)
+    assert [o.target.name for o in kodi_only] == ["kodi"]

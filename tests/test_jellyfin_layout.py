@@ -9,7 +9,7 @@ import pytest
 from showrunner.model.show import Episode, EpisodePerson, Show
 from showrunner.targets.base import DesiredFile, FileKind
 from showrunner.targets.jellyfin.layout import JellyfinLayout
-from showrunner.targets.jellyfin.nfo import episode_nfo, show_nfo
+from showrunner.targets.nfo import episode_nfo, show_nfo
 
 ALBUM = UUID("97769e09-f6ec-4d0b-86d0-3237df31f35b")
 ASSET = UUID("712f0482-ba03-4739-a060-cea85f44e17d")

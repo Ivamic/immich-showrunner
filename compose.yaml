@@ -25,6 +25,7 @@ services:
       # is the name the Jellyfin folder had before 0.2.
       SHOWRUNNER_JELLYFIN_OUTPUT_DIR: "${SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION:+/output/jellyfin}"
       SHOWRUNNER_OUTPUT_DIR: "${SHOWRUNNER_OUTPUT_LOCATION:+/output/jellyfin}"
+      SHOWRUNNER_KODI_OUTPUT_DIR: "${SHOWRUNNER_KODI_OUTPUT_LOCATION:+/output/kodi}"
       # Where Jellyfin sees its output folder: the folder on the host, unless Jellyfin runs in a
       # container that mounts it somewhere else.
       SHOWRUNNER_JELLYFIN_OUTPUT_PATH: "${SHOWRUNNER_JELLYFIN_OUTPUT_PATH:-${SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION:-${SHOWRUNNER_OUTPUT_LOCATION:-}}}"
@@ -32,6 +33,7 @@ services:
       # The only folders the app writes to. The Immich library is not mounted at all. A folder
       # that is not set gets an empty volume that nothing uses.
       - "${SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION:-${SHOWRUNNER_OUTPUT_LOCATION:-unused-jellyfin}}:/output/jellyfin"
+      - "${SHOWRUNNER_KODI_OUTPUT_LOCATION:-unused-kodi}:/output/kodi"
     depends_on:
       db:
         condition: service_healthy
@@ -54,3 +56,4 @@ services:
 volumes:
   db-data:
   unused-jellyfin:
+  unused-kodi:

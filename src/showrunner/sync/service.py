@@ -307,7 +307,10 @@ async def _with_pictures(
         content = pictures.get(desired.image)
         if content is None:
             try:
-                content = await immich.preview(desired.image.asset_id)
+                if desired.image.of_person:
+                    content = await immich.person_picture(desired.image.asset_id)
+                else:
+                    content = await immich.preview(desired.image.asset_id)
             except (ImmichUnreachableError, ImmichAuthError):
                 raise
             except ImmichError as exc:

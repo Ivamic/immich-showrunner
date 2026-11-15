@@ -25,11 +25,13 @@ class FileKind(StrEnum):
 
 @dataclass(frozen=True)
 class ImageSource:
-    """Which picture of Immich a file holds. `version` changes when the picture changes there, so
-    that it is downloaded again only then."""
+    """Which picture of Immich a file holds: the preview of an asset or, with `of_person`, the
+    face of a person (`asset_id` is then the id of the person). `version` changes when the
+    picture changes there, so that it is downloaded again only then."""
 
     asset_id: UUID
     version: str
+    of_person: bool = False
 
 
 @dataclass(frozen=True)

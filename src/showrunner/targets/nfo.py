@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""NFO files as Jellyfin 12 reads them (checked on 12.4): `tvshow.nfo` and one per episode.
+"""NFO files: `tvshow.nfo` and one per episode, as Jellyfin 12 and Kodi 21 read them (checked on
+Jellyfin 12.4 and Kodi 21.3).
 
-The episode number is always written. Without it Jellyfin picks a number out of the file name."""
+The season and the episode number are always written: both media servers would otherwise take
+them from the file name."""
 
 import re
 from xml.etree import ElementTree as ET

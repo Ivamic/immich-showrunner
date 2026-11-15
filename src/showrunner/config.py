@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     # folder had before 0.2 and is read when SHOWRUNNER_JELLYFIN_OUTPUT_DIR is not set.
     jellyfin_output_dir: Path | None = None
     output_dir: Path | None = None
+    kodi_output_dir: Path | None = None
 
     # Where the media server sees the folders of the Immich library, as `/from=/to` pairs
     # separated by `;`. A video in a folder without a mapping is skipped.
@@ -105,7 +106,7 @@ class Settings(BaseSettings):
             raise ValueError(f"must be at least {MIN_SECRET_KEY_LENGTH} characters long")
         return value
 
-    @field_validator("jellyfin_output_dir", "output_dir", mode="before")
+    @field_validator("jellyfin_output_dir", "output_dir", "kodi_output_dir", mode="before")
     @classmethod
     def _empty_is_none(cls, value: object) -> object:
         return None if isinstance(value, str) and not value.strip() else value

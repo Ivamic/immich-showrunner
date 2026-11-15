@@ -111,10 +111,10 @@ async def cmd_check(settings: Settings) -> int:
         line(False, f"Immich: {exc}")
 
     line(bool(settings.path_mappings), f"path mappings: {settings.path_map or '(none)'}")
-    folders = {"Jellyfin": settings.jellyfin_dir}
+    folders = {"Jellyfin": settings.jellyfin_dir, "Kodi": settings.kodi_output_dir}
     line(
         any(folders.values()),
-        "an output folder is set (SHOWRUNNER_JELLYFIN_OUTPUT_DIR)",
+        "an output folder is set (SHOWRUNNER_JELLYFIN_OUTPUT_DIR or SHOWRUNNER_KODI_OUTPUT_DIR)",
     )
     for name, out in folders.items():
         if out is not None:

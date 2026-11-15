@@ -13,7 +13,7 @@ from pathlib import PurePosixPath
 from showrunner.model.naming import season_folder_name
 from showrunner.model.show import Show
 from showrunner.targets.base import DesiredFile, FileKind, ImageSource
-from showrunner.targets.jellyfin.nfo import episode_nfo, show_nfo
+from showrunner.targets.nfo import episode_nfo, show_nfo
 
 SHOW_NFO_NAME = "tvshow.nfo"
 POSTER_NAME = "poster.jpg"

@@ -87,6 +87,9 @@ class FakeImmich:
                 return httpx2.Response(status, json={"message": "broken"})
         if path == "/api/albums":
             return httpx2.Response(200, json=list(self.albums.values()))
+        if path.startswith("/api/people/") and path.endswith("/thumbnail"):
+            body = f"JPEG face {path.split('/')[3]}".encode()
+            return httpx2.Response(200, content=body, headers={"content-type": "image/jpeg"})
         if path.startswith("/api/assets/") and path.endswith("/thumbnail"):
             asset = path.split("/")[3]
             version = next(

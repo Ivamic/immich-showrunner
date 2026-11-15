@@ -12,7 +12,7 @@ from uuid import UUID
 
 import httpx2
 
-from showrunner.targets.jellyfin.nfo import UNIQUE_ID_TYPE
+from showrunner.targets.nfo import UNIQUE_ID_TYPE
 
 DEFAULT_TIMEOUT_S = 30.0
 

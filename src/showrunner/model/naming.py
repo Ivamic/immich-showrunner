@@ -67,6 +67,20 @@ def episode_file_stem(filmed_at: datetime, original_file_name: str, asset_id: UU
     return f"{filmed_at:%Y%m%d-%H%M%S} {stem} [{short_id(asset_id)}]"
 
 
+def kodi_episode_file_stem(filmed_at: datetime, asset_id: UUID) -> str:
+    """`2024-07-15 143211 [1898906754]`: Kodi recognises an episode by the date in its name and
+    takes the season and the number from its NFO (checked on 21.3). The id is the short id as a
+    decimal number: Kodi reads `e` followed by digits, as in a hexadecimal id, as an episode
+    number."""
+    return f"{filmed_at:%Y-%m-%d %H%M%S} [{int(short_id(asset_id), 16)}]"
+
+
+def kodi_actor_file_name(name: str) -> str:
+    """The picture of a person for Kodi: its name with `_` for every space, as Kodi looks it up
+    in the `.actors` folder of the show."""
+    return safe_name(name).replace(" ", "_") + ".jpg"
+
+
 def file_extension(path: str) -> str:
     """The extension of the original file, lower case, with the dot; empty when there is none or
     it does not look like one."""

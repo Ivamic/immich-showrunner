@@ -19,6 +19,7 @@ from showrunner.targets.base import JELLYFIN
 from showrunner.targets.jellyfin.client import JellyfinClient, JellyfinError, tell_jellyfin
 from showrunner.targets.jellyfin.layout import JellyfinLayout
 from showrunner.targets.jellyfin.people import tend_people
+from showrunner.targets.kodi.layout import KodiLayout
 
 log = logging.getLogger(__name__)
 
@@ -66,10 +67,15 @@ def outputs_from(settings: Settings, *, dry_run: bool) -> list[Output]:
                 notify=jellyfin_client(settings) is not None,
             )
         )
+    if settings.kodi_output_dir is not None:
+        outputs.append(
+            Output(KodiLayout(), None if dry_run else Executor(settings.kodi_output_dir, roots))
+        )
     if not outputs:
         raise SetupError(
-            "no output folder: set SHOWRUNNER_JELLYFIN_OUTPUT_DIR (in compose.yaml: "
-            "SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION)"
+            "no output folder: set SHOWRUNNER_JELLYFIN_OUTPUT_DIR or SHOWRUNNER_KODI_OUTPUT_DIR "
+            "(in compose.yaml: SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION or "
+            "SHOWRUNNER_KODI_OUTPUT_LOCATION)"
         )
     return outputs
 

@@ -16,6 +16,7 @@ from showrunner.store.registry import Registry
 from showrunner.sync.executor import MARKER_NAME, Executor
 from showrunner.sync.service import Output, SyncReport, run_sync, sync_outputs
 from showrunner.targets.jellyfin.layout import JellyfinLayout
+from showrunner.targets.kodi.layout import KodiLayout
 
 pytestmark = pytest.mark.anyio
 needs_links = pytest.mark.skipif(os.name == "nt", reason="symbolic links need Linux")
@@ -258,3 +259,29 @@ async def test_two_targets_read_immich_once(session: AsyncSession, tmp_path: Pat
         )
     assert [r.created for r in reports] == [3, 3]
     assert not (second / FILES[4]).exists() and (first / FILES[4]).exists()
+
+
+@needs_links
+async def test_a_kodi_folder_alone(session: AsyncSession, out: Path) -> None:
+    immich, album = family()
+    anna = UUID("8800ba4a-52a0-4f68-944a-6587ea5ff3c2")
+    immich.videos[album][1]["people"] = [{"id": str(anna), "name": "Anna"}]
+    outputs = [Output(KodiLayout(), Executor(out, [PurePosixPath("/mnt/immich")]))]
+    async with immich.client() as client:
+        (report,) = await sync_outputs(
+            immich=client, registry=Registry(session), outputs=outputs, options=OPTIONS
+        )
+    first, second = int("00000001", 16), int("00000002", 16)
+    assert tree(out) == [
+        f"{FOLDER}/.actors/Anna.jpg",
+        f"{FOLDER}/Season 2023/2023-06-10 090000 [{first}]-thumb.jpg",
+        f"{FOLDER}/Season 2023/2023-06-10 090000 [{first}].mp4",
+        f"{FOLDER}/Season 2023/2023-06-10 090000 [{first}].nfo",
+        f"{FOLDER}/Season 2024/2024-07-15 143200 [{second}]-thumb.jpg",
+        f"{FOLDER}/Season 2024/2024-07-15 143200 [{second}].mp4",
+        f"{FOLDER}/Season 2024/2024-07-15 143200 [{second}].nfo",
+        f"{FOLDER}/tvshow.nfo",
+    ]
+    assert (out / FOLDER / ".actors" / "Anna.jpg").read_bytes() == f"JPEG face {anna}".encode()
+    assert report.target == "kodi" and report.created == 8 and report.ok
+    assert await Registry(session).entries("jellyfin") == []
