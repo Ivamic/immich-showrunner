@@ -1,0 +1,96 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Mosaic: frames edge to edge in a tight grid, the title in a large grotesque on a dark fade.
+# The base style: other styles take from it the outputs they leave out.
+schema: 1
+id: mosaic
+version: 1
+names: {en: Mosaic, de: Mosaik, fr: Mosaïque, it: Mosaico, ru: Мозаика}
+max_frames: 12
+fonts:
+  title: {file: fonts/Montserrat-ExtraBold.ttf}
+
+outputs:
+  series_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: {color: "#0E0F12"}
+    layouts:
+      - cells: [{box: [0, 0, 100, 100]}]
+      - cells:
+          - grid: {cols: 2, rows: [58, 42], gap: 1.1, spans: [[0, 0, 2, 1], [0, 1, 1, 1], [1, 1, 1, 1]]}
+      - cells:
+          - grid: {area: [0, 0, 100, 49.63], cols: [64, 36], rows: 2, gap: 1.1,
+                   spans: [[0, 0, 1, 2], [1, 0, 1, 1], [1, 1, 1, 1]]}
+          - grid: {area: [0, 50.37, 100, 49.63], cols: 3, rows: 1, gap: 1.1}
+      - cells:
+          - grid: {cols: 3, rows: 4, gap: 1.1}
+    text: &title
+      font: title
+      uppercase: true
+      area: [7, 0, 86, 96]
+      anchor: bottom
+      size: [22, 46]
+      max_lines: 3
+      line_height: 1.04
+      shadow: {dx: 0, dy: 2, blur: 12, color: "#00000080"}
+      plate: {kind: fade, color: "#08090CE6", fade: 64, fade_from: 0.91}
+
+  season_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: {color: "#0E0F12"}
+    layouts:
+      - cells: [{box: [0, 0, 100, 100]}]
+      - cells:
+          - grid: {cols: 2, rows: [58, 42], gap: 1.1, spans: [[0, 0, 2, 1], [0, 1, 1, 1], [1, 1, 1, 1]]}
+      - cells:
+          - grid: {cols: 2, rows: 2, gap: 1.1}
+    text:
+      <<: *title
+      uppercase: false
+      area: [0, 0, 100, 97.33]
+      align: center
+      size: [128, 128]
+      max_lines: 1
+      plate: {kind: fade, color: "#08090CE6", fade: 56, fade_from: 0.91}
+
+  landscape:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: {color: "#0E0F12"}
+    layouts:
+      - cells: [{box: [0, 0, 100, 100]}]
+      - cells: [{grid: {cols: 3, rows: 1, gap: 0.8}}]
+      - cells: [{grid: {cols: 3, rows: 2, gap: 0.8}}]
+    text:
+      <<: *title
+      area: [4.5, 0, 60, 91.1]
+      size: [20, 44]
+      max_lines: 2
+      plate: {kind: fade, color: "#08090CE6", fade: 56, fade_from: 0.91}
+
+  fanart:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: {color: "#0E0F12"}
+    cell:
+      filter: {brightness: 0.78, saturation: 0.9}
+    layouts:
+      - cells: [{box: [0, 0, 100, 100]}]
+      - cells: [{grid: {cols: 3, rows: 1, gap: 0.8}}]
+      - cells: [{grid: {cols: 3, rows: 2, gap: 0.8}}]
+      - cells: [{grid: {cols: 4, rows: 2, gap: 0.8}}]
+
+  logo:
+    size: [800, 310]
+    text:
+      font: title
+      uppercase: true
+      area: [4, 4, 92, 92]
+      anchor: center
+      align: center
+      size: [50, 94]
+      max_lines: 2
+      line_height: 1.04
+      stroke: {width: 1, color: "#000000B3"}
+      shadow: {dx: 0, dy: 2, blur: 8, color: "#00000080"}
