@@ -16,6 +16,7 @@ dependencies = [
     "httpx2>=2.13",
     "pillow>=13.0",
     "pydantic-settings>=2.8",
+    "pyyaml>=6.0.3",
     "sqlalchemy[asyncio]>=2.0.40",
     "uvicorn>=0.34",
 ]
@@ -33,6 +34,7 @@ dev = [
     "pip-licenses>=5.0",
     "pytest>=8.3",
     "ruff>=0.11",
+    "types-pyyaml>=6.0.12",
 ]
 
 [tool.ruff]

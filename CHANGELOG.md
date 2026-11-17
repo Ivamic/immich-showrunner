@@ -7,6 +7,13 @@ between releases.
 
 ## [Unreleased]
 
+### Added
+
+- **Artwork styles** (groundwork, not used by the sync yet): a style is a folder with a declarative
+  `style.yaml`, its fonts and pictures. A renderer draws from it, out of video frames and the
+  title, the poster, landscape picture, backdrop and logo of a show and the poster of a season.
+  The first style, Mosaic, ships with the app.
+
 ## [0.2.1] - 2026-11-15
 
 ### Fixed

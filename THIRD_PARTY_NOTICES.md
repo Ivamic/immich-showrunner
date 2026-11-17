@@ -11,6 +11,14 @@ Copyright © 2017 IBM Corp. with Reserved Font Name "Plex".
 Licensed under the SIL Open Font License, Version 1.1: see
 [`frontend/src/lib/assets/fonts/OFL.txt`](frontend/src/lib/assets/fonts/OFL.txt).
 
+## Montserrat
+
+The title font of the Mosaic artwork style, in `src/showrunner/artwork/styles/mosaic/fonts/`.
+
+Copyright 2024 The Montserrat.Git Project Authors (https://github.com/JulietaUla/Montserrat.git).
+Licensed under the SIL Open Font License, Version 1.1: see
+[`src/showrunner/artwork/styles/mosaic/fonts/OFL.txt`](src/showrunner/artwork/styles/mosaic/fonts/OFL.txt).
+
 ## Pictures in the screenshots
 
 The screenshots in `docs/images/screenshots/` show videos made from these pictures of Wikimedia
