@@ -13,6 +13,10 @@ between releases.
   `style.yaml`, its fonts and pictures. A renderer draws from it, out of video frames and the
   title, the poster, landscape picture, backdrop and logo of a show and the poster of a season.
   The first style, Mosaic, ships with the app.
+- **Frames for artwork** (groundwork): frames are read from a video over HTTP without fetching
+  the whole file, scored for sharpness, exposure, contrast and color, searched for faces (YuNet,
+  on the CPU) and cropped to keep the faces whole. The best frames, unlike each other and from
+  different videos, are chosen first.
 
 ## [0.2.1] - 2026-11-15
 

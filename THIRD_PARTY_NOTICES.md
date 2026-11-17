@@ -19,6 +19,20 @@ Copyright 2024 The Montserrat.Git Project Authors (https://github.com/JulietaUla
 Licensed under the SIL Open Font License, Version 1.1: see
 [`src/showrunner/artwork/styles/mosaic/fonts/OFL.txt`](src/showrunner/artwork/styles/mosaic/fonts/OFL.txt).
 
+## YuNet face detection model
+
+The model that finds faces in video frames for artwork, in `src/showrunner/artwork/models/`
+(`face_detection_yunet_2023mar.onnx` from [OpenCV Zoo](https://github.com/opencv/opencv_zoo)).
+
+Copyright (c) 2020 Shiqi Yu. Licensed under the MIT License: see
+[`src/showrunner/artwork/models/LICENSE`](src/showrunner/artwork/models/LICENSE).
+
+## Portrait in the tests
+
+`tests/data/portrait.jpg` is a reduced copy of
+[Mark Twain by AF Bradley.jpg](https://commons.wikimedia.org/wiki/File:Mark_Twain_by_AF_Bradley.jpg)
+from Wikimedia Commons — public domain.
+
 ## Pictures in the screenshots
 
 The screenshots in `docs/images/screenshots/` show videos made from these pictures of Wikimedia
