@@ -41,11 +41,12 @@ AssetResolver = Callable[[str], Path]
 
 @dataclass(frozen=True)
 class Frame:
-    """A frame of a video and the point that matters most in it (shares of width and height),
-    which stays in view when the frame is cropped."""
+    """A frame of a video, the point that matters most in it and the region to keep whole
+    (faces), as shares of width and height; both guide the crop to a cell."""
 
     image: Image.Image
     focus: tuple[float, float] = (0.5, 0.5)
+    region: tuple[float, float, float, float] | None = None
 
 
 def rgba(color: str) -> tuple[int, int, int, int]:
@@ -155,16 +156,36 @@ def place(canvas: Image.Image, piece: Image.Image, center: tuple[float, float]) 
 # --- frames in cells --------------------------------------------------------------------
 
 
-def cover(image: Image.Image, size: tuple[int, int], focus: tuple[float, float]) -> Image.Image:
-    """Scale to fill the size and crop, keeping the focus point in view (CSS object-position)."""
+def cover(
+    image: Image.Image,
+    size: tuple[int, int],
+    focus: tuple[float, float] = (0.5, 0.5),
+    region: tuple[float, float, float, float] | None = None,
+) -> Image.Image:
+    """Scale to fill the size and crop. The focus point goes as near the middle of the crop as
+    the edges allow; the region (faces), when it fits, stays whole."""
     width, height = max(1, size[0]), max(1, size[1])
     scale = max(width / image.width, height / image.height)
-    scaled = (max(width, round(image.width * scale)), max(height, round(image.height * scale)))
-    left = (scaled[0] - width) * min(1, max(0, focus[0]))
-    top = (scaled[1] - height) * min(1, max(0, focus[1]))
+    full = (image.width * scale, image.height * scale)
+    spans = (region[0], region[0] + region[2]) if region else None
+    left = _offset(full[0], width, focus[0], spans)
+    spans = (region[1], region[1] + region[3]) if region else None
+    top = _offset(full[1], height, focus[1], spans)
     # Crop in the source first, so a large frame is not scaled whole.
     box = (left / scale, top / scale, (left + width) / scale, (top + height) / scale)
     return image.convert("RGBA").resize((width, height), RESAMPLE, box=box)
+
+
+def _offset(total: float, window: float, point: float, keep: tuple[float, float] | None) -> float:
+    """Start of the crop window along one side, in scaled pixels."""
+    offset = point * total - window / 2
+    if keep is not None:
+        start, end = keep[0] * total, keep[1] * total
+        if end - start <= window:
+            offset = min(max(offset, end - window), start)
+        else:
+            offset = (start + end) / 2 - window / 2
+    return min(max(offset, 0.0), max(0.0, total - window))
 
 
 def filtered(image: Image.Image, style: CellStyle, scale: float) -> Image.Image:
@@ -234,7 +255,7 @@ def cell_piece(
         )
     else:
         left, top, inner = 0, 0, (width, height)
-    picture = filtered(cover(frame.image, inner, frame.focus), style, scale)
+    picture = filtered(cover(frame.image, inner, frame.focus, frame.region), style, scale)
     tile.alpha_composite(picture, dest=(left, top))
     if style.border is not None:
         line = max(1, round(style.border.width * scale))
