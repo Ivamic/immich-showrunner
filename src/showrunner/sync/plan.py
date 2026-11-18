@@ -61,6 +61,9 @@ class Plan:
     # Links removed because the user asked for it (a show hidden on the page): they do not count
     # towards a mass removal.
     links_removed_on_purpose: int = 0
+    # Links removed whose video gets a link at another path in the same plan (the folder of a
+    # show was renamed): a move, not a loss, and not counted towards a mass removal either.
+    links_moved: int = 0
 
     def of_type(self, action_type: ActionType) -> tuple[Action, ...]:
         return tuple(a for a in self.actions if a.type is action_type)
@@ -77,7 +80,7 @@ class Plan:
 
     @property
     def is_mass_removal(self) -> bool:
-        unexpected = self.links_removed - self.links_removed_on_purpose
+        unexpected = self.links_removed - self.links_removed_on_purpose - self.links_moved
         return unexpected > MASS_REMOVAL_MIN and unexpected > self.links_before * MASS_REMOVAL_SHARE
 
 
@@ -134,6 +137,11 @@ def make_plan(
     # Removals first, deepest paths first, so that a path freed by one show can be taken by
     # another; then everything else in the order of the paths.
     actions.sort(key=lambda a: (a.type is not ActionType.REMOVE, str(a.path)))
+    linked_again = {
+        a.desired.asset_id
+        for a in actions
+        if a.type is ActionType.CREATE and a.kind is FileKind.LINK and a.desired is not None
+    }
     return Plan(
         actions=tuple(actions),
         links_before=links_before,
@@ -145,6 +153,16 @@ def make_plan(
             if a.type is ActionType.REMOVE
             and a.kind is FileKind.LINK
             and a.album_id in removed_on_purpose
+        ),
+        links_moved=sum(
+            1
+            for a in actions
+            if a.type is ActionType.REMOVE
+            and a.kind is FileKind.LINK
+            and a.album_id not in removed_on_purpose
+            and a.entry is not None
+            and a.entry.asset_id is not None
+            and a.entry.asset_id in linked_again
         ),
     )
 
