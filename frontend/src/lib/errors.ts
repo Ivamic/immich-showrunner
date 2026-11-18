@@ -42,6 +42,8 @@ export function errorMessage(error: unknown): string {
 			return m.error_artwork_not_ready();
 		case 'artwork_failed':
 			return m.error_artwork_failed();
+		case 'artwork_slot':
+			return m.error_artwork_slot();
 		default:
 			return m.error_unexpected();
 	}

@@ -223,7 +223,8 @@ class Registry:
         return {row.album_id: row for row in rows}
 
     async def save_artwork(self, album_id: UUID, style_id: str, **values: Any) -> None:
-        """Set fields of the artwork of a show (`seed`, `use_cover`, `frozen`, `frozen_jobs`),
+        """Set fields of the artwork of a show (`seed`, `use_cover`, `slot_seeds`, `drawn_jobs`,
+        `pinned_jobs`),
         creating its row with `style_id` if there is none."""
         statement = insert(ArtworkRow).values(album_id=album_id, style_id=style_id, **values)
         await self._session.execute(

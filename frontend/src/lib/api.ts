@@ -170,7 +170,6 @@ export const acceptInvitation = (id: string) =>
 export const faceUrl = (id: string) => `/api/people/${id}/face`;
 
 export type ArtworkKind = 'series_poster' | 'season_poster' | 'landscape' | 'fanart' | 'logo';
-export type Frozen = 'none' | 'show' | 'all';
 
 export interface Style {
 	id: string;
@@ -184,50 +183,60 @@ export interface Style {
 export interface ArtworkPicture {
 	kind: ArtworkKind;
 	season: number | null;
+	/** The name of the picture: `series_poster`, `season_poster:2024`… */
+	slot: string;
 	url: string;
+	pinned: boolean;
 }
 
 export interface Artwork {
 	style_id: string | null;
 	seed: number;
 	use_cover: boolean;
-	frozen: Frozen;
+	slot_seeds: Record<string, number>;
 	pictures: ArtworkPicture[];
+	/** Videos still to look at: the pictures are drawn from the others for now. */
+	waiting: number;
+	/** A sync runs or is about to: the pictures may change soon. */
+	syncing: boolean;
 }
 
 export interface ArtworkChoice {
 	style_id: string;
 	seed: number;
 	use_cover: boolean;
+	slot_seeds: Record<string, number>;
 }
 
 export interface ArtworkPreview {
 	choice: ArtworkChoice;
-	/** Data URLs by kind: series_poster (absent with the cover), landscape, fanart. */
-	pictures: Partial<Record<ArtworkKind, string>>;
+	/** Data URLs by slot; pinned pictures and the poster given way to the cover are absent. */
+	pictures: Record<string, string>;
 }
 
 export type ArtworkChange = 'style' | 'frames' | 'cover' | 'drawn';
+
+export interface ArtworkLookRequest {
+	change: ArtworkChange;
+	/** With `frames`: other frames for this picture only. */
+	slot?: string | null;
+	/** With `style`: this style instead of one at random. */
+	style_id?: string | null;
+	current?: ArtworkChoice | null;
+	seen_styles?: string[];
+}
 
 export const getStyles = () => request<Style[]>('GET', '/styles');
 export const editStyle = (id: string, enabled: boolean) =>
 	request<void>('PATCH', `/styles/${id}`, { enabled });
 export const getArtwork = (show: string) => request<Artwork>('GET', `/shows/${show}/artwork`);
-export const previewArtwork = (
-	show: string,
-	change: ArtworkChange,
-	current: ArtworkChoice | null,
-	seenStyles: string[]
-) =>
-	request<ArtworkPreview>('POST', `/shows/${show}/artwork/preview`, {
-		change,
-		current,
-		seen_styles: seenStyles
-	});
+export const previewArtwork = (show: string, look: ArtworkLookRequest) =>
+	request<ArtworkPreview>('POST', `/shows/${show}/artwork/preview`, look);
 export const applyArtwork = (show: string, choice: ArtworkChoice) =>
 	request<void>('PUT', `/shows/${show}/artwork`, choice);
-export const freezeArtwork = (show: string, frozen: Frozen) =>
-	request<void>('PUT', `/shows/${show}/artwork/frozen`, { frozen });
+/** Pin or unpin pictures (all of them when `slots` is null); answers with the pinned ones. */
+export const pinArtwork = (show: string, slots: string[] | null, pinned: boolean) =>
+	request<{ pinned: string[] }>('PUT', `/shows/${show}/artwork/pins`, { slots, pinned });
 
 export const getStatus = () => request<Status>('GET', '/status');
 /** A full pass right away; `force` carries out a mass removal that the last pass held. */

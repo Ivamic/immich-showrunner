@@ -139,7 +139,7 @@ async def artwork_context(
         )
     context = ArtworkContext(
         styles=styles(),
-        source=lambda asset_id: immich.video_source(asset_id, original=original),
+        source=immich.http_source(original=original),
         budget_seconds=settings.artwork_budget_seconds,
     )
     return context, warning

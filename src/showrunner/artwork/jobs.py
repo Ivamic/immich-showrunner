@@ -134,24 +134,47 @@ def choose_style(album_id: UUID, style_ids: Sequence[str]) -> str:
     return random.Random(album_id.int).choice(sorted(style_ids))
 
 
+def slot_key(kind: OutputKind, season: int | None) -> str:
+    """The name of a picture of a show: `series_poster`, `fanart`, `season_poster:2024`…"""
+    return kind.value if season is None else f"{kind.value}:{season}"
+
+
+def parse_slot(key: str) -> ArtworkKey | None:
+    kind, _, season = key.partition(":")
+    try:
+        output = OutputKind(kind)
+    except ValueError:
+        return None
+    if season:
+        return (output, int(season)) if season.isdigit() else None
+    return (output, None) if output is not OutputKind.SEASON_POSTER else None
+
+
 def plan_show(
     show: Show,
     looks: Mapping[UUID, Sequence[FrameLook]],
     style: Style,
     seed: int = 0,
     *,
+    seeds: Mapping[str, int] | None = None,
     season_posters: bool = True,
 ) -> dict[ArtworkKey, ArtworkJob]:
     """The pictures of a show. `looks` must cover its videos; a video without frames (one that
-    could not be read) is left out. A show without any frame gets no pictures."""
+    could not be read) is left out. A show without any frame gets no pictures. `seeds` gives a
+    picture other frames than the rest (by its slot key)."""
     every = [look for episode in show.episodes for look in looks.get(episode.asset_id, ())]
     if not every:
         return {}
     limit = style.spec.max_frames
     title = show.sort_title
+    own_seeds = seeds or {}
     jobs: dict[ArtworkKey, ArtworkJob] = {}
 
-    def job(kind: OutputKind, season: int | None, text: str, chosen: list[FrameLook]) -> None:
+    def job(
+        kind: OutputKind, season: int | None, text: str, pool: list[FrameLook], default: int
+    ) -> None:
+        picture_seed = own_seeds.get(slot_key(kind, season), default)
+        chosen = choose(pool, limit, picture_seed) if pool else []
         jobs[(kind, season)] = ArtworkJob(
             album_id=show.album_id,
             kind=kind,
@@ -159,15 +182,14 @@ def plan_show(
             style_id=style.id,
             style_version=style.spec.version,
             text=text,
-            seed=seed,
+            seed=picture_seed,
             frames=tuple(ChosenFrame.of(look) for look in chosen),
         )
 
-    best = choose(every, limit, seed)
-    job(OutputKind.SERIES_POSTER, None, title, best)
-    job(OutputKind.LANDSCAPE, None, title, best)
-    job(OutputKind.FANART, None, "", choose(every, limit, seed + FANART_SEED))
-    job(OutputKind.LOGO, None, title, [])  # only the title
+    job(OutputKind.SERIES_POSTER, None, title, every, seed)
+    job(OutputKind.LANDSCAPE, None, title, every, seed)
+    job(OutputKind.FANART, None, "", every, seed + FANART_SEED)
+    job(OutputKind.LOGO, None, title, [], seed)  # only the title
     if season_posters:
         for season in show.seasons:
             own = [
@@ -177,5 +199,5 @@ def plan_show(
                 for look in looks.get(episode.asset_id, ())
             ]
             if own:
-                job(OutputKind.SEASON_POSTER, season, str(season), choose(own, limit, seed))
+                job(OutputKind.SEASON_POSTER, season, str(season), own, seed)
     return jobs

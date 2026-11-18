@@ -58,6 +58,8 @@ class SyncReport:
     media_server_pending: int = 0
     # Pictures that could not be taken from Immich; they are tried again on the next pass.
     pictures_failed: list[str] = field(default_factory=list)
+    # Videos still to look at for the pictures, per album.
+    artwork_waiting: dict[UUID, int] = field(default_factory=dict)
     # People of the albums read in this pass: name as written for the media server -> Immich id.
     people: dict[str, UUID] = field(default_factory=dict)
     # Albums whose files could not all be written; their stamps are not moved on.
@@ -172,6 +174,7 @@ async def apply_output(
         skipped=list(view.skipped),
         visible_albums=view.visible,
         people=dict(view.people),
+        artwork_waiting=dict(view.artwork.waiting),
     )
     desired: list[DesiredFile] = []
     for show, folder in view.shows:
@@ -285,7 +288,7 @@ async def sync_outputs(
                 "artwork: looked at %d videos (%d could not be read); %d shows wait for more",
                 view.artwork.looked,
                 view.artwork.unreadable,
-                len(view.artwork.incomplete),
+                len(view.artwork.waiting),
             )
     pictures: dict[ImageSource, bytes] = {}
     reports = [
