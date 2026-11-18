@@ -19,6 +19,54 @@ Copyright 2024 The Montserrat.Git Project Authors (https://github.com/JulietaUla
 Licensed under the SIL Open Font License, Version 1.1: see
 [`src/showrunner/artwork/styles/mosaic/fonts/OFL.txt`](src/showrunner/artwork/styles/mosaic/fonts/OFL.txt).
 
+## Caveat
+
+The title font of the Polaroid style, in `src/showrunner/artwork/styles/polaroid/fonts/`.
+
+Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)
+Licensed under the SIL Open Font License, Version 1.1: see
+[`src/showrunner/artwork/styles/polaroid/fonts/OFL.txt`](src/showrunner/artwork/styles/polaroid/fonts/OFL.txt).
+
+## Oswald
+
+The title font of the Film style, in `src/showrunner/artwork/styles/film/fonts/`.
+
+Copyright 2016 The Oswald Project Authors (https://github.com/googlefonts/OswaldFont)
+Licensed under the SIL Open Font License, Version 1.1: see
+[`src/showrunner/artwork/styles/film/fonts/OFL-Oswald.txt`](src/showrunner/artwork/styles/film/fonts/OFL-Oswald.txt).
+
+## VT323
+
+The year stamp of the Film style, in `src/showrunner/artwork/styles/film/fonts/`.
+
+Copyright 2011, The VT323 Project Authors (peter.hull@oikoi.com)
+Licensed under the SIL Open Font License, Version 1.1: see
+[`src/showrunner/artwork/styles/film/fonts/OFL-VT323.txt`](src/showrunner/artwork/styles/film/fonts/OFL-VT323.txt).
+
+## Playfair Display
+
+The title font of the Playbill style, in `src/showrunner/artwork/styles/afisha/fonts/`.
+
+Copyright 2017 The Playfair Display Project Authors (https://github.com/clauseggers/Playfair-Display), with Reserved Font Name "Playfair Display"
+Licensed under the SIL Open Font License, Version 1.1: see
+[`src/showrunner/artwork/styles/afisha/fonts/OFL.txt`](src/showrunner/artwork/styles/afisha/fonts/OFL.txt).
+
+## Marck Script
+
+The title font of the Watercolor style, in `src/showrunner/artwork/styles/watercolor/fonts/`.
+
+Copyright (c) 2011, Denis Masharov <denis.masharov@gmail.com> & Marck Fogel, with Reserved Font Name "Marck Script".
+Licensed under the SIL Open Font License, Version 1.1: see
+[`src/showrunner/artwork/styles/watercolor/fonts/OFL.txt`](src/showrunner/artwork/styles/watercolor/fonts/OFL.txt).
+
+## PT Mono
+
+The title font of the Pinboard style, in `src/showrunner/artwork/styles/board/fonts/`.
+
+Copyright (c) 2011, ParaType Ltd. (http://www.paratype.com/public), with Reserved Font Names "PT Sans", "PT Serif", "PT Mono" and "ParaType".
+Licensed under the SIL Open Font License, Version 1.1: see
+[`src/showrunner/artwork/styles/board/fonts/OFL.txt`](src/showrunner/artwork/styles/board/fonts/OFL.txt).
+
 ## YuNet face detection model
 
 The model that finds faces in video frames for artwork, in `src/showrunner/artwork/models/`

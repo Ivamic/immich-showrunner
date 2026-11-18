@@ -15,11 +15,14 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
 from showrunner.artwork.style import (
     Background,
+    BackgroundLayer,
     CellStyle,
+    Decor,
+    FontFile,
     LinearGradient,
     Plate,
     RadialSpot,
@@ -27,6 +30,7 @@ from showrunner.artwork.style import (
     Stop,
     TextBlock,
     Texture,
+    Vignette,
 )
 from showrunner.artwork.text import FittedText, font
 
@@ -64,20 +68,61 @@ def asset(path: Path) -> Image.Image:
 # --- background -------------------------------------------------------------------------
 
 
-def background(size: tuple[int, int], spec: Background, assets: AssetResolver) -> Image.Image:
+def background(
+    size: tuple[int, int], spec: Background, assets: AssetResolver, scale: float = 1.0
+) -> Image.Image:
     canvas = Image.new("RGBA", size, rgba(spec.color))
-    for layer in spec.layers:
+    draw_layers(canvas, spec.layers, assets, scale)
+    return canvas
+
+
+def draw_layers(
+    canvas: Image.Image, layers: Sequence[BackgroundLayer], assets: AssetResolver, scale: float
+) -> None:
+    size = canvas.size
+    for layer in layers:
         if isinstance(layer, LinearGradient):
             canvas.alpha_composite(linear_gradient(size, layer))
         elif isinstance(layer, RadialSpot):
             canvas.alpha_composite(radial_spot(size, layer))
+        elif isinstance(layer, Vignette):
+            canvas.alpha_composite(vignette(size, layer))
         elif isinstance(layer, Texture):
-            texture = cover(asset(assets(layer.image)), size, (0.5, 0.5))
+            source = asset(assets(layer.image))
+            if layer.tile:
+                texture = tiled(source, size, layer.tile * scale)
+            else:
+                texture = cover(source, size, (0.5, 0.5))
             if layer.opacity < 1:
                 table = [round(a * layer.opacity) for a in range(256)]
                 texture.putalpha(texture.getchannel("A").point(table))
             canvas.alpha_composite(texture)
-    return canvas
+
+
+def tiled(
+    source: Image.Image, size: tuple[int, int], tile_width: float, tile_height: float | None = None
+) -> Image.Image:
+    """The picture repeated over the size, each tile `tile_width` pixels wide."""
+    tw = max(1, round(tile_width))
+    th = max(1, round(tile_height if tile_height else source.height * tw / source.width))
+    tile = source.resize((tw, th), RESAMPLE)
+    out = Image.new("RGBA", size, (0, 0, 0, 0))
+    for top in range(0, size[1], th):
+        for left in range(0, size[0], tw):
+            out.paste(tile, (left, top))
+    return out
+
+
+def vignette(size: tuple[int, int], spec: Vignette) -> Image.Image:
+    r, g, b, a = rgba(spec.color)
+    # Distance from the middle as a share of the way to the corner (an ellipse over the
+    # picture); Pillow's radial gradient is 255 in the corners.
+    distance = Image.radial_gradient("L").resize(size, Image.Resampling.BILINEAR)
+    inner = spec.inner * 255
+    table = [round(min(1.0, max(0.0, (v - inner) / (255 - inner))) * a) for v in range(256)]
+    layer = Image.new("RGBA", size, (r, g, b, 0))
+    layer.putalpha(distance.point(table))
+    return layer
 
 
 def linear_gradient(size: tuple[int, int], spec: LinearGradient) -> Image.Image:
@@ -278,11 +323,13 @@ def cell_piece(
         aw = max(1, round(width * attachment.width / 100))
         ah = max(1, round(source.height * aw / source.width))
         stuck = source.resize((aw, ah), RESAMPLE)
-        turn = rng.uniform(-attachment.jitter, attachment.jitter) if attachment.jitter else 0.0
+        turn = attachment.turn
+        if attachment.jitter:
+            turn += rng.uniform(-attachment.jitter, attachment.jitter)
         if turn:
-            stuck = stuck.rotate(turn, resample=Image.Resampling.BICUBIC, expand=True)
+            stuck = stuck.rotate(-turn, resample=Image.Resampling.BICUBIC, expand=True)
         x = {"top_left": width * 0.12, "top_right": width * 0.88}.get(attachment.anchor, width / 2)
-        y = height if attachment.anchor == "bottom" else 0
+        y = (height if attachment.anchor == "bottom" else 0) + height * attachment.dy / 100
         place(piece, stuck, (margin + x, margin + y))
     return piece, (piece.width / 2, piece.height / 2)
 
@@ -293,8 +340,8 @@ def with_shadow(
     """The piece over its shadow; and the shift of the piece's middle in the result."""
     if shadow is None:
         return piece, (0.0, 0.0)
-    blur = shadow.blur * scale
-    pad = round(blur * 2 + max(abs(shadow.dx), abs(shadow.dy)) * scale) + 1
+    blur = shadow.blur * scale / 2  # a CSS blur radius is twice the Gaussian deviation
+    pad = round(blur * 3 + max(abs(shadow.dx), abs(shadow.dy)) * scale) + 1
     out = Image.new("RGBA", (piece.width + 2 * pad, piece.height + 2 * pad), (0, 0, 0, 0))
     r, g, b, a = rgba(shadow.color)
     alpha = piece.getchannel("A").point(lambda v: round(v * a / 255))
@@ -327,11 +374,30 @@ def draw_cell(
     place(canvas, piece, ((left + right) / 2, (top + bottom) / 2))
 
 
-def draw_decor(canvas: Image.Image, image: Path, rect: Rect, rotate: float) -> None:
+def draw_decor(
+    canvas: Image.Image, spec: Decor, rect: Rect, scale: float, assets: AssetResolver
+) -> None:
     x, y, w, h = rect
-    picture = asset(image).resize((max(1, round(w)), max(1, round(h))), RESAMPLE)
-    if rotate:
-        picture = picture.rotate(-rotate, resample=Image.Resampling.BICUBIC, expand=True)
+    size = (max(1, round(w)), max(1, round(h)))
+    if spec.color is not None:
+        picture = Image.new("RGBA", size, rgba(spec.color))
+    elif spec.tile is not None and spec.image:
+        picture = tiled(asset(assets(spec.image)), size, spec.tile[0] * scale, spec.tile[1] * scale)
+    elif spec.image:
+        picture = asset(assets(spec.image)).resize(size, RESAMPLE)
+    else:
+        return
+    if spec.radius:
+        mask = Image.new("L", (size[0] * SUPERSAMPLE, size[1] * SUPERSAMPLE), 0)
+        ImageDraw.Draw(mask).rounded_rectangle(
+            (0, 0, mask.width - 1, mask.height - 1),
+            radius=spec.radius * scale * SUPERSAMPLE,
+            fill=255,
+        )
+        picture.putalpha(ImageChops.multiply(picture.getchannel("A"), mask.resize(size, RESAMPLE)))
+    if spec.rotate:
+        picture = picture.rotate(-spec.rotate, resample=Image.Resampling.BICUBIC, expand=True)
+    picture, _ = with_shadow(picture, spec.shadow, scale)
     place(canvas, picture, (x + w / 2, y + h / 2))
 
 
@@ -343,12 +409,16 @@ def draw_text(
     fitted: FittedText,
     spec: TextBlock,
     area: Rect,
-    font_file: tuple[Path, int],
+    font_file: FontFile,
     scale: float,
+    assets: AssetResolver,
 ) -> None:
+    """The lines on their plate. Text and plate are drawn on their own layer first, so the
+    whole block can be turned and cast one shadow."""
     if not fitted.lines:
         return
-    face = font(font_file[0], fitted.size, font_file[1])
+    face = font(font_file.path, fitted.size, font_file.index, font_file.variation)
+    spacing = spec.letter_spacing * fitted.size
     ascent, descent = face.getmetrics()
     pitch = fitted.size * spec.line_height
     block_height = pitch * (len(fitted.lines) - 1) + ascent + descent
@@ -356,63 +426,103 @@ def draw_text(
     top = {"top": y, "center": y + (h - block_height) / 2, "bottom": y + h - block_height}[
         spec.anchor
     ]
-    widths = [face.getlength(line) for line in fitted.lines]
+    widths = [_line_width(face, line, spacing) for line in fitted.lines]
     starts = [
         {"left": x, "center": x + (w - lw) / 2, "right": x + w - lw}[spec.align] for lw in widths
     ]
+    text_box = (min(starts), top, max(widths), block_height)
 
+    block = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    middle = (text_box[0] + text_box[2] / 2, text_box[1] + text_box[3] / 2)
     if spec.plate is not None:
-        _plate(canvas, spec.plate, (min(starts), top, max(widths), block_height), scale)
+        middle = _plate(block, spec.plate, text_box, scale, assets)
 
-    layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(layer)
+    letters = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(letters)
     stroke = round(spec.stroke.width * scale) if spec.stroke else 0
     stroke_fill = rgba(spec.stroke.color) if spec.stroke else None
     for i, line in enumerate(fitted.lines):
-        draw.text(
-            (starts[i], top + pitch * i),
-            line,
-            font=face,
-            fill=rgba(spec.color),
-            stroke_width=stroke,
-            stroke_fill=stroke_fill,
-        )
+        at_x, at_y = starts[i], top + pitch * i
+        pieces = [line] if not spacing else list(line)
+        for piece in pieces:
+            draw.text(
+                (at_x, at_y),
+                piece,
+                font=face,
+                fill=rgba(spec.color),
+                stroke_width=stroke,
+                stroke_fill=stroke_fill,
+            )
+            at_x += face.getlength(piece) + spacing
     if spec.shadow is not None:
-        shadow, _ = with_shadow(layer, spec.shadow, scale)
-        pad = (shadow.width - layer.width) // 2
-        canvas.alpha_composite(shadow.crop((pad, pad, pad + canvas.width, pad + canvas.height)))
-    else:
-        canvas.alpha_composite(layer)
+        letters = _with_shadow_same_size(letters, spec.shadow, scale)
+    block.alpha_composite(letters)
+    if spec.rotate:
+        block = block.rotate(
+            -spec.rotate, resample=Image.Resampling.BICUBIC, center=middle, expand=False
+        )
+    canvas.alpha_composite(block)
 
 
-def _plate(canvas: Image.Image, spec: Plate, text: Rect, scale: float) -> None:
-    width, height = canvas.size
+def _line_width(face: ImageFont.FreeTypeFont, line: str, spacing: float) -> float:
+    return face.getlength(line) + spacing * max(0, len(line) - 1)
+
+
+def _with_shadow_same_size(layer: Image.Image, shadow: Shadow, scale: float) -> Image.Image:
+    out, _ = with_shadow(layer, shadow, scale)
+    pad = (out.width - layer.width) // 2
+    return out.crop((pad, pad, pad + layer.width, pad + layer.height))
+
+
+def _plate(
+    block: Image.Image, spec: Plate, text: Rect, scale: float, assets: AssetResolver
+) -> tuple[float, float]:
+    """Draw the plate under the text; returns the plate's middle (the block turns around it)."""
+    width, height = block.size
     x, y, w, h = text
     pad_top, pad_x, pad_bottom = spec.pad_top * scale, spec.pad_x * scale, spec.pad_bottom * scale
     r, g, b, a = rgba(spec.color)
-    if spec.kind == "fade":
-        solid_top = max(0, y - pad_top)
-        fade = spec.fade * scale
-        top = max(0, solid_top - fade)
-        rows = max(1, height - round(top))
-        column = Image.new("L", (1, rows))
-        for i in range(rows):
-            at = round(top) + i
-            if at < solid_top:  # fading in from nothing to fade_from
-                share = (at - top) / max(1.0, solid_top - top) * spec.fade_from
-            else:  # from fade_from at the top of the solid part to full at the bottom
-                share = spec.fade_from + (1 - spec.fade_from) * (at - solid_top) / max(
-                    1.0, height - solid_top
-                )
-            column.putpixel((0, i), round(a * share))
-        plate = Image.new("RGBA", (width, rows), (r, g, b, 0))
-        plate.putalpha(column.resize((width, rows)))
-        canvas.alpha_composite(plate, dest=(0, round(top)))
-        return
-    if spec.kind == "band":
-        box = (0.0, y - pad_top, float(width), y + h + pad_bottom)
+    left, span = (0.0, float(width))
+    if spec.across is not None:
+        left, span = spec.across[0] / 100 * width, spec.across[1] / 100 * width
+    to_edge = spec.to_edge if spec.to_edge is not None else spec.kind == "fade"
+    if spec.kind in ("fade", "band"):
+        solid_top = y - pad_top
+        bottom = float(height) if to_edge else y + h + pad_bottom
+        fade = spec.fade * scale if spec.kind == "fade" else 0.0
+        top = solid_top - fade
+        box = (left, top, left + span, bottom)
     else:
         box = (x - pad_x, y - pad_top, x + w + pad_x, y + h + pad_bottom)
-    layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-    ImageDraw.Draw(layer).rounded_rectangle(box, radius=spec.radius * scale, fill=(r, g, b, a))
-    canvas.alpha_composite(layer)
+        solid_top, fade = box[1], 0.0
+    size = (max(1, round(box[2] - box[0])), max(1, round(box[3] - box[1])))
+    plate = Image.new("RGBA", size, (r, g, b, a))
+    if spec.image:
+        plate.alpha_composite(tiled(asset(assets(spec.image)), size, spec.tile * scale))
+    if spec.kind == "fade":
+        column = Image.new("L", (1, size[1]))
+        for i in range(size[1]):
+            at = box[1] + i
+            if at < solid_top:  # fading in from nothing to fade_from
+                share = (at - box[1]) / max(1.0, fade) * spec.fade_from
+            else:  # from fade_from at the top of the solid part to full at the bottom
+                share = spec.fade_from + (1 - spec.fade_from) * (at - solid_top) / max(
+                    1.0, box[3] - solid_top
+                )
+            column.putpixel((0, i), round(255 * min(1.0, max(0.0, share))))
+        plate.putalpha(ImageChops.multiply(plate.getchannel("A"), column.resize(size)))
+    if spec.radius:
+        corners = Image.new("L", (size[0] * SUPERSAMPLE, size[1] * SUPERSAMPLE), 0)
+        ImageDraw.Draw(corners).rounded_rectangle(
+            (0, 0, corners.width - 1, corners.height - 1),
+            radius=spec.radius * scale * SUPERSAMPLE,
+            fill=255,
+        )
+        plate.putalpha(ImageChops.multiply(plate.getchannel("A"), corners.resize(size, RESAMPLE)))
+    if spec.mask:
+        shape = asset(assets(spec.mask)).getchannel("A").resize(size, RESAMPLE)
+        plate.putalpha(ImageChops.multiply(plate.getchannel("A"), shape))
+    plate, _ = with_shadow(plate, spec.shadow, scale)
+    middle = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
+    place(block, plate, middle)
+    return middle

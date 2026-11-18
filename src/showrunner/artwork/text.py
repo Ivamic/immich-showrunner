@@ -33,16 +33,25 @@ class FittedText:
 
 
 @lru_cache(maxsize=64)
-def font(path: Path, size: int, index: int = 0) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(str(path), size=size, index=index)
+def font(
+    path: Path, size: int, index: int = 0, variation: str | None = None
+) -> ImageFont.FreeTypeFont:
+    face = ImageFont.truetype(str(path), size=size, index=index)
+    if variation:
+        face.set_variation_by_name(variation)
+    return face
 
 
-def font_measure(path: Path, index: int = 0) -> Measure:
-    """Width at any size, from the width at a reference size (the outline scales linearly)."""
-    reference = font(path, REFERENCE_SIZE, index)
+def font_measure(
+    path: Path, index: int = 0, variation: str | None = None, spacing: float = 0
+) -> Measure:
+    """Width at any size, from the width at a reference size (the outline scales linearly).
+    `spacing` is the extra space between letters in parts of the size."""
+    reference = font(path, REFERENCE_SIZE, index, variation)
 
     def measure(text: str, size: float) -> float:
-        return reference.getlength(text) * size / REFERENCE_SIZE
+        extra = spacing * size * max(0, len(text) - 1)
+        return reference.getlength(text) * size / REFERENCE_SIZE + extra
 
     return measure
 
@@ -153,9 +162,17 @@ def _cut(line: str, rest: str, width: float, size: float, measure: Measure) -> s
 
 
 def fit(
-    text: str, width: float, min_size: float, max_size: float, max_lines: int, measure: Measure
+    text: str,
+    width: float,
+    min_size: float,
+    max_size: float,
+    max_lines: int,
+    measure: Measure,
+    height: float | None = None,
+    line_height: float = 1.1,
 ) -> FittedText:
-    """Lines and size for the text in a line `width` pixels wide."""
+    """Lines and size for the text in a line `width` pixels wide; with `height`, the lines
+    must also fit that high."""
     text = " ".join(text.split())
     if not text:
         return FittedText(lines=(), size=int(max_size))
@@ -165,6 +182,8 @@ def fit(
         lines = balanced(words, count, measure)
         longest = max(measure(line, 1) for line in lines)
         size = min(max_size, width / longest) if longest else max_size
+        if height is not None:
+            size = min(size, height / (line_height * (len(lines) - 1) + 1.2))
         score = size * (1 - LINE_PENALTY * (len(lines) - 1))
         if best is None or score > best[0]:
             best = (score, _whole(size, lines, width, measure), lines)

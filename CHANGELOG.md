@@ -17,6 +17,10 @@ between releases.
   the whole file, scored for sharpness, exposure, contrast and color, searched for faces (YuNet,
   on the CPU) and cropped to keep the faces whole. The best frames, unlike each other and from
   different videos, are chosen first.
+- **Five more artwork styles**: Polaroid, Film, Playbill, Watercolor and Pinboard, next to Mosaic.
+  Styles can now strew prints at random (from a seed), pin and tape them, put film strips and other
+  decor under or over the frames, darken the edges, space and turn the title and lay it on paper
+  with a torn edge.
 
 ## [0.2.1] - 2026-11-15
 
