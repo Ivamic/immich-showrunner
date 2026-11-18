@@ -285,7 +285,8 @@ async def catch_up_jellyfin(
     if not pending:
         return []
     visible = set(visible_albums)
-    done = await tell_jellyfin(client, output_folder, pending & visible, pending - visible)
+    folders = {album: row.folder_name for album, row in (await registry.shows()).items()}
+    done = await tell_jellyfin(client, output_folder, pending & visible, pending - visible, folders)
     await registry.clear_pending(pending, JELLYFIN)
     await registry.commit()
     return done

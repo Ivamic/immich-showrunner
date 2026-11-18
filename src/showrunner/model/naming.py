@@ -39,17 +39,20 @@ def short_id(value: UUID) -> str:
 
 def show_folder_name(album_name: str, album_id: UUID) -> str:
     """`Summer at the lake [imm-97769e09]`. Kept as it was first created when the album is
-    renamed: the title lives in the metadata."""
-    return f"{safe_name(album_name)} [{SHOW_ID_PREFIX}{short_id(album_id)}]"
+    renamed: the title lives in the metadata. A date in the name loses its separators, as in
+    the names of files: Jellyfin reads a date anywhere in the path of an episode (see below)."""
+    name = without_dated_separators(safe_name(album_name))
+    return f"{name} [{SHOW_ID_PREFIX}{short_id(album_id)}]"
 
 
 def season_folder_name(season: int) -> str:
     return f"Season {season:02d}"
 
 
-# A date with separators anywhere in a file name makes Jellyfin take the file for a daily episode
-# of that date, and videos filmed on the same day for versions of one episode (checked on 12.4).
-# Dates are therefore written without separators.
+# A date with separators anywhere in the path of an episode — its file name or the folder of the
+# show — makes Jellyfin take the file for a daily episode of that date, and the videos with the
+# same date for versions of one episode (checked on 12.4). Dates are therefore written without
+# separators.
 _DATE_YMD = re.compile(r"(\d{4})[._ -](\d{2})[._ -](\d{2})")
 _DATE_DMY = re.compile(r"(\d{2})[._ -](\d{2})[._ -](\d{4})")
 

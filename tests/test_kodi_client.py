@@ -41,7 +41,11 @@ class FakeKodi:
         if method == "VideoLibrary.GetTVShows":
             result = {
                 "tvshows": [
-                    {"tvshowid": 11, "uniqueid": {"immich": str(A1)}},
+                    {
+                        "tvshowid": 11,
+                        "uniqueid": {"immich": str(A1)},
+                        "file": f"{OUTPUT}/Summer [imm-97769e09]/",
+                    },
                     {"tvshowid": 12, "uniqueid": {"immich": str(A2)}},
                     {"tvshowid": 13, "uniqueid": {"tvdb": "123"}},
                     {"tvshowid": 14, "uniqueid": {"immich": "not-an-id"}},
@@ -179,3 +183,15 @@ def test_kodi_names_a_file_with_its_own_separators() -> None:
     assert kodi_file_path(r"D:\media\kodi", relative) == (
         r"D:\media\kodi\Summer [imm-1]\Season 2024\poster.jpg"
     )
+
+
+async def test_show_in_a_renamed_folder_is_removed_and_scanned_anew() -> None:
+    """Kodi knows the show by its old folder: refreshing it would read an empty folder, and the
+    scan would add the new folder as a second show."""
+    kodi = FakeKodi()
+    async with kodi.client() as client:
+        done = await tell_kodi(client, OUTPUT, {A1: "Summer 20260607 [imm-97769e09]"}, set())
+    methods = kodi.methods()
+    assert "VideoLibrary.RemoveTVShow" in methods and "VideoLibrary.RefreshTVShow" not in methods
+    assert methods.index("VideoLibrary.RemoveTVShow") < methods.index("VideoLibrary.Scan")
+    assert f"Kodi: removed the show of album {A1} from its old folder" in done

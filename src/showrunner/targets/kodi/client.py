@@ -124,14 +124,21 @@ class KodiClient:
     async def shows(self) -> dict[UUID, int]:
         """The shows of the app that Kodi knows: Immich album id -> Kodi id. Kodi gives its
         shows new ids when they are refreshed, so they are never kept."""
-        result = await self.call("VideoLibrary.GetTVShows", {"properties": ["uniqueid"]})
-        shows: dict[UUID, int] = {}
+        return {album: show_id for album, (show_id, _) in (await self.show_folders()).items()}
+
+    async def show_folders(self) -> dict[UUID, tuple[int, str]]:
+        """The shows of the app that Kodi knows: Immich album id -> the Kodi id and the name of
+        the folder Kodi reads it from."""
+        result = await self.call("VideoLibrary.GetTVShows", {"properties": ["uniqueid", "file"]})
+        shows: dict[UUID, tuple[int, str]] = {}
         for show in (result or {}).get("tvshows") or []:
             unique = (show.get("uniqueid") or {}).get(UNIQUE_ID_TYPE)
             try:
-                shows[UUID(str(unique))] = int(show["tvshowid"])
+                album, show_id = UUID(str(unique)), int(show["tvshowid"])
             except (KeyError, TypeError, ValueError):
                 continue
+            path = str(show.get("file") or "").rstrip("/\\")
+            shows[album] = (show_id, path.replace("\\", "/").rsplit("/", 1)[-1])
         return shows
 
     async def scan(self, directory: str) -> None:
@@ -186,11 +193,22 @@ async def tell_kodi(
     root = folder_path(output_path)
     if not await client.can_open(root):
         raise KodiError(f"Kodi can not open {root} now")
-    known = await client.shows()
+    seen = await client.show_folders()
+    # A show whose folder was renamed: Kodi knows it by its old path, would refresh the empty
+    # old folder and add the new one as a second show. It is removed, and the scan adds it anew.
+    moved = {
+        album
+        for album in changed.keys() & seen.keys()
+        if seen[album][1] and seen[album][1] != changed[album]
+    }
+    known = {album: show_id for album, (show_id, _) in seen.items() if album not in moved}
     for album in sorted(gone, key=str):
         if album in known:
             await client.remove_show(known[album])
             done.append(f"Kodi: removed the show of album {album}")
+    for album in sorted(moved, key=str):
+        await client.remove_show(seen[album][0])
+        done.append(f"Kodi: removed the show of album {album} from its old folder")
     for album in sorted(changed.keys() & known.keys(), key=str):
         folder = folder_path(output_path, changed[album])
         # A show with files that Kodi does not find: a clean now would remove its episodes, and
