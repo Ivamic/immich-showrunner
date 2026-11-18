@@ -139,3 +139,22 @@ def test_mass_removal(before: int, removed: int, held: bool) -> None:
     plan = make_plan(desired, registry)
     assert plan.links_removed == removed
     assert plan.is_mass_removal is held
+
+
+def test_a_renamed_folder_is_a_move_not_a_mass_removal() -> None:
+    """Every link of a large show moves to a new folder: removed here, created there for the
+    same videos. Nothing is lost, so the sync is not held."""
+    registry = [recorded(link(n, folder="2026-06_07 - Trip")) for n in range(100)]
+    desired = [link(n, folder="20260607 - Trip") for n in range(100)]
+    plan = make_plan(desired, registry)
+    assert plan.links_removed == 100 and plan.links_moved == 100
+    assert not plan.is_mass_removal
+
+
+def test_a_move_does_not_hide_a_loss() -> None:
+    """Half the links move and the other half are gone: the loss alone still holds the sync."""
+    registry = [recorded(link(n, folder="old")) for n in range(100)]
+    desired = [link(n, folder="new") for n in range(40)]
+    plan = make_plan(desired, registry)
+    assert plan.links_moved == 40
+    assert plan.is_mass_removal, "60 of 100 links really go"

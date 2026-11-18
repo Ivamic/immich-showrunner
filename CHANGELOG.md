@@ -46,6 +46,8 @@ between releases.
   already did; an existing folder with such a date is renamed once (the database migration does
   it, the next sync moves the files), and Jellyfin and Kodi are made to find the show in its new
   folder. Watched marks of such a show start anew in Kodi, and in Jellyfin if it keeps them by path.
+- **Renaming the folders held the sync** as a mass removal: links that move to a new folder for
+  the same videos are no longer counted as removed. A real loss is still held.
 
 
 ## [0.2.1] - 2026-11-15
