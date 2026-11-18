@@ -39,6 +39,20 @@ oder Kodi.
 
 <table>
   <tr>
+    <td colspan="2" width="100%"><a href="docs/images/screenshots/artwork-styles.webp"><img src="docs/images/screenshots/artwork-styles.webp" alt="Ein Album in jedem der neun Stile der gezeichneten Bilder"></a><br><sub>Ein Album in jedem der neun Stile der gezeichneten Bilder</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-artwork-shows.webp"><img src="docs/images/screenshots/jellyfin-artwork-shows.webp" alt="Jellyfin: die Serien mit ihren gezeichneten Postern"></a><br><sub>Jellyfin: die Serien mit ihren gezeichneten Postern</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-artwork-show.webp"><img src="docs/images/screenshots/jellyfin-artwork-show.webp" alt="Jellyfin: eine Serie mit gezeichnetem Poster, Hintergrund und Logo"></a><br><sub>Jellyfin: eine Serie mit gezeichnetem Poster, Hintergrund und Logo</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/app-artwork.webp"><img src="docs/images/screenshots/app-artwork.webp" alt="Die Seite: die Bilder eines Albums, jedes mit anderen Einzelbildern und einer Nadel"></a><br><sub>Die Seite: die Bilder eines Albums, jedes mit anderen Einzelbildern und einer Nadel</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/app-artwork-look.webp"><img src="docs/images/screenshots/app-artwork-look.webp" alt="Die Seite: ein anderer Stil, nebeneinander, bevor er übernommen wird"></a><br><sub>Die Seite: ein anderer Stil, nebeneinander, bevor er übernommen wird</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
     <td width="50%"><a href="docs/images/screenshots/jellyfin-shows.webp"><img src="docs/images/screenshots/jellyfin-shows.webp" alt="Jellyfin: Alben als Serien"></a><br><sub>Jellyfin: Alben als Serien</sub></td>
     <td width="50%"><a href="docs/images/screenshots/jellyfin-season.webp"><img src="docs/images/screenshots/jellyfin-season.webp" alt="Jellyfin: eine Staffel, Titel aus den Beschreibungen in Immich"></a><br><sub>Jellyfin: eine Staffel, Titel aus den Beschreibungen in Immich</sub></td>
   </tr>
@@ -61,7 +75,12 @@ oder Kodi.
   Sie es nicht mehr, verschwinden sie.
 - **Album = Serie, Video = Folge.** Staffeln sind die Aufnahmejahre oder eine Staffel pro Album.
   Der Titel einer Folge ist die erste Zeile der Videobeschreibung in Immich oder der
-  Aufnahmezeitpunkt; Poster und Bilder der Folgen sind die aus Immich.
+  Aufnahmezeitpunkt; die Bilder der Folgen sind die aus Immich.
+- **Eigene Bilder.** Poster, Querformatbild, Hintergrund und Logo einer Serie und ein Poster für
+  jede Staffel werden aus Einzelbildern der Videos des Albums gezeichnet, die Gesichter im Blick, in
+  einem von neun Stilen. Ohne KI-Bildgenerierung: alles läuft auf der CPU Ihres Servers. Auf der
+  Seite probieren Sie einen anderen Stil oder andere Einzelbilder, für alle Bilder oder nur eines,
+  und heften die an, die Ihnen gefallen.
 - **Personen aus Immich**, unter eigenen Namen für den Medienserver („Mama“ darf bei Ihnen „Mama“
   bleiben), mit einem kurzen Präfix markiert, damit sie sich nie mit den Schauspielern Ihrer
   Filmbibliothek vermischen.

@@ -39,6 +39,20 @@ Kodi.
 
 <table>
   <tr>
+    <td colspan="2" width="100%"><a href="docs/images/screenshots/artwork-styles.webp"><img src="docs/images/screenshots/artwork-styles.webp" alt="Un album in ciascuno dei nove stili delle immagini disegnate"></a><br><sub>Un album in ciascuno dei nove stili delle immagini disegnate</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-artwork-shows.webp"><img src="docs/images/screenshots/jellyfin-artwork-shows.webp" alt="Jellyfin: le serie con le loro locandine disegnate"></a><br><sub>Jellyfin: le serie con le loro locandine disegnate</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-artwork-show.webp"><img src="docs/images/screenshots/jellyfin-artwork-show.webp" alt="Jellyfin: una serie con locandina, sfondo e logo disegnati"></a><br><sub>Jellyfin: una serie con locandina, sfondo e logo disegnati</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/app-artwork.webp"><img src="docs/images/screenshots/app-artwork.webp" alt="La pagina: le immagini di un album, ognuna con altri fotogrammi e un lucchetto"></a><br><sub>La pagina: le immagini di un album, ognuna con altri fotogrammi e un lucchetto</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/app-artwork-look.webp"><img src="docs/images/screenshots/app-artwork-look.webp" alt="La pagina: un altro stile, affiancato prima di applicarlo"></a><br><sub>La pagina: un altro stile, affiancato prima di applicarlo</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
     <td width="50%"><a href="docs/images/screenshots/jellyfin-shows.webp"><img src="docs/images/screenshots/jellyfin-shows.webp" alt="Jellyfin: gli album come serie"></a><br><sub>Jellyfin: gli album come serie</sub></td>
     <td width="50%"><a href="docs/images/screenshots/jellyfin-season.webp"><img src="docs/images/screenshots/jellyfin-season.webp" alt="Jellyfin: una stagione, titoli dalle descrizioni in Immich"></a><br><sub>Jellyfin: una stagione, titoli dalle descrizioni in Immich</sub></td>
   </tr>
@@ -61,7 +75,12 @@ Kodi.
   spariscono.
 - **Album = serie, video = episodio.** Le stagioni sono gli anni delle riprese, oppure una sola
   stagione per album. Il titolo di un episodio è la prima riga della descrizione del video in
-  Immich, oppure l’ora della ripresa; la locandina e le immagini degli episodi sono quelle di Immich.
+  Immich, oppure l’ora della ripresa; le immagini degli episodi sono quelle di Immich.
+- **Immagini proprie.** La locandina, l’immagine orizzontale, lo sfondo e il logo di una serie e una
+  locandina per ogni stagione sono disegnati dai fotogrammi dei video dell’album, tenendo in vista i
+  volti, in uno di nove stili. Senza generazione di immagini con l’IA: tutto gira sulla CPU del tuo
+  server. Sulla pagina prova un altro stile o altri fotogrammi, per tutte le immagini o per una sola,
+  e fissa quelle che ti piacciono.
 - **Le persone di Immich**, con nomi propri per il media server («Mamma» può restare «Mamma» da
   te), segnate da un breve prefisso perché non si mescolino mai con gli attori della tua
   cineteca.

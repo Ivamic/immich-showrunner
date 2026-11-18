@@ -39,6 +39,20 @@ Jellyfin или Kodi.
 
 <table>
   <tr>
+    <td colspan="2" width="100%"><a href="docs/images/screenshots/artwork-styles.webp"><img src="docs/images/screenshots/artwork-styles.webp" alt="Один альбом во всех девяти стилях нарисованных картинок"></a><br><sub>Один альбом во всех девяти стилях нарисованных картинок</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-artwork-shows.webp"><img src="docs/images/screenshots/jellyfin-artwork-shows.webp" alt="Jellyfin: сериалы с нарисованными постерами"></a><br><sub>Jellyfin: сериалы с нарисованными постерами</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-artwork-show.webp"><img src="docs/images/screenshots/jellyfin-artwork-show.webp" alt="Jellyfin: сериал с нарисованными постером, фоном и логотипом"></a><br><sub>Jellyfin: сериал с нарисованными постером, фоном и логотипом</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/app-artwork.webp"><img src="docs/images/screenshots/app-artwork.webp" alt="Страница: картинки альбома, у каждой — другие кадры и замок"></a><br><sub>Страница: картинки альбома, у каждой — другие кадры и замок</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/app-artwork-look.webp"><img src="docs/images/screenshots/app-artwork-look.webp" alt="Страница: другой стиль рядом с нынешним, до применения"></a><br><sub>Страница: другой стиль рядом с нынешним, до применения</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
     <td width="50%"><a href="docs/images/screenshots/jellyfin-shows.webp"><img src="docs/images/screenshots/jellyfin-shows.webp" alt="Jellyfin: альбомы как сериалы"></a><br><sub>Jellyfin: альбомы как сериалы</sub></td>
     <td width="50%"><a href="docs/images/screenshots/jellyfin-season.webp"><img src="docs/images/screenshots/jellyfin-season.webp" alt="Jellyfin: сезон, названия из описаний в Immich"></a><br><sub>Jellyfin: сезон, названия из описаний в Immich</sub></td>
   </tr>
@@ -60,8 +74,12 @@ Jellyfin или Kodi.
   медиасервера и поделитесь с ним альбомом — его видео появятся в медиасервере. Перестали делиться —
   исчезли.
 - **Альбом = сериал, видео = эпизод.** Сезоны — годы съёмки или один сезон на альбом. Название
-  эпизода — первая строка описания видео в Immich или время съёмки; постер и картинки эпизодов —
-  те же, что в Immich.
+  эпизода — первая строка описания видео в Immich или время съёмки; картинки эпизодов — те же, что
+  в Immich.
+- **Свои картинки.** Постер, широкая картинка, фон и логотип сериала и постер каждого сезона
+  рисуются из кадров видео альбома, так, чтобы лица были видны, в одном из девяти стилей. Без
+  генерации картинок ИИ: всё работает на процессоре вашего сервера. На странице можно попробовать
+  другой стиль или другие кадры — для всех картинок или для одной — и закрепить понравившиеся.
 - **Люди из Immich** — под своими именами для медиасервера («мама» у вас останется «мамой») и с
   коротким префиксом, чтобы не смешиваться с актёрами вашей фильмотеки.
 - **Работает само**, а для случаев, где угадало не так, есть веб-страница: переименовать сериал
