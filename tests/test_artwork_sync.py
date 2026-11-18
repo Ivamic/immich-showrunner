@@ -152,14 +152,15 @@ def test_drawn_poster_takes_the_place_of_the_cover() -> None:
     jobs = plan_show(show, looks_of(show), STYLES["mosaic"])
     drawn = {str(f.path): f for f in picture_files(show, root, jobs, PICTURE_NAMES)}
     assert set(drawn) == {
-        "Family/poster.jpg",
+        "Family/folder.jpg",
         "Family/landscape.jpg",
         "Family/fanart.jpg",
         "Family/logo.png",
         "Family/Season 2023/poster.jpg",
         "Family/Season 2024/poster.jpg",
     }
-    poster = drawn["Family/poster.jpg"]
+    poster = drawn["Family/folder.jpg"]
+    assert "Family/poster.jpg" not in drawn, "the cover gives way to the drawn poster"
     assert poster.kind is FileKind.IMAGE and poster.image is not None
     assert poster.image.artwork is not None
     assert poster.source_version == jobs[(OutputKind.SERIES_POSTER, None)].version
@@ -229,7 +230,7 @@ async def test_a_pass_draws_the_pictures_once(
     assert report.ok
     written = files(tmp_path)
     folder = "Family [imm-00000001]"
-    for name in ("poster.jpg", "landscape.jpg", "fanart.jpg", "logo.png"):
+    for name in ("folder.jpg", "landscape.jpg", "fanart.jpg", "logo.png"):
         assert written[f"{folder}/{name}"].startswith(b"ART "), name
     assert written[f"{folder}/Season 2023/poster.jpg"].startswith(b"ART season_poster 2023")
     assert sorted(looked_at) == [asset_id(1), asset_id(2)]
@@ -256,7 +257,9 @@ async def test_a_show_waits_for_its_videos_and_keeps_the_cover(
     # The album was not stamped: the next quick pass reads it again and draws it.
     art = FakeArtwork()
     await one_pass(immich, session, tmp_path, art)
-    assert files(tmp_path)["Family [imm-00000001]/poster.jpg"].startswith(b"ART")
+    written = files(tmp_path)
+    assert written["Family [imm-00000001]/folder.jpg"].startswith(b"ART")
+    assert "Family [imm-00000001]/poster.jpg" not in written, "the cover gave way"
     assert art.drawn
 
 
