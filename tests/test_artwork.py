@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from PIL import Image, ImageDraw
 
-from showrunner.artwork.paint import Frame, cover, linear_gradient, radial_spot
+from showrunner.artwork.paint import Frame, cover, linear_gradient, radial_spot, vignette
 from showrunner.artwork.render import encode, grid_rects, render
 from showrunner.artwork.style import (
     BUILTIN_STYLES,
@@ -19,9 +19,11 @@ from showrunner.artwork.style import (
     Stop,
     Style,
     StyleError,
+    Vignette,
     builtin_styles,
     json_schema,
     load_style,
+    text_block,
 )
 from showrunner.artwork.text import ELLIPSIS, fit, font_measure
 
@@ -115,27 +117,38 @@ def test_empty_title_has_no_lines() -> None:
 # --- the base style ---------------------------------------------------------------------
 
 
+BUILTIN = ["mosaic", "polaroid", "film", "afisha", "watercolor", "board"]
+LANGUAGES = {"en", "de", "fr", "it", "ru"}
+
+
 def test_builtin_styles_load(styles: dict[str, Style]) -> None:
+    assert sorted(styles) == sorted(BUILTIN)
     mosaic = styles["mosaic"]
     assert set(mosaic.spec.outputs) == set(OutputKind)
     assert mosaic.spec.names["ru"] == "Мозаика"
+    for style in styles.values():
+        assert set(style.spec.names) == LANGUAGES, style.id
+        assert style.id == "mosaic" or style.base is mosaic
     assert "properties" in json_schema()
 
 
 @pytest.mark.parametrize("kind", list(OutputKind))
-@pytest.mark.parametrize("count", FRAME_COUNTS)
-def test_every_output_for_every_frame_count(
-    styles: dict[str, Style], kind: OutputKind, count: int
+@pytest.mark.parametrize("name", BUILTIN)
+def test_every_style_every_output_every_frame_count(
+    styles: dict[str, Style], name: str, kind: OutputKind
 ) -> None:
-    output, _ = styles["mosaic"].output(kind)
-    for key, title in TITLES.items():
-        rendered = render(styles["mosaic"], kind, FRAMES[:count], title, seed=7)
-        assert rendered.image.size == output.size, key
-        if output.layouts:
-            assert 1 <= rendered.frames_used <= count
-        picture = Image.open(io.BytesIO(encode(rendered, kind)))
-        assert picture.size == output.size
-        assert picture.format == ("PNG" if kind == OutputKind.LOGO else "JPEG")
+    style = styles[name]
+    output, _ = style.output(kind)
+    for count in FRAME_COUNTS:
+        titles = TITLES.items() if count == 6 else [("long", TITLES["long"])]
+        for key, title in titles:
+            rendered = render(style, kind, FRAMES[:count], title, seed=7)
+            assert rendered.image.size == output.size, (count, key)
+            if output.layouts:
+                assert 1 <= rendered.frames_used <= min(count, style.spec.max_frames)
+            picture = Image.open(io.BytesIO(encode(rendered, kind)))
+            assert picture.size == output.size
+            assert picture.format == ("PNG" if kind == OutputKind.LOGO else "JPEG")
 
 
 def test_layout_uses_as_many_frames_as_it_can(styles: dict[str, Style]) -> None:
@@ -147,11 +160,34 @@ def test_layout_uses_as_many_frames_as_it_can(styles: dict[str, Style]) -> None:
     assert used == {1: 1, 2: 1, 3: 3, 4: 3, 5: 3, 6: 6, 7: 6, 8: 6, 9: 6, 10: 6, 11: 6, 12: 12}
 
 
-def test_same_input_gives_the_same_bytes(styles: dict[str, Style]) -> None:
+@pytest.mark.parametrize("name", BUILTIN)
+def test_same_input_gives_the_same_bytes(styles: dict[str, Style], name: str) -> None:
     for kind in OutputKind:
-        first = encode(render(styles["mosaic"], kind, FRAMES[:6], TITLES["long"], seed=3), kind)
-        again = encode(render(styles["mosaic"], kind, FRAMES[:6], TITLES["long"], seed=3), kind)
+        first = encode(render(styles[name], kind, FRAMES[:6], TITLES["long"], seed=3), kind)
+        again = encode(render(styles[name], kind, FRAMES[:6], TITLES["long"], seed=3), kind)
         assert first == again, kind
+
+
+def test_strewn_prints_move_with_the_seed(styles: dict[str, Style]) -> None:
+    """Polaroid scatters six prints: another seed, another arrangement; same seed, same one."""
+    kind = OutputKind.SERIES_POSTER
+    one = encode(render(styles["polaroid"], kind, FRAMES[:6], "", seed=1), kind)
+    again = encode(render(styles["polaroid"], kind, FRAMES[:6], "", seed=1), kind)
+    other = encode(render(styles["polaroid"], kind, FRAMES[:6], "", seed=2), kind)
+    assert one == again != other
+
+
+def test_layout_moves_the_title(styles: dict[str, Style]) -> None:
+    """Playbill puts the title on the lower edge of the main frame, which is higher with more
+    frames below it."""
+    afisha = styles["afisha"]
+    output, _ = afisha.output(OutputKind.SERIES_POSTER)
+    one = text_block(output, output.layout_for(1))
+    six = text_block(output, output.layout_for(6))
+    assert one is not None and six is not None
+    assert one.area[3] > six.area[3]
+    assert one.plate is not None and one.plate.to_edge is None
+    assert six.plate is not None and six.plate.to_edge is False
 
 
 def test_logo_is_transparent_around_the_title(styles: dict[str, Style]) -> None:
@@ -368,3 +404,37 @@ def test_linear_gradient_follows_the_css_angle() -> None:
     right = linear_gradient((100, 60), LinearGradient(kind="linear", angle=90, stops=stops))
     assert down.getpixel((50, 1))[0] < 20 and down.getpixel((50, 58))[0] > 235  # type: ignore[index]
     assert right.getpixel((1, 30))[0] < 20 and right.getpixel((98, 30))[0] > 235  # type: ignore[index]
+
+
+def test_letter_spacing_widens_the_line() -> None:
+    plain = font_measure(MONTSERRAT)
+    spaced = font_measure(MONTSERRAT, spacing=0.1)
+    assert spaced("ABCD", 50) == pytest.approx(plain("ABCD", 50) + 3 * 5)
+    assert spaced("A", 50) == pytest.approx(plain("A", 50))
+
+
+def test_title_keeps_to_the_height() -> None:
+    free = fit("WINTER", 600, 10, 300, 2, MEASURE)
+    low = fit("WINTER", 600, 10, 300, 2, MEASURE, height=60, line_height=1.0)
+    assert free.size > 100
+    assert low.size <= 50
+
+
+def test_vignette_darkens_the_corners_only() -> None:
+    layer = vignette((200, 100), Vignette(kind="vignette", inner=0.5, color="#000000FF"))
+    alpha = layer.getchannel("A")
+    assert alpha.getpixel((100, 50)) == 0
+    assert alpha.getpixel((0, 0)) > 200  # type: ignore[operator]
+
+
+def test_pin_goes_over_the_note(styles: dict[str, Style]) -> None:
+    """The board's pin is drawn after the title's note, so the note does not hide it."""
+    board = styles["board"]
+    output, _ = board.output(OutputKind.SERIES_POSTER)
+    pins = [item for item in output.decor if item.above_text]
+    assert pins
+    with_title = render(board, OutputKind.SERIES_POSTER, FRAMES[:1], "Winter", 1).image
+    x = round((pins[0].box[0] + pins[0].box[2] / 2) / 100 * 1000)
+    y = round((pins[0].box[1] + pins[0].box[3] / 2) / 100 * 1500)
+    r, g, b, _ = with_title.getpixel((x - 4, y - 4))  # type: ignore[misc]
+    assert min(r, g, b) > 200, "the white pin head, not the note's paper shade"

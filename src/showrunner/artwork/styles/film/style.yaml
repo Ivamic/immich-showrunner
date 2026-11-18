@@ -1,0 +1,216 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Film: frames on strips of film with sprocket holes, the title on the black leader, the year
+# of a season stamped like a camera's date.
+schema: 1
+id: film
+version: 1
+names: {en: Film, de: Film, fr: Pellicule, it: Pellicola, ru: Плёнка}
+max_frames: 12
+fonts:
+  title: {file: fonts/Oswald.ttf, variation: SemiBold}
+  stamp: {file: fonts/VT323-Regular.ttf}
+
+outputs:
+  series_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: &dark
+      color: "#111111"
+      layers: [{kind: radial, center: [50, 30], radius: 75, color: "#2A2A2A"}]
+    cell: {radius: 2}
+    overlay: &scrim
+      - kind: linear
+        stops: [{at: 0, color: "#00000000"}, {at: 0.66, color: "#00000000"},
+                {at: 0.83, color: "#000000BF"}, {at: 1, color: "#000000F2"}]
+    layouts:
+      - &one
+        decor:
+          - {color: "#0A0A0A", box: [16, -2, 68, 104],
+             shadow: &strip_shadow {dx: 0, dy: 10, blur: 30, color: "#00000099"}}
+          - {image: assets/holes_v.png, box: [19.3, -2, 1.94, 104], tile: [7, 20]}
+          - {image: assets/holes_v.png, box: [78.75, -2, 1.94, 104], tile: [7, 20]}
+        cells: [{box: [27.56, 10, 44.88, 54]}]
+      - &three
+        decor:
+          - {color: "#0A0A0A", box: [24, -2, 52, 104], shadow: *strip_shadow}
+          - {image: assets/holes_v.png, box: [26.5, -2, 1.94, 104], tile: [7, 20]}
+          - {image: assets/holes_v.png, box: [71.55, -2, 1.94, 104], tile: [7, 20]}
+        cells:
+          - {box: [32.84, 3, 34.32, 21]}
+          - {box: [32.84, 26, 34.32, 21]}
+          - {box: [32.84, 49, 34.32, 21]}
+      - decor:
+          - {color: "#0A0A0A", box: [8, -6, 40, 104], shadow: *strip_shadow}
+          - {image: assets/holes_v.png, box: [9.9, -6, 1.94, 104], tile: [7, 20]}
+          - {image: assets/holes_v.png, box: [44.15, -6, 1.94, 104], tile: [7, 20]}
+          - {color: "#0A0A0A", box: [52, 2, 40, 104], shadow: *strip_shadow}
+          - {image: assets/holes_v.png, box: [53.9, 2, 1.94, 104], tile: [7, 20]}
+          - {image: assets/holes_v.png, box: [88.15, 2, 1.94, 104], tile: [7, 20]}
+        cells:
+          - {box: [14.8, 1, 26.4, 19.5]}
+          - {box: [14.8, 23, 26.4, 19.5]}
+          - {box: [14.8, 45, 26.4, 19.5]}
+          - {box: [58.8, 8, 26.4, 19.5]}
+          - {box: [58.8, 30, 26.4, 19.5]}
+          - {box: [58.8, 52, 26.4, 19.5]}
+      - decor:
+          - {color: "#0A0A0A", box: [4, -4, 28, 108], shadow: *strip_shadow}
+          - {image: assets/holes_v.png, box: [5.3, -4, 1.94, 108], tile: [7, 20]}
+          - {image: assets/holes_v.png, box: [28.75, -4, 1.94, 108], tile: [7, 20]}
+          - {color: "#0A0A0A", box: [36, -1, 28, 108], shadow: *strip_shadow}
+          - {image: assets/holes_v.png, box: [37.3, -1, 1.94, 108], tile: [7, 20]}
+          - {image: assets/holes_v.png, box: [60.75, -1, 1.94, 108], tile: [7, 20]}
+          - {color: "#0A0A0A", box: [68, -6, 28, 108], shadow: *strip_shadow}
+          - {image: assets/holes_v.png, box: [69.3, -6, 1.94, 108], tile: [7, 20]}
+          - {image: assets/holes_v.png, box: [92.75, -6, 1.94, 108], tile: [7, 20]}
+        cells:
+          - {box: [8.76, 1, 18.48, 15.5]}
+          - {box: [8.76, 18.5, 18.48, 15.5]}
+          - {box: [8.76, 36, 18.48, 15.5]}
+          - {box: [8.76, 53.5, 18.48, 15.5]}
+          - {box: [40.76, 4, 18.48, 15.5]}
+          - {box: [40.76, 21.5, 18.48, 15.5]}
+          - {box: [40.76, 39, 18.48, 15.5]}
+          - {box: [40.76, 56.5, 18.48, 15.5]}
+          - {box: [72.76, -1, 18.48, 15.5]}
+          - {box: [72.76, 16.5, 18.48, 15.5]}
+          - {box: [72.76, 34, 18.48, 15.5]}
+          - {box: [72.76, 51.5, 18.48, 15.5]}
+    text: &title
+      font: title
+      color: "#F5F1E8"
+      uppercase: true
+      letter_spacing: 0.03
+      area: [6, 0, 88, 96.67]
+      anchor: bottom
+      align: center
+      size: [26, 58]
+      max_lines: 2
+      line_height: 1.05
+      plate: {kind: band, color: "#050505", pad_top: 14, to_edge: true}
+
+  season_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: *dark
+    cell: {radius: 2}
+    overlay: *scrim
+    layouts:
+      - *one
+      - *three
+      - decor:
+          - {color: "#0A0A0A", box: [8, -4, 40, 108], shadow: *strip_shadow}
+          - {image: assets/holes_v.png, box: [9.9, -4, 1.94, 108], tile: [7, 20]}
+          - {image: assets/holes_v.png, box: [44.15, -4, 1.94, 108], tile: [7, 20]}
+          - {color: "#0A0A0A", box: [52, -10, 40, 108], shadow: *strip_shadow}
+          - {image: assets/holes_v.png, box: [53.9, -10, 1.94, 108], tile: [7, 20]}
+          - {image: assets/holes_v.png, box: [88.15, -10, 1.94, 108], tile: [7, 20]}
+        cells:
+          - {box: [14.8, 2, 26.4, 20]}
+          - {box: [14.8, 25, 26.4, 20]}
+          - {box: [58.8, -4, 26.4, 20]}
+          - {box: [58.8, 19, 26.4, 20]}
+    text:
+      font: stamp
+      color: "#FF8B26"
+      area: [0, 0, 94, 96]
+      anchor: bottom
+      align: right
+      size: [150, 150]
+      max_lines: 1
+      line_height: 1
+      letter_spacing: 0.04
+      shadow: {dx: 0, dy: 0, blur: 14, color: "#FF78148C"}
+      plate: {kind: box, color: "#0000009E", pad_x: 14, radius: 4}
+
+  landscape:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *dark
+    cell: {radius: 2}
+    decor:
+      - {color: "#0A0A0A", box: [-2, 14, 104, 50], shadow: *strip_shadow}
+      - {image: assets/holes_h.png, box: [-2, 16.88, 104, 1.94], tile: [20, 7]}
+      - {image: assets/holes_h.png, box: [-2, 59.17, 104, 1.94], tile: [20, 7]}
+    layouts:
+      - cells: [{box: [40, 22.5, 20, 33]}]
+      - cells: [{box: [16, 22.5, 20, 33]}, {box: [40, 22.5, 20, 33]}, {box: [64, 22.5, 20, 33]}]
+      - cells:
+          - {box: [4, 22.5, 20, 33]}
+          - {box: [28, 22.5, 20, 33]}
+          - {box: [52, 22.5, 20, 33]}
+          - {box: [76, 22.5, 20, 33]}
+    text:
+      <<: *title
+      area: [4, 0, 92, 93]
+      align: left
+      size: [22, 40]
+      plate: null
+
+  fanart:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *dark
+    cell: {radius: 2, filter: {brightness: 0.8}}
+    layouts:
+      - decor:
+          - {color: "#0A0A0A", box: [-4, 29, 108, 42], shadow: *strip_shadow}
+          - {image: assets/holes_h.png, box: [-4, 31.4, 108, 1.94], tile: [20, 7]}
+          - {image: assets/holes_h.png, box: [-4, 66.65, 108, 1.94], tile: [20, 7]}
+        cells:
+          - {box: [2, 36, 17.5, 28]}
+          - {box: [22, 36, 17.5, 28]}
+          - {box: [42, 36, 17.5, 28]}
+          - {box: [62, 36, 17.5, 28]}
+          - {box: [82, 36, 17.5, 28]}
+      - decor:
+          - {color: "#0A0A0A", box: [-4, 6, 108, 42], shadow: *strip_shadow}
+          - {image: assets/holes_h.png, box: [-4, 8.4, 108, 1.94], tile: [20, 7]}
+          - {image: assets/holes_h.png, box: [-4, 43.65, 108, 1.94], tile: [20, 7]}
+          - {color: "#0A0A0A", box: [-4, 52, 108, 42], shadow: *strip_shadow}
+          - {image: assets/holes_h.png, box: [-4, 54.4, 108, 1.94], tile: [20, 7]}
+          - {image: assets/holes_h.png, box: [-4, 89.65, 108, 1.94], tile: [20, 7]}
+        cells:
+          - {box: [6, 13, 20, 28]}
+          - {box: [29, 13, 20, 28]}
+          - {box: [52, 13, 20, 28]}
+          - {box: [75, 13, 20, 28]}
+          - {box: [-4, 59, 20, 28]}
+          - {box: [19, 59, 20, 28]}
+          - {box: [42, 59, 20, 28]}
+          - {box: [65, 59, 20, 28]}
+      - decor:
+          - {color: "#0A0A0A", box: [-4, 6, 108, 42], shadow: *strip_shadow}
+          - {image: assets/holes_h.png, box: [-4, 8.4, 108, 1.94], tile: [20, 7]}
+          - {image: assets/holes_h.png, box: [-4, 43.65, 108, 1.94], tile: [20, 7]}
+          - {color: "#0A0A0A", box: [-4, 52, 108, 42], shadow: *strip_shadow}
+          - {image: assets/holes_h.png, box: [-4, 54.4, 108, 1.94], tile: [20, 7]}
+          - {image: assets/holes_h.png, box: [-4, 89.65, 108, 1.94], tile: [20, 7]}
+        cells:
+          - {box: [2, 13, 17.5, 28]}
+          - {box: [22, 13, 17.5, 28]}
+          - {box: [42, 13, 17.5, 28]}
+          - {box: [62, 13, 17.5, 28]}
+          - {box: [82, 13, 17.5, 28]}
+          - {box: [-8, 59, 17.5, 28]}
+          - {box: [12, 59, 17.5, 28]}
+          - {box: [32, 59, 17.5, 28]}
+          - {box: [52, 59, 17.5, 28]}
+          - {box: [72, 59, 17.5, 28]}
+
+  logo:
+    size: [800, 310]
+    design: [568, 220]
+    text:
+      font: title
+      color: "#F5F1E8"
+      uppercase: true
+      letter_spacing: 0.06
+      area: [6, 4, 88, 92]
+      anchor: center
+      align: center
+      size: [40, 92]
+      max_lines: 2
+      line_height: 1.05
+      stroke: {width: 1, color: "#000000B3"}
+      shadow: {dx: 0, dy: 2, blur: 8, color: "#00000080"}

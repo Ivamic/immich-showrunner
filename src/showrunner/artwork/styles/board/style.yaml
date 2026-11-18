@@ -1,0 +1,147 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Board: prints pinned to a wooden board, the title typed on a crumpled note.
+schema: 1
+id: board
+version: 1
+names: {en: Pinboard, de: Pinnwand, fr: Tableau, it: Bacheca, ru: Доска}
+max_frames: 12
+fonts:
+  title: {file: fonts/PTMono-Regular.ttf}
+
+outputs:
+  series_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: &wood
+      color: "#5E4334"
+      layers:
+        - kind: linear
+          stops: [{at: 0, color: "#6A4C3B"}, {at: 1, color: "#553C2F"}]
+        - {kind: texture, image: assets/wood.png, tile: 78}
+    cell: &photo
+      mat: {color: "#F7F7F5", top: 9.4, right: 9.4, bottom: 9.4, left: 9.4}
+      shadow: {dx: 0, dy: 8, blur: 16, color: "#140A0573"}
+      attachments: [{image: assets/pin.png, width: 6.5, anchor: top, dy: 1.5}]
+    decor:
+      - {image: assets/pin.png, box: [47.2, 2.35, 5.56, 3.7], over: true, above_text: true}
+    layouts:
+      - &one
+        cells: [{box: [8, 24, 84, 58], rotate: 1.5}]
+      - &three
+        cell:
+          mat: {color: "#F7F7F5", top: 7.9, right: 7.9, bottom: 7.9, left: 7.9}
+          attachments: [{image: assets/pin.png, width: 9, anchor: top, dy: 2}]
+        cells:
+          - {box: [4, 24, 56, 34], rotate: -3}
+          - {box: [44, 31, 52, 31], rotate: 3}
+          - {box: [12, 61, 62, 31], rotate: -1}
+      - cell:
+          mat: {color: "#F7F7F5", top: 6.5, right: 6.5, bottom: 6.5, left: 6.5}
+          attachments: [{image: assets/pin.png, width: 10.5, anchor: top, dy: 2.5}]
+        cells:
+          - scatter: {xs: [4, 50], ys: [24, 48, 72], size: [46, 22], jitter: 1, turn: 4}
+      - cell:
+          mat: {color: "#F7F7F5", top: 5.4, right: 5.4, bottom: 5.4, left: 5.4}
+          attachments: [{image: assets/pin.png, width: 13, anchor: top, dy: 3}]
+        cells:
+          - scatter: {xs: [2, 34, 66], ys: [23, 42, 61, 80], size: [32, 17.5], jitter: 1, turn: 5}
+    text: &note
+      font: title
+      color: "#2E2E2E"
+      stroke: {width: 0.4, color: "#2E2E2E"}
+      uppercase: true
+      letter_spacing: 0.04
+      area: [8, 7.1, 84, 14]
+      anchor: top
+      align: center
+      size: [18, 40]
+      max_lines: 2
+      line_height: 1.15
+      rotate: -1.5
+      plate:
+        kind: box
+        color: "#F2F0EA"
+        pad_x: 20
+        pad_top: 14
+        pad_bottom: 14
+        shadow: {dx: 0, dy: 8, blur: 16, color: "#140A0573"}
+
+  season_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: *wood
+    cell: *photo
+    decor:
+      - {image: assets/pin.png, box: [47.2, 2.35, 5.56, 3.7], over: true, above_text: true}
+    layouts:
+      - *one
+      - *three
+      - cell:
+          mat: {color: "#F7F7F5", top: 6.5, right: 6.5, bottom: 6.5, left: 6.5}
+          attachments: [{image: assets/pin.png, width: 10.5, anchor: top, dy: 2.5}]
+        cells:
+          - scatter: {xs: [4, 50], ys: [26, 56], size: [46, 26], jitter: 1, turn: 4}
+    text:
+      <<: *note
+      area: [8, 6.4, 84, 13]
+      size: [64, 64]
+      max_lines: 1
+      plate:
+        kind: box
+        color: "#F2F0EA"
+        pad_x: 26
+        pad_top: 10
+        pad_bottom: 10
+        shadow: {dx: 0, dy: 8, blur: 16, color: "#140A0573"}
+
+  landscape:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *wood
+    cell:
+      <<: *photo
+      mat: {color: "#F7F7F5", top: 5.8, right: 5.8, bottom: 5.8, left: 5.8}
+      attachments: [{image: assets/pin.png, width: 6.3, anchor: top, dy: 2}]
+    layouts:
+      - cells: [{box: [44, 14, 40, 72], rotate: 2}]
+      - cells:
+          - scatter: {xs: [36, 67], ys: [10, 52], size: [30, 40], jitter: 0.9, turn: 4, count: 3}
+    text:
+      <<: *note
+      area: [4, 10, 30, 80]
+      anchor: center
+      size: [16, 32]
+      max_lines: 3
+      rotate: -2
+
+  fanart:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *wood
+    cell:
+      <<: *photo
+      mat: {color: "#F7F7F5", top: 5.1, right: 5.1, bottom: 5.1, left: 5.1}
+      attachments: [{image: assets/pin.png, width: 7.5, anchor: top, dy: 2}]
+    layouts:
+      - cells: [{box: [30, 10, 40, 75], rotate: -2}]
+      - cells:
+          - scatter: {xs: [10, 38, 66], ys: [12], size: [24, 40], jitter: 1, turn: 5}
+      - cells:
+          - scatter: {xs: [2, 26, 50, 74], ys: [8, 52], size: [23, 38], jitter: 0.8, turn: 5}
+
+  logo:
+    size: [800, 310]
+    design: [568, 220]
+    text:
+      font: title
+      color: "#FFFFFF"
+      stroke: {width: 1, color: "#000000B3"}
+      uppercase: true
+      letter_spacing: 0.05
+      area: [6, 4, 88, 92]
+      anchor: center
+      align: center
+      size: [34, 80]
+      max_lines: 2
+      line_height: 1.1
+      shadow: {dx: 0, dy: 2, blur: 8, color: "#00000080"}

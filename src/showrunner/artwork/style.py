@@ -80,14 +80,27 @@ class RadialSpot(Strict):
 
 
 class Texture(Strict):
-    """A picture laid over the whole background, cropped to fill it."""
+    """A picture over the whole background: cropped to fill it, or repeated as tiles."""
 
     kind: Literal["texture"]
     image: AssetPath
     opacity: Annotated[float, Field(ge=0, le=1)] = 1
+    tile: Length | None = None
+    """Width of one tile in design pixels; without it the picture fills the background."""
 
 
-BackgroundLayer = Annotated[LinearGradient | RadialSpot | Texture, Field(discriminator="kind")]
+class Vignette(Strict):
+    """Edges darkened towards the corners, the middle left as it is."""
+
+    kind: Literal["vignette"]
+    inner: Annotated[float, Field(ge=0, lt=1)] = 0.55
+    """Share of the way from the middle to the corner where the darkening starts."""
+    color: Color = "#00000073"
+
+
+BackgroundLayer = Annotated[
+    LinearGradient | RadialSpot | Texture | Vignette, Field(discriminator="kind")
+]
 
 
 class Background(Strict):
@@ -99,6 +112,8 @@ class Background(Strict):
 
 
 class Shadow(Strict):
+    """As a CSS box-shadow: offsets and blur radius in design pixels."""
+
     dx: float = 0
     dy: float = 2
     blur: Length = 8
@@ -135,6 +150,9 @@ class Attachment(Strict):
     width: Annotated[float, Field(gt=0, le=200)]
     """Percents of the cell width."""
     anchor: Literal["top", "bottom", "top_left", "top_right"] = "top"
+    dy: Annotated[float, Field(ge=-100, le=100)] = 0
+    """Shift down, in percents of the cell height."""
+    turn: Annotated[float, Field(ge=-180, le=180)] = 0
     jitter: Annotated[float, Field(ge=0, le=45)] = 0
     """Up to this many degrees either way, from the seed."""
 
@@ -219,25 +237,81 @@ class GridItem(Strict):
     grid: Grid
 
 
-class Layout(Strict):
-    """The cells for one number of frames. Frames go to cells in order, the best one first."""
+class Scatter(Strict):
+    """Cells of one size strewn over places, row by row, each shifted and turned a little at
+    random (from the seed), like prints thrown on a table."""
 
-    cells: list[Cell | GridItem] = Field(min_length=1)
-    cell: dict[str, Any] | None = None
-    """Fields of the cell style that differ for this layout."""
+    xs: list[Percent] = Field(min_length=1)
+    ys: list[Percent] = Field(min_length=1)
+    size: tuple[Annotated[float, Field(gt=0, le=200)], Annotated[float, Field(gt=0, le=200)]]
+    """Width and height in percents of the picture."""
+    jitter: Annotated[float, Field(ge=0, le=20)] = 0
+    """Up to this many percents either way."""
+    turn: Annotated[float, Field(ge=0, le=45)] = 0
+    """Up to this many degrees either way."""
+    count: Annotated[int, Field(ge=1, le=24)] | None = None
+    """Fewer cells than places; all places by default."""
 
     @property
-    def frames(self) -> int:
-        return sum(item.grid.count if isinstance(item, GridItem) else 1 for item in self.cells)
+    def places(self) -> int:
+        return self.count or len(self.xs) * len(self.ys)
+
+    @model_validator(mode="after")
+    def _count_fits(self) -> Scatter:
+        if self.places > len(self.xs) * len(self.ys):
+            raise ValueError("more cells than places")
+        return self
+
+
+class ScatterItem(Strict):
+    scatter: Scatter
 
 
 class Decor(Strict):
-    """A picture in a fixed place, under the frames or over them."""
+    """A fixed picture or a plain colored box, under the frames or over them. A picture is
+    stretched to the box or repeated along it as tiles."""
 
-    image: AssetPath
+    image: AssetPath | None = None
+    color: Color | None = None
     box: Box
     rotate: Annotated[float, Field(ge=-180, le=180)] = 0
     over: bool = False
+    above_text: bool = False
+    """Over the text as well (a pin through a note)."""
+    tile: tuple[Length, Length] | None = None
+    """Size of one tile in design pixels."""
+    radius: Length = 0
+    shadow: Shadow | None = None
+
+    @model_validator(mode="after")
+    def _one_fill(self) -> Decor:
+        if (self.image is None) == (self.color is None):
+            raise ValueError("decor needs either an image or a color")
+        return self
+
+
+class Layout(Strict):
+    """The cells for one number of frames. Frames go to cells in order, the best one first."""
+
+    cells: list[Cell | GridItem | ScatterItem] = Field(min_length=1)
+    cell: dict[str, Any] | None = None
+    """Fields of the cell style that differ for this layout."""
+    decor: list[Decor] = []
+    """Decor of this layout only, drawn after the output's."""
+    text: dict[str, Any] | None = None
+    """Fields of the output's text that differ for this layout (where the title stands)."""
+
+    @property
+    def frames(self) -> int:
+        total = 0
+        for item in self.cells:
+            if isinstance(item, GridItem):
+                total += item.grid.count
+            elif isinstance(item, ScatterItem):
+                total += item.scatter.places
+            else:
+                total += 1
+        return total
 
 
 # --- text -------------------------------------------------------------------------------
@@ -265,6 +339,18 @@ class Plate(Strict):
     pad_x: Length = 0
     pad_bottom: Length = 0
     radius: Length = 0
+    across: tuple[Percent, Annotated[float, Field(gt=0, le=200)]] | None = None
+    """Left edge and width of a fade or band in percents; the whole width by default."""
+    to_edge: bool | None = None
+    """The plate reaches down to the bottom edge; otherwise it ends under the text. By default
+    a fade does and a band does not."""
+    image: AssetPath | None = None
+    """A picture repeated over the plate (paper, grid lines)."""
+    tile: Length = 24
+    """Width of one tile of the image, in design pixels."""
+    mask: AssetPath | None = None
+    """A picture stretched over a box plate whose alpha cuts its shape (a torn edge)."""
+    shadow: Shadow | None = None
 
 
 class TextBlock(Strict):
@@ -279,6 +365,10 @@ class TextBlock(Strict):
     max_lines: Annotated[int, Field(ge=1, le=6)] = 2
     line_height: Annotated[float, Field(gt=0.5, le=3)] = 1.1
     uppercase: bool = False
+    letter_spacing: Annotated[float, Field(ge=-0.2, le=1)] = 0
+    """Extra space between letters, in parts of the size (CSS em)."""
+    rotate: Annotated[float, Field(ge=-45, le=45)] = 0
+    """The text with its plate turned around its middle."""
     shadow: Shadow | None = None
     stroke: Stroke | None = None
     plate: Plate | None = None
@@ -302,6 +392,8 @@ class Output(Strict):
     cell: CellStyle = CellStyle()
     layouts: list[Layout] = []
     decor: list[Decor] = []
+    overlay: list[BackgroundLayer] = []
+    """Layers over the frames and under the text: a darkening, a vignette."""
     text: TextBlock | None = None
 
     @property
@@ -331,6 +423,8 @@ class Output(Strict):
 class FontRef(Strict):
     file: AssetPath
     index: Annotated[int, Field(ge=0)] = 0
+    variation: str | None = None
+    """A named instance of a variable font, such as "Bold"."""
 
 
 class StyleSpec(Strict):
@@ -384,9 +478,16 @@ class Style:
     def path(self, relative: str) -> Path:
         return _inside(self.root, relative)
 
-    def font_path(self, name: str) -> tuple[Path, int]:
+    def font_path(self, name: str) -> FontFile:
         font = self.spec.fonts[name]
-        return self.path(font.file), font.index
+        return FontFile(self.path(font.file), font.index, font.variation)
+
+
+@dataclass(frozen=True)
+class FontFile:
+    path: Path
+    index: int = 0
+    variation: str | None = None
 
 
 def _inside(root: Path, relative: str) -> Path:
@@ -405,19 +506,24 @@ def _inside(root: Path, relative: str) -> Path:
 def _named_files(spec: StyleSpec) -> list[str]:
     files = [font.file for font in spec.fonts.values()]
     for output in spec.outputs.values():
+        layers = list(output.overlay)
         if output.background:
-            files += [
-                layer.image for layer in output.background.layers if isinstance(layer, Texture)
-            ]
-        files += [decor.image for decor in output.decor]
+            layers += output.background.layers
+        files += [layer.image for layer in layers if isinstance(layer, Texture)]
+        decor = list(output.decor)
         styles = [output.cell.model_dump(exclude_none=True)]
         for layout in output.layouts:
+            decor += layout.decor
             styles.append(layout.cell or {})
             styles += [item.style or {} for item in layout.cells if isinstance(item, Cell)]
+        files += [item.image for item in decor if item.image]
         for style in styles:
             if style.get("mask"):
                 files.append(style["mask"])
             files += [attachment["image"] for attachment in style.get("attachments", [])]
+        if output.text and output.text.plate:
+            plate = output.text.plate
+            files += [name for name in (plate.image, plate.mask) if name]
     return files
 
 
@@ -467,6 +573,15 @@ def _cell_style(
         return CellStyle.model_validate(merged)
     except ValidationError as exc:
         raise StyleError(f"{where}: cell style: {exc}") from exc
+
+
+def text_block(output: Output, layout: Layout | None) -> TextBlock | None:
+    """The output's text with the layout's changes."""
+    if output.text is None or layout is None or not layout.text:
+        return output.text
+    merged = output.text.model_dump(exclude_unset=True)
+    merged.update(layout.text)
+    return TextBlock.model_validate(merged)
 
 
 def cell_style(output: Output, layout: Layout, cell: Cell | None) -> CellStyle:

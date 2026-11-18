@@ -1,0 +1,111 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Playbill: one main frame across the top, the others in a row below it, the title in a large
+# serif on the colored band. At most nine frames.
+schema: 1
+id: afisha
+version: 1
+names: {en: Playbill, de: Plakat, fr: Affiche, it: Locandina, ru: Афиша}
+max_frames: 9
+fonts:
+  title: {file: fonts/PlayfairDisplay.ttf, variation: Black}
+
+outputs:
+  series_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: &band {color: "#13262B"}
+    layouts:
+      - cells: [{box: [0, 0, 100, 100]}]
+        text:
+          plate: {kind: fade, color: "#13262BF2", fade: 70, fade_from: 0.905, pad_bottom: 12}
+      - text: {area: [6, 0, 88, 63.78]}
+        cells:
+          - {box: [0, 0, 100, 66]}
+          - grid: {area: [5, 69.5, 90, 26], cols: 2, rows: 1, gap: 3}
+        cell: {radius: 3}
+      - text: {area: [6, 0, 88, 59.78]}
+        cells:
+          - {box: [0, 0, 100, 62]}
+          - grid: {area: [4, 65.5, 92, 30], cols: 5, rows: 1, gap: 1.6}
+        cell: {radius: 3}
+      - text: {area: [6, 0, 88, 51.78]}
+        cells:
+          - {box: [0, 0, 100, 54]}
+          - grid: {area: [4, 57, 92, 40.5], cols: 4, rows: 2, gap: 1.6}
+        cell: {radius: 3}
+    text: &title
+      font: title
+      color: "#FFFFFF"
+      area: [6, 0, 88, 95.33]
+      anchor: bottom
+      size: [26, 60]
+      max_lines: 3
+      line_height: 1.02
+      shadow: {dx: 0, dy: 2, blur: 14, color: "#00000073"}
+      plate: {kind: fade, color: "#13262BF2", fade: 70, fade_from: 0.905, pad_bottom: 12,
+              to_edge: false}
+
+  season_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: *band
+    layouts:
+      - cells: [{box: [0, 0, 100, 100]}]
+        text:
+          area: [0, 0, 100, 95.33]
+          plate: {kind: fade, color: "#13262BF2", fade: 60, fade_from: 0.905, pad_bottom: 6}
+      - text: {area: [0, 0, 100, 68.89]}
+        cells:
+          - {box: [0, 0, 100, 70]}
+          - grid: {area: [5, 73, 90, 23], cols: 3, rows: 1, gap: 2.4}
+        cell: {radius: 3}
+    text:
+      <<: *title
+      color: "#E9B872"
+      area: [0, 0, 100, 68.89]
+      align: center
+      size: [140, 140]
+      max_lines: 1
+      plate: {kind: fade, color: "#13262BF2", fade: 60, fade_from: 0.905, pad_bottom: 6,
+              to_edge: false}
+
+  landscape:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *band
+    layouts:
+      - cells: [{box: [0, 0, 66, 100]}]
+      - cells:
+          - {box: [0, 0, 66, 100]}
+          - {box: [68.5, 4, 28.5, 29], style: {radius: 3}}
+          - {box: [68.5, 35.3, 28.5, 29], style: {radius: 3}}
+          - {box: [68.5, 66.6, 28.5, 29], style: {radius: 3}}
+    text:
+      <<: *title
+      area: [6, 0, 54, 89.33]
+      size: [22, 46]
+      plate: {kind: fade, color: "#13262BF2", fade: 56, fade_from: 0.905, across: [0, 66]}
+
+  fanart:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *band
+    cell: {filter: {brightness: 0.88}}
+    overlay: [{kind: vignette, inner: 0.55, color: "#00000073"}]
+    layouts:
+      - cells: [{box: [0, 0, 100, 100]}]
+
+  logo:
+    size: [800, 310]
+    design: [568, 220]
+    text:
+      font: title
+      color: "#FFFFFF"
+      area: [6, 4, 88, 92]
+      anchor: center
+      align: center
+      size: [40, 96]
+      max_lines: 2
+      line_height: 1.02
+      stroke: {width: 1, color: "#000000B3"}
+      shadow: {dx: 0, dy: 2, blur: 8, color: "#00000073"}

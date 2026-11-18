@@ -1,0 +1,138 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Polaroid: instant prints strewn over paper, taped down; the title handwritten on a torn
+# sheet of squared paper.
+schema: 1
+id: polaroid
+version: 1
+names: {en: Polaroid, de: Polaroid, fr: Polaroid, it: Polaroid, ru: Полароид}
+max_frames: 12
+fonts:
+  title: {file: fonts/Caveat.ttf, variation: Bold}
+
+outputs:
+  series_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: &paper
+      color: "#E6DAC4"
+      layers:
+        - {kind: radial, center: [50, 40], radius: 70, color: "#F4ECDF"}
+        - {kind: vignette, inner: 0.45, color: "#C8B5966E"}
+    cell: &print
+      mat: {color: "#FBF8F1", top: 11.5, right: 11.5, bottom: 34.6, left: 11.5}
+      shadow: {dx: 0, dy: 8, blur: 18, color: "#3C281447"}
+      attachments: [{image: assets/tape.png, width: 32, anchor: top, dy: -1, jitter: 7}]
+    layouts:
+      - &one
+        cells: [{box: [11, 6, 78, 66], rotate: -2.5}]
+      - &three
+        cell: {mat: {color: "#FBF8F1", top: 9.4, right: 9.4, bottom: 28.1, left: 9.4}}
+        cells:
+          - {box: [5, 4, 56, 40], rotate: -5}
+          - {box: [40, 14, 54, 38], rotate: 4.5}
+          - {box: [15, 37, 58, 36], rotate: -1.5}
+      - cell: {mat: {color: "#FBF8F1", top: 7.9, right: 7.9, bottom: 23.8, left: 7.9}}
+        cells:
+          - scatter: {xs: [4, 50], ys: [3, 26, 49], size: [46, 25], jitter: 2, turn: 6}
+      - cell: {mat: {color: "#FBF8F1", top: 6.5, right: 6.5, bottom: 19.4, left: 6.5}}
+        cells:
+          - scatter: {xs: [2, 34, 66], ys: [2, 20, 38, 56], size: [32, 19], jitter: 1.6, turn: 8}
+    text: &title
+      font: title
+      color: "#3B2F27"
+      area: [8, 0, 84, 93.3]
+      anchor: bottom
+      align: center
+      size: [30, 68]
+      max_lines: 2
+      line_height: 0.98
+      rotate: -1.5
+      plate: &sheet
+        kind: box
+        color: "#FCFCFA"
+        image: assets/grid.png
+        tile: 12
+        mask: assets/torn.png
+        pad_x: 18
+        pad_top: 6
+        pad_bottom: 20
+        shadow: {dx: 0, dy: 2, blur: 6, color: "#3C281433"}
+
+  season_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: *paper
+    cell: *print
+    layouts:
+      - *one
+      - *three
+      - cell: {mat: {color: "#FBF8F1", top: 8.6, right: 8.6, bottom: 25.9, left: 8.6}}
+        cells:
+          - {box: [6, 4, 56, 36], rotate: -4}
+          - {box: [40, 12, 54, 32], rotate: 5}
+          - {box: [4, 38, 52, 30], rotate: -2}
+          - {box: [44, 44, 50, 28], rotate: 3}
+    text:
+      <<: *title
+      color: "#B23A26"
+      area: [8, 0, 84, 96]
+      size: [120, 120]
+      max_lines: 1
+      rotate: -4
+      plate:
+        <<: *sheet
+        pad_top: 0
+        pad_bottom: 10
+
+  landscape:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *paper
+    cell:
+      <<: *print
+      mat: {color: "#FBF8F1", top: 9, right: 9, bottom: 26.9, left: 9}
+    layouts:
+      - cells: [{box: [8, 10, 40, 76], rotate: -3}]
+      - cells:
+          - {box: [3, 9, 30, 56], rotate: -5}
+          - {box: [22, 30, 30, 56], rotate: 4}
+          - {box: [43, 7, 20, 64], rotate: -2}
+    text:
+      <<: *title
+      area: [67, 10, 30, 80]
+      anchor: center
+      size: [26, 56]
+      max_lines: 3
+      rotate: 0
+      plate: null
+
+  fanart:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *paper
+    cell:
+      <<: *print
+      mat: {color: "#FBF8F1", top: 6.4, right: 6.4, bottom: 19.2, left: 6.4}
+    layouts:
+      - cells: [{box: [30, 8, 40, 80], rotate: -2}]
+      - cells:
+          - {box: [6, 10, 30, 70], rotate: -5}
+          - {box: [36, 14, 30, 70], rotate: 3}
+          - {box: [65, 8, 30, 70], rotate: -2}
+      - cells:
+          - scatter: {xs: [2, 26, 50, 74], ys: [6, 50], size: [24, 42], jitter: 1.5, turn: 7}
+
+  logo:
+    size: [800, 310]
+    design: [568, 220]
+    text:
+      font: title
+      color: "#FFF8EC"
+      area: [6, 4, 88, 92]
+      anchor: center
+      align: center
+      size: [46, 104]
+      max_lines: 2
+      line_height: 0.98
+      stroke: {width: 1, color: "#000000B3"}
+      shadow: {dx: 0, dy: 2, blur: 8, color: "#0000008C"}

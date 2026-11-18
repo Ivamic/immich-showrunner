@@ -1,0 +1,122 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Watercolor: the main frame with a watercolor edge on pastel washes, the others as small
+# cards, the title in a handwritten script. At most seven frames.
+schema: 1
+id: watercolor
+version: 1
+names: {en: Watercolor, de: Aquarell, fr: Aquarelle, it: Acquerello, ru: Акварель}
+max_frames: 7
+fonts:
+  title: {file: fonts/MarckScript-Regular.ttf}
+
+outputs:
+  series_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: &washes
+      color: "#FBF6F1"
+      layers:
+        - {kind: radial, center: [16, 20], radius: 44, color: "#ECAAA58C"}
+        - {kind: radial, center: [84, 14], radius: 49, color: "#FACD9680"}
+        - {kind: radial, center: [72, 72], radius: 44, color: "#B9A5DC73"}
+        - {kind: radial, center: [22, 86], radius: 48, color: "#F0B9C880"}
+        - {kind: radial, center: [50, 46], radius: 46, color: "#FADEC499"}
+    cell: &card
+      mat: {color: "#FFFFFF", top: 5, right: 5, bottom: 5, left: 5}
+      shadow: {dx: 0, dy: 6, blur: 14, color: "#50323C40"}
+    layouts:
+      - cells:
+          - {box: [-8, 0, 116, 74], style: &wash {shape: mask, mask: assets/wash.png, mat: null, shadow: null}}
+      - cells:
+          - {box: [-8, -2, 116, 60], style: *wash}
+          - {box: [8, 54, 40, 20], rotate: -3.5}
+          - {box: [52, 55.5, 40, 20], rotate: 3}
+      - cells:
+          - {box: [-8, -2, 116, 52], style: *wash}
+          - {box: [4, 48, 28, 14], rotate: -3.5}
+          - {box: [36, 49.5, 28, 14], rotate: 3}
+          - {box: [68, 48, 28, 14], rotate: -3.5}
+          - {box: [18, 63, 28, 14], rotate: -3.5}
+          - {box: [54, 64.5, 28, 14], rotate: 3}
+      - cells:
+          - {box: [-8, -2, 116, 46], style: *wash}
+          - {box: [4, 42, 28, 14.5], rotate: -3.5}
+          - {box: [36, 43.5, 28, 14.5], rotate: 3}
+          - {box: [68, 42, 28, 14.5], rotate: -3.5}
+          - {box: [4, 58, 28, 14.5], rotate: -3.5}
+          - {box: [36, 59.5, 28, 14.5], rotate: 3}
+          - {box: [68, 58, 28, 14.5], rotate: -3.5}
+    text: &title
+      font: title
+      color: "#6B3F4A"
+      area: [6, 79, 88, 17]
+      anchor: bottom
+      align: center
+      size: [28, 60]
+      max_lines: 2
+      line_height: 1.0
+      shadow: {dx: 0, dy: 1, blur: 0, color: "#FFFFFF99"}
+
+  season_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: *washes
+    cell: *card
+    layouts:
+      - cells:
+          - {box: [-8, 0, 116, 74], style: *wash}
+      - cells:
+          - {box: [-8, -2, 116, 62], style: *wash}
+          - {box: [4, 56, 28, 15], rotate: -3.5}
+          - {box: [36, 57.5, 28, 15], rotate: 3}
+          - {box: [68, 56, 28, 15], rotate: -3.5}
+    text:
+      <<: *title
+      color: "#B5536A"
+      area: [0, 74, 100, 24]
+      size: [120, 120]
+      max_lines: 1
+
+  landscape:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *washes
+    cell:
+      <<: *card
+      mat: {color: "#FFFFFF", top: 9, right: 9, bottom: 9, left: 9}
+    layouts:
+      - cells:
+          - {box: [-6, -10, 70, 120], style: *wash}
+      - cells:
+          - {box: [-6, -10, 70, 120], style: *wash}
+          - {box: [61, 54, 17, 32], rotate: -4}
+          - {box: [80, 52, 17, 32], rotate: 3}
+    text:
+      <<: *title
+      area: [62, 10, 35, 80]
+      anchor: top
+      size: [24, 52]
+      max_lines: 3
+
+  fanart:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *washes
+    layouts:
+      - cells:
+          - {box: [-6, -12, 112, 124], style: *wash}
+
+  logo:
+    size: [800, 310]
+    design: [568, 220]
+    text:
+      font: title
+      color: "#FFF4EE"
+      area: [6, 4, 88, 92]
+      anchor: center
+      align: center
+      size: [44, 100]
+      max_lines: 2
+      line_height: 1.0
+      stroke: {width: 1, color: "#000000B3"}
+      shadow: {dx: 0, dy: 2, blur: 8, color: "#00000080"}
