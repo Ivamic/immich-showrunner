@@ -38,6 +38,20 @@ Kodi.
 
 <table>
   <tr>
+    <td colspan="2" width="100%"><a href="docs/images/screenshots/artwork-styles.webp"><img src="docs/images/screenshots/artwork-styles.webp" alt="One album in each of the nine styles of the drawn pictures"></a><br><sub>One album in each of the nine styles of the drawn pictures</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-artwork-shows.webp"><img src="docs/images/screenshots/jellyfin-artwork-shows.webp" alt="Jellyfin: the shows with their drawn posters"></a><br><sub>Jellyfin: the shows with their drawn posters</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-artwork-show.webp"><img src="docs/images/screenshots/jellyfin-artwork-show.webp" alt="Jellyfin: a show with its drawn poster, backdrop and logo"></a><br><sub>Jellyfin: a show with its drawn poster, backdrop and logo</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/app-artwork.webp"><img src="docs/images/screenshots/app-artwork.webp" alt="The page: the pictures of an album, each with other frames and a pin"></a><br><sub>The page: the pictures of an album, each with other frames and a pin</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/app-artwork-look.webp"><img src="docs/images/screenshots/app-artwork-look.webp" alt="The page: another style, side by side before it is applied"></a><br><sub>The page: another style, side by side before it is applied</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
     <td width="50%"><a href="docs/images/screenshots/jellyfin-shows.webp"><img src="docs/images/screenshots/jellyfin-shows.webp" alt="Jellyfin: albums as shows"></a><br><sub>Jellyfin: albums as shows</sub></td>
     <td width="50%"><a href="docs/images/screenshots/jellyfin-season.webp"><img src="docs/images/screenshots/jellyfin-season.webp" alt="Jellyfin: a season, titles from the descriptions in Immich"></a><br><sub>Jellyfin: a season, titles from the descriptions in Immich</sub></td>
   </tr>
@@ -59,7 +73,11 @@ Kodi.
   share an album with it: its videos show up in the media server. Stop sharing, and they are gone.
 - **Album = show, video = episode.** Seasons are the years of filming, or one season per album.
   The title of an episode is the first line of the video's description in Immich, or the time
-  it was filmed; the poster and the pictures of the episodes are those of Immich.
+  it was filmed; the pictures of the episodes are those of Immich.
+- **Pictures of its own.** The poster, landscape picture, backdrop and logo of a show and a
+  poster for every season are drawn from frames of the album's videos, with the faces kept in view,
+  in one of nine styles. No AI image generation: it all runs on the CPU of your server. On the page,
+  try another style or other frames, for all the pictures or just one, and pin the ones you like.
 - **People from Immich**, under names of their own for the media server ("Mum" can stay "Mum"
   in your library), marked with a short prefix so that they never mix with the actors of your
   film library.

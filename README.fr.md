@@ -39,6 +39,20 @@ Jellyfin ou Kodi.
 
 <table>
   <tr>
+    <td colspan="2" width="100%"><a href="docs/images/screenshots/artwork-styles.webp"><img src="docs/images/screenshots/artwork-styles.webp" alt="Un album dans chacun des neuf styles des illustrations dessinées"></a><br><sub>Un album dans chacun des neuf styles des illustrations dessinées</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-artwork-shows.webp"><img src="docs/images/screenshots/jellyfin-artwork-shows.webp" alt="Jellyfin : les séries avec leurs affiches dessinées"></a><br><sub>Jellyfin : les séries avec leurs affiches dessinées</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/jellyfin-artwork-show.webp"><img src="docs/images/screenshots/jellyfin-artwork-show.webp" alt="Jellyfin : une série avec son affiche, son fond et son logo dessinés"></a><br><sub>Jellyfin : une série avec son affiche, son fond et son logo dessinés</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/screenshots/app-artwork.webp"><img src="docs/images/screenshots/app-artwork.webp" alt="La page : les illustrations d’un album, chacune avec d’autres images et une épingle"></a><br><sub>La page : les illustrations d’un album, chacune avec d’autres images et une épingle</sub></td>
+    <td width="50%"><a href="docs/images/screenshots/app-artwork-look.webp"><img src="docs/images/screenshots/app-artwork-look.webp" alt="La page : un autre style, côte à côte avant de l’appliquer"></a><br><sub>La page : un autre style, côte à côte avant de l’appliquer</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
     <td width="50%"><a href="docs/images/screenshots/jellyfin-shows.webp"><img src="docs/images/screenshots/jellyfin-shows.webp" alt="Jellyfin : les albums comme séries"></a><br><sub>Jellyfin : les albums comme séries</sub></td>
     <td width="50%"><a href="docs/images/screenshots/jellyfin-season.webp"><img src="docs/images/screenshots/jellyfin-season.webp" alt="Jellyfin : une saison, titres tirés des descriptions dans Immich"></a><br><sub>Jellyfin : une saison, titres tirés des descriptions dans Immich</sub></td>
   </tr>
@@ -61,7 +75,12 @@ Jellyfin ou Kodi.
   serveur multimédia. Arrêtez de le partager, et elles disparaissent.
 - **Album = série, vidéo = épisode.** Les saisons sont les années de tournage, ou une seule saison
   par album. Le titre d’un épisode est la première ligne de la description de la vidéo dans
-  Immich, ou l’heure du tournage ; l’affiche et les images des épisodes sont celles d’Immich.
+  Immich, ou l’heure du tournage ; les images des épisodes sont celles d’Immich.
+- **Des illustrations à elles.** L’affiche, l’image en paysage, le fond et le logo d’une série et
+  une affiche pour chaque saison sont dessinés à partir d’images des vidéos de l’album, en gardant
+  les visages en vue, dans l’un de neuf styles. Sans génération d’images par IA : tout tourne sur
+  le processeur de votre serveur. Sur la page, essayez un autre style ou d’autres images, pour
+  toutes les illustrations ou une seule, et épinglez celles qui vous plaisent.
 - **Les personnes d’Immich**, sous des noms à elles pour le serveur multimédia (« Maman » peut
   rester « Maman » chez vous), marquées d’un court préfixe pour ne jamais se mêler aux acteurs de
   votre filmothèque.

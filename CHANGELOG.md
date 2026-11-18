@@ -7,44 +7,46 @@ between releases.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-18
+
 ### Added
 
-- **Artwork styles** (groundwork, not used by the sync yet): a style is a folder with a declarative
-  `style.yaml`, its fonts and pictures. A renderer draws from it, out of video frames and the
-  title, the poster, landscape picture, backdrop and logo of a show and the poster of a season.
-  The first style, Mosaic, ships with the app.
-- **Frames for artwork** (groundwork): frames are read from a video over HTTP without fetching
-  the whole file, scored for sharpness, exposure, contrast and color, searched for faces (YuNet,
-  on the CPU) and cropped to keep the faces whole. The best frames, unlike each other and from
-  different videos, are chosen first.
-- **Five more artwork styles**: Polaroid, Film, Playbill, Watercolor and Pinboard, next to Mosaic.
-  Styles can now strew prints at random (from a seed), pin and tape them, put film strips and other
-  decor under or over the frames, darken the edges, space and turn the title and lay it on paper
-  with a torn edge.
-- **Three more artwork styles**: Diamonds, Diagonals and Editorial.
-- **Faces stay clear of the title**: a frame under the title is cropped so that the faces land in
-  the part the title leaves free, enlarged a little when it cannot be moved enough.
-  The same is done for the part of a slanted, round or diamond frame that is wholly seen.
-- **Shows get drawn pictures** (on by default; `SHOWRUNNER_ARTWORK=false` turns them off): the poster,
-  landscape picture, backdrop and logo of a show and a poster for every season, drawn from frames
-  of the album's videos in a style chosen for the album. New videos are looked at in the background
-  of the syncs, at most `SHOWRUNNER_ARTWORK_BUDGET_SECONDS` (240) per sync; until a show has frames
-  it keeps the cover of its album. A picture is drawn again only when what it is made of changes.
-  Kodi gets the posters of seasons through the NFO of the show, and forgets its cached pictures of a
-  changed show.
-- **In the Jellyfin folder the drawn poster is `folder.jpg`** (the cover of the album stays
-  `poster.jpg`): Jellyfin keeps the size of a picture by its path, so a 2:3 poster written over a
-  16:9 cover would be shown cut to 16:9.
-- **Pictures on the page of an album**: the poster, landscape picture, backdrop, logo and season
-  posters the media servers have now; "Another style", "Other frames" and "Album cover as the
-  poster", each shown before and after it is applied, with "One more"; a style chosen by name;
-  other frames for a single picture; and pinning pictures one by one (or all), so that they stay
-  as they are whatever happens to the album. While the pictures are drawn again or the videos of
-  an album are still being looked at, the page says so and shows the new pictures when they are
-  ready.
+- **Drawn pictures for every show** (on by default; `SHOWRUNNER_ARTWORK=false` turns them off): the
+  poster, landscape picture, backdrop and logo of a show and a poster for every season, drawn from
+  frames of the album's videos. No AI image generation: everything runs on the CPU.
+- **Frames chosen with care**: a few frames are read from every video over HTTP, without fetching
+  the whole file, scored for sharpness, exposure, contrast and color, and searched for faces
+  (YuNet). The best frames, unlike each other and from different videos, come first; they are
+  cropped to keep the faces whole and clear of the title and of slanted, round or diamond edges.
+- **Nine styles**: Mosaic, Polaroid, Film, Playbill, Watercolor, Pinboard, Diamonds, Diagonals and
+  Editorial. A style is chosen for each album at random and kept. A style is a folder with a
+  declarative `style.yaml`, its fonts and pictures.
+- **Drawn once**: new videos are looked at in the background of the syncs, at most
+  `SHOWRUNNER_ARTWORK_BUDGET_SECONDS` (240) per sync, so a large library gets its pictures over a
+  few syncs; until a show has frames it keeps the cover of its album. A picture is drawn again only
+  when what it is made of changes. Looking at videos and drawing run in a process of their own, so
+  the page stays free meanwhile.
+- **Pictures on the page of an album**: the pictures the media servers have now; "Another style",
+  a style chosen by name, "Other frames" for all the pictures or for one, and "Album cover as the
+  poster", each shown side by side with the pictures of now before it is applied. A picture can be
+  pinned (or all of them), and then stays as it is whatever happens to the album. The page shows
+  when pictures are being drawn and how many videos are still to look at.
 - **A Styles page**: switch styles on or off; albums in a style switched off get another one.
+- **Kodi** gets the posters of the seasons through the NFO of the show, and forgets the pictures it
+  cached for a changed show, so a new picture shows at once.
 - **`asset.download`** for the Immich API key is recommended: the frames are then read from the
-  original videos. Without it they come from the videos Immich converted for playing.
+  original videos. Without it they come from the videos Immich converted for playing; `check` tells
+  which.
+
+### Changed
+
+- **In the Jellyfin folder the drawn poster is `folder.jpg`**; the cover of the album, when it is
+  used, stays `poster.jpg`. Jellyfin keeps the size of a picture by its path, and would show a 2:3
+  poster written over a 16:9 cover cut to 16:9.
+- **The image is larger** (about 600 MB instead of 230 MB): it holds the libraries that read videos
+  and find faces.
+- **The database changes** (migrations 0009–0012): it keeps what was learned about the frames, the
+  style and the choices of each album. Going back to 0.2 needs a copy made before the update.
 
 ### Fixed
 
@@ -54,13 +56,12 @@ between releases.
   already did; an existing folder with such a date is renamed once (the database migration does
   it, the next sync moves the files), and Jellyfin and Kodi are made to find the show in its new
   folder. Watched marks of such a show start anew in Kodi, and in Jellyfin if it keeps them by path.
-- **Renaming the folders held the sync** as a mass removal: links that move to a new folder for
-  the same videos are no longer counted as removed. A real loss is still held.
-- **The page no longer stalls while pictures are made**: looking at videos and drawing run in a
-  process of their own.
-- **"Other frames" gives other pictures**: the leading frame is drawn from the best of all the
-  frames of the album, not from the same few.
+- **Moving folders is not a mass removal**: links that move to a new folder for the same videos are
+  no longer counted as removed. A real loss of most links still holds the sync.
 
+### Security
+
+- The dependencies that ship were checked for known vulnerabilities before the release: none found.
 
 ## [0.2.1] - 2026-11-15
 
