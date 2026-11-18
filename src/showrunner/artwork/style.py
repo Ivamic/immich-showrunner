@@ -67,6 +67,8 @@ class LinearGradient(Strict):
     angle: float = 180
     """As in CSS: 180 runs from the top down, 90 from left to right."""
     stops: list[Stop] = Field(min_length=2)
+    box: Box | None = None
+    """Where the gradient lies; the whole picture by default."""
 
 
 class RadialSpot(Strict):
@@ -300,6 +302,8 @@ class Layout(Strict):
     """Decor of this layout only, drawn after the output's."""
     text: dict[str, Any] | None = None
     """Fields of the output's text that differ for this layout (where the title stands)."""
+    overlay: list[BackgroundLayer] = []
+    """Layers over the frames of this layout only, after the output's."""
 
     @property
     def frames(self) -> int:

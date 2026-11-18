@@ -1,0 +1,102 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Editorial: a white page with a grid of merged cells; the title in a wide cell among the frames.
+schema: 1
+id: editorial
+version: 1
+names: {en: Editorial, de: Magazin, fr: Magazine, it: Rivista, ru: Журнальная сетка}
+max_frames: 12
+fonts:
+  title: {file: fonts/CormorantGaramond.ttf, variation: SemiBold}
+  year: {file: fonts/CormorantGaramond.ttf, variation: Medium}
+  logo: {file: fonts/CormorantGaramond.ttf, variation: Bold}
+
+outputs:
+  series_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: &white {color: "#FFFFFF"}
+    layouts:
+      - cells:
+          - grid: {area: [2.6, 1.73, 94.8, 96.53], cols: 1, rows: 4, gap: 1.6, spans: [[0, 0, 1, 3]]}
+        text: {area: [5.6, 74.93, 88.8, 23.33]}
+      - cells:
+          - grid: {area: [2.6, 1.73, 94.8, 96.53], cols: 2, rows: 4, gap: 1.6, spans: [[0, 0, 2, 2], [0, 3, 1, 1], [1, 3, 1, 1]]}
+        text: {area: [5.6, 50.53, 88.8, 23.33]}
+      - cells:
+          - grid: {area: [2.6, 1.73, 94.8, 96.53], cols: 3, rows: 5, gap: 1.6, spans: [[0, 0, 1, 2], [1, 0, 2, 1], [0, 2, 2, 2], [2, 2, 1, 1], [2, 3, 1, 1], [0, 4, 3, 1]]}
+        text: {area: [37.73, 21.25, 56.67, 18.45]}
+      - cells:
+          - grid: {area: [2.6, 1.73, 94.8, 96.53], cols: 4, rows: 6, gap: 1.6, spans: [[0, 0, 1, 2], [1, 0, 1, 1], [2, 0, 1, 1], [3, 0, 1, 2], [1, 1, 1, 1], [2, 1, 1, 1], [0, 3, 2, 2], [2, 3, 1, 1], [3, 3, 1, 1], [2, 4, 1, 1], [3, 4, 1, 1], [0, 5, 4, 1]]}
+        text: {area: [5.6, 34.27, 88.8, 15.2]}
+    text: &title
+      font: title
+      color: "#6B4A2F"
+      letter_spacing: 0.02
+      area: [10, 40, 80, 20]
+      anchor: center
+      align: center
+      size: [16, 36]
+      max_lines: 3
+      line_height: 1.02
+
+  season_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: *white
+    layouts:
+      - cells:
+          - grid: {area: [2.6, 1.73, 94.8, 96.53], cols: 1, rows: 4, gap: 1.6, spans: [[0, 0, 1, 3]]}
+        text: {area: [5.6, 74.93, 88.8, 23.33]}
+      - cells:
+          - grid: {area: [2.6, 1.73, 94.8, 96.53], cols: 2, rows: 3, gap: 1.6, spans: [[0, 0, 1, 1], [1, 0, 1, 1], [0, 2, 1, 1], [1, 2, 1, 1]]}
+        text: {area: [5.6, 34.27, 88.8, 31.47]}
+    text:
+      <<: *title
+      font: year
+      letter_spacing: 0.08
+      size: [88, 88]
+      max_lines: 1
+
+  landscape:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *white
+    layouts:
+      - cells:
+          - grid: {area: [1.6, 2.84, 96.8, 94.31], cols: 4, rows: 2, gap: 1, spans: [[0, 0, 2, 2]]}
+        text: {area: [53.5, 2.84, 41.9, 94.31]}
+      - cells:
+          - grid: {area: [1.6, 2.84, 96.8, 94.31], cols: 4, rows: 2, gap: 1, spans: [[0, 0, 1, 2], [1, 0, 1, 1], [2, 0, 1, 1], [3, 0, 1, 2]]}
+        text: {area: [29.05, 50.89, 41.9, 46.27]}
+    text:
+      <<: *title
+      size: [16, 40]
+      max_lines: 2
+
+  fanart:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *white
+    layouts:
+      - cells:
+          - grid: {area: [1.6, 2.84, 96.8, 94.31], cols: 4, rows: 2, gap: 1, spans: [[0, 0, 4, 2]]}
+      - cells:
+          - grid: {area: [1.6, 2.84, 96.8, 94.31], cols: 4, rows: 2, gap: 1, spans: [[0, 0, 2, 2], [2, 0, 2, 1], [2, 1, 2, 1]]}
+      - cells:
+          - grid: {area: [1.6, 2.84, 96.8, 94.31], cols: 4, rows: 2, gap: 1, spans: [[0, 0, 1, 2], [1, 0, 1, 1], [2, 0, 1, 1], [3, 0, 1, 1], [1, 1, 2, 1], [3, 1, 1, 1]]}
+
+  logo:
+    size: [800, 310]
+    design: [568, 220]
+    text:
+      font: logo
+      color: "#FFFFFF"
+      letter_spacing: 0.03
+      area: [6, 4, 88, 92]
+      anchor: center
+      align: center
+      size: [40, 96]
+      max_lines: 2
+      line_height: 1.02
+      stroke: {width: 1, color: "#000000B3"}
+      shadow: {dx: 0, dy: 2, blur: 8, color: "#00000080"}

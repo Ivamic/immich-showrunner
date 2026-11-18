@@ -21,6 +21,10 @@ between releases.
   Styles can now strew prints at random (from a seed), pin and tape them, put film strips and other
   decor under or over the frames, darken the edges, space and turn the title and lay it on paper
   with a torn edge.
+- **Three more artwork styles**: Diamonds, Diagonals and Editorial.
+- **Faces stay clear of the title**: a frame under the title is cropped so that the faces land in
+  the part the title leaves free, enlarged a little when it cannot be moved enough.
+  The same is done for the part of a slanted, round or diamond frame that is wholly seen.
 
 ## [0.2.1] - 2026-11-15
 

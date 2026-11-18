@@ -1,0 +1,163 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Diamonds: a black ground, the main frame across the top, the others in diamond frames.
+# At most nine frames.
+schema: 1
+id: diamonds
+version: 1
+names: {en: Diamonds, de: Rauten, fr: Losanges, it: Rombi, ru: Ромбы}
+max_frames: 9
+fonts:
+  title: {file: fonts/MarckScript-Regular.ttf}
+  year: {file: fonts/Montserrat-Bold.ttf}
+
+outputs:
+  series_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: &black {color: "#0B0B0B"}
+    cell: &gem
+      shape: diamond
+      radius: 14
+      border: {width: 3, color: "#6E6E6E"}
+      shadow: {dx: 0, dy: 8, blur: 22, color: "#000000B3"}
+    layouts:
+      - cells: [{box: [6.79, 13.78, 86.42, 57.62]}]
+        text: {area: [6, 0, 88, 94], align: center}
+      - overlay: [{kind: linear, box: [0, 0, 100, 44], stops: [{at: 0, color: "#0B0B0B00"}, {at: 0.35, color: "#0B0B0B00"}, {at: 1, color: "#0B0B0BEB"}]}]
+        text: {area: [6, 0, 88, 41]}
+        cells:
+          - {box: [0, 0, 100, 44], style: {shape: rect, radius: 0, border: null, shadow: null}}
+          - {box: [9.11, 46.45, 44.0, 29.33]}
+          - {box: [46.89, 59.41, 44.0, 29.33]}
+      - overlay: [{kind: linear, box: [0, 0, 100, 42], stops: [{at: 0, color: "#0B0B0B00"}, {at: 0.35, color: "#0B0B0B00"}, {at: 1, color: "#0B0B0BEB"}]}]
+        text: {area: [6, 0, 88, 39]}
+        cells:
+          - {box: [0, 0, 100, 42], style: {shape: rect, radius: 0, border: null, shadow: null}}
+          - {box: [31.14, 42.98, 37.71, 25.14]}
+          - {box: [10.03, 57.06, 37.71, 25.14]}
+          - {box: [52.25, 57.06, 37.71, 25.14]}
+          - {box: [31.14, 71.13, 37.71, 25.14]}
+          - {box: [-11.08, 42.98, 37.71, 25.14]}
+      - overlay: [{kind: linear, box: [0, 0, 100, 40], stops: [{at: 0, color: "#0B0B0B00"}, {at: 0.35, color: "#0B0B0B00"}, {at: 1, color: "#0B0B0BEB"}]}]
+        text: {area: [6, 0, 88, 37]}
+        cells:
+          - {box: [0, 0, 100, 40], style: {shape: rect, radius: 0, border: null, shadow: null}}
+          - {box: [31.14, 42.98, 37.71, 25.14]}
+          - {box: [10.03, 57.06, 37.71, 25.14]}
+          - {box: [52.25, 57.06, 37.71, 25.14]}
+          - {box: [31.14, 71.13, 37.71, 25.14]}
+          - {box: [-11.08, 42.98, 37.71, 25.14]}
+          - {box: [73.37, 42.98, 37.71, 25.14]}
+          - {box: [-11.08, 71.13, 37.71, 25.14]}
+          - {box: [73.37, 71.13, 37.71, 25.14]}
+    text: &title
+      font: title
+      color: "#FFFFFF"
+      area: [6, 0, 88, 94]
+      anchor: bottom
+      align: left
+      size: [26, 58]
+      max_lines: 2
+      line_height: 1.0
+      shadow: {dx: 0, dy: 2, blur: 10, color: "#00000099"}
+
+  season_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: *black
+    cell: *gem
+    layouts:
+      - cells: [{box: [6.79, 13.78, 86.42, 57.62]}]
+        text: {area: [6, 0, 88, 94], align: center}
+      - overlay: [{kind: linear, box: [0, 0, 100, 42], stops: [{at: 0, color: "#0B0B0B00"}, {at: 0.35, color: "#0B0B0B00"}, {at: 1, color: "#0B0B0BEB"}]}]
+        cells:
+          - {box: [0, 0, 100, 42], style: {shape: rect, radius: 0, border: null, shadow: null}}
+          - {box: [31.14, 42.98, 37.71, 25.14]}
+          - {box: [10.03, 57.06, 37.71, 25.14]}
+          - {box: [52.25, 57.06, 37.71, 25.14]}
+    text:
+      font: year
+      color: "#FFFFFF"
+      letter_spacing: 0.04
+      area: [0, 0, 93, 96]
+      anchor: bottom
+      align: right
+      size: [76, 76]
+      max_lines: 1
+      line_height: 1.0
+
+  landscape:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *black
+    cell: *gem
+    overlay:
+      - {kind: linear, angle: 90, box: [0, 0, 50, 100], stops: [{at: 0, color: "#0B0B0B00"}, {at: 0.55, color: "#0B0B0B00"}, {at: 1, color: "#0B0B0BF2"}]}
+      - {kind: linear, box: [0, 0, 50, 100], stops: [{at: 0, color: "#0B0B0B00"}, {at: 0.45, color: "#0B0B0B00"}, {at: 1, color: "#0B0B0BE6"}]}
+    layouts:
+      - cells: [{box: [0, 0, 50, 100], style: {shape: rect, radius: 0, border: null, shadow: null}}]
+      - cells:
+          - {box: [0, 0, 50, 100], style: {shape: rect, radius: 0, border: null, shadow: null}}
+          - {box: [61.57, 16.95, 18.12, 32.21]}
+          - {box: [71.1, 33.89, 18.12, 32.21]}
+          - {box: [61.57, 50.84, 18.12, 32.21]}
+      - cells:
+          - {box: [0, 0, 50, 100], style: {shape: rect, radius: 0, border: null, shadow: null}}
+          - {box: [52.03, 16.95, 18.12, 32.21]}
+          - {box: [61.57, 33.89, 18.12, 32.21]}
+          - {box: [52.03, 50.84, 18.12, 32.21]}
+          - {box: [71.1, 16.95, 18.12, 32.21]}
+          - {box: [71.1, 50.84, 18.12, 32.21]}
+          - {box: [80.63, 33.89, 18.12, 32.21]}
+    text:
+      <<: *title
+      area: [4, 0, 44, 93]
+      size: [22, 48]
+      max_lines: 3
+
+  fanart:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *black
+    cell: *gem
+    layouts:
+      - cells:
+          - {box: [3.95, 20.36, 22.1, 39.28]}
+          - {box: [27.7, 20.36, 22.1, 39.28]}
+          - {box: [51.45, 20.36, 22.1, 39.28]}
+          - {box: [75.2, 20.36, 22.1, 39.28]}
+          - {box: [-7.92, 41.47, 22.1, 39.28]}
+          - {box: [15.83, 41.47, 22.1, 39.28]}
+          - {box: [39.58, 41.47, 22.1, 39.28]}
+          - {box: [63.33, 41.47, 22.1, 39.28]}
+          - {box: [87.08, 41.47, 22.1, 39.28]}
+      - cells:
+          - {box: [-7.92, -11.31, 22.1, 39.28]}
+          - {box: [15.83, -11.31, 22.1, 39.28]}
+          - {box: [39.58, -11.31, 22.1, 39.28]}
+          - {box: [63.33, -11.31, 22.1, 39.28]}
+          - {box: [87.08, -11.31, 22.1, 39.28]}
+          - {box: [3.95, 9.8, 22.1, 39.28]}
+          - {box: [27.7, 9.8, 22.1, 39.28]}
+          - {box: [51.45, 9.8, 22.1, 39.28]}
+          - {box: [75.2, 9.8, 22.1, 39.28]}
+          - {box: [-7.92, 30.91, 22.1, 39.28]}
+          - {box: [15.83, 30.91, 22.1, 39.28]}
+          - {box: [39.58, 30.91, 22.1, 39.28]}
+          - {box: [63.33, 30.91, 22.1, 39.28]}
+          - {box: [87.08, 30.91, 22.1, 39.28]}
+
+  logo:
+    size: [800, 310]
+    design: [568, 220]
+    text:
+      font: title
+      color: "#FFFFFF"
+      area: [6, 4, 88, 92]
+      anchor: center
+      align: center
+      size: [44, 100]
+      max_lines: 2
+      line_height: 1.0
+      stroke: {width: 1, color: "#000000B3"}
+      shadow: {dx: 0, dy: 2, blur: 8, color: "#00000080"}
