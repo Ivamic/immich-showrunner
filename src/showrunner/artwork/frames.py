@@ -20,8 +20,11 @@ LONG_SIDE = 1920
 """Largest side of a frame; a backdrop is 1920 wide."""
 FRAMES_PER_VIDEO = 6
 OPEN_TIMEOUT = 60.0
-BAR_LEVEL = 18
-"""Rows and columns this dark at the edges are black bars."""
+BAR_LEVEL = 40
+"""Rows and columns this dark at the edges may be bars: black, or the dark grey some editors
+pad a standing video with. They are cut only when they are plain (see BAR_EVENNESS)."""
+BAR_EVENNESS = 6.0
+"""Black bars are plain: their brightness hardly varies (a dark scene does)."""
 
 
 class FrameError(RuntimeError):
@@ -102,15 +105,19 @@ def _frame_at(
 
 
 def trim_bars(image: Image.Image) -> Image.Image:
-    """The picture without black bars along its edges (letterbox and pillarbox)."""
+    """The picture without bars along its edges (letterbox and pillarbox): rows and columns at
+    the edges that are dark and plain. A dark scene is not plain, and is left whole."""
     grey = np.asarray(image.convert("L"), dtype=np.float32)
-    rows = np.flatnonzero(grey.mean(axis=1) > BAR_LEVEL)
-    cols = np.flatnonzero(grey.mean(axis=0) > BAR_LEVEL)
-    if rows.size == 0 or cols.size == 0:
-        return image  # all dark: a night or a fade, not bars
-    top, bottom, left, right = int(rows[0]), int(rows[-1]) + 1, int(cols[0]), int(cols[-1]) + 1
     height, width = grey.shape
-    # Cut only real bars: a few rows at least, and never most of the picture.
+    # A line belongs to a bar when it is dark and hardly varies along its length.
+    plain_rows = (grey.mean(axis=1) <= BAR_LEVEL) & (grey.std(axis=1) <= BAR_EVENNESS)
+    plain_cols = (grey.mean(axis=0) <= BAR_LEVEL) & (grey.std(axis=0) <= BAR_EVENNESS)
+    top = _run(plain_rows)
+    bottom = height - _run(plain_rows[::-1])
+    left = _run(plain_cols)
+    right = width - _run(plain_cols[::-1])
+    # Cut only real bars: a few lines at least, and leaving at least a quarter of the picture
+    # (a phone video standing in a wide frame keeps about a third of its width).
     if top < height * 0.02:
         top = 0
     if height - bottom < height * 0.02:
@@ -119,8 +126,14 @@ def trim_bars(image: Image.Image) -> Image.Image:
         left = 0
     if width - right < width * 0.02:
         right = width
-    if (bottom - top) < height * 0.5 or (right - left) < width * 0.5:
+    if (bottom - top) < height * 0.25 or (right - left) < width * 0.25:
         return image
     if (top, bottom, left, right) == (0, height, 0, width):
         return image
     return image.crop((left, top, right, bottom))
+
+
+def _run(plain: np.ndarray) -> int:
+    """How many lines from the start are plain."""
+    stops = np.flatnonzero(~plain)
+    return int(stops[0]) if stops.size else len(plain)

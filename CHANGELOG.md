@@ -25,6 +25,15 @@ between releases.
 - **Faces stay clear of the title**: a frame under the title is cropped so that the faces land in
   the part the title leaves free, enlarged a little when it cannot be moved enough.
   The same is done for the part of a slanted, round or diamond frame that is wholly seen.
+- **Shows get drawn pictures** (on by default; `SHOWRUNNER_ARTWORK=false` turns them off): the poster,
+  landscape picture, backdrop and logo of a show and a poster for every season, drawn from frames
+  of the album's videos in a style chosen for the album. New videos are looked at in the background
+  of the syncs, at most `SHOWRUNNER_ARTWORK_BUDGET_SECONDS` (240) per sync; until a show has frames
+  it keeps the cover of its album. A picture is drawn again only when what it is made of changes.
+  Kodi gets the posters of seasons through the NFO of the show, and forgets its cached pictures of a
+  changed show.
+- **`asset.download`** for the Immich API key is recommended: the frames are then read from the
+  original videos. Without it they come from the videos Immich converted for playing.
 
 ## [0.2.1] - 2026-11-15
 

@@ -2,7 +2,9 @@
 """The files of a show for Kodi (checked on Kodi 21.3, "Local information only"):
 
 <show folder>/tvshow.nfo
-<show folder>/poster.jpg                              the cover of the album
+<show folder>/poster.jpg                              drawn, or the cover of the album
+<show folder>/landscape.jpg, fanart.jpg, clearlogo.png        drawn
+<show folder>/Season 2024/poster.jpg                  drawn; set on the season by the app
 <show folder>/.actors/<name_of_person>.jpg            the face of a person, from Immich
 <show folder>/Season 2024/<date time [id]>.mp4        a link
 <show folder>/Season 2024/<date time [id]>.nfo
@@ -16,17 +18,26 @@ inserted in the middle. The season and the number come from the NFO.
 from pathlib import PurePosixPath
 from uuid import UUID
 
+from showrunner.artwork.jobs import ShowArtwork
+from showrunner.artwork.style import OutputKind
 from showrunner.model.naming import (
     kodi_actor_file_name,
     kodi_episode_file_stem,
     season_folder_name,
 )
 from showrunner.model.show import Show
+from showrunner.targets.artwork import POSTER_NAME, SEASON_POSTER_NAME, picture_files
 from showrunner.targets.base import KODI, DesiredFile, FileKind, ImageSource
+from showrunner.targets.kodi.client import kodi_file_path
 from showrunner.targets.nfo import episode_nfo, show_nfo
 
 SHOW_NFO_NAME = "tvshow.nfo"
-POSTER_NAME = "poster.jpg"
+PICTURE_NAMES = {
+    OutputKind.SERIES_POSTER: POSTER_NAME,
+    OutputKind.LANDSCAPE: "landscape.jpg",
+    OutputKind.FANART: "fanart.jpg",
+    OutputKind.LOGO: "clearlogo.png",
+}
 THUMB_SUFFIX = "-thumb.jpg"
 ACTORS_FOLDER = ".actors"
 # Immich gives no version of a face: it is downloaded once.
@@ -36,25 +47,24 @@ FACE_VERSION = "face"
 class KodiLayout:
     name = KODI
 
-    def files(self, show: Show, folder_name: str) -> list[DesiredFile]:
+    def __init__(self, output_path: str = "") -> None:
+        """`output_path` is the output folder as Kodi sees it (`smb://…`), for the paths of the
+        posters of seasons in the NFO of the show; without it the seasons get no posters."""
+        self.output_path = output_path
+
+    def files(
+        self, show: Show, folder_name: str, artwork: ShowArtwork | None = None
+    ) -> list[DesiredFile]:
         root = PurePosixPath(folder_name)
         files = [
             DesiredFile(
                 path=root / SHOW_NFO_NAME,
                 kind=FileKind.SHOW_NFO,
                 album_id=show.album_id,
-                content=show_nfo(show),
+                content=show_nfo(show, self._season_posters(folder_name, artwork)),
             )
         ]
-        if show.cover_asset_id is not None:
-            files.append(
-                DesiredFile(
-                    path=root / POSTER_NAME,
-                    kind=FileKind.IMAGE,
-                    album_id=show.album_id,
-                    image=ImageSource(show.cover_asset_id, str(show.cover_asset_id)),
-                )
-            )
+        files += picture_files(show, root, artwork, PICTURE_NAMES)
         faces: dict[str, UUID] = {}
         for episode in show.episodes:
             base = root / season_folder_name(episode.season)
@@ -98,3 +108,15 @@ class KodiLayout:
                 )
             )
         return files
+
+    def _season_posters(self, folder_name: str, artwork: ShowArtwork | None) -> dict[int, str]:
+        if not self.output_path or not artwork:
+            return {}
+        return {
+            season: kodi_file_path(
+                self.output_path,
+                PurePosixPath(folder_name) / season_folder_name(season) / SEASON_POSTER_NAME,
+            )
+            for kind, season in artwork
+            if kind is OutputKind.SEASON_POSTER and season is not None
+        }

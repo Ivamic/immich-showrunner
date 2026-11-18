@@ -2,7 +2,9 @@
 """The files of a show for Jellyfin:
 
 <show folder>/tvshow.nfo
-<show folder>/poster.jpg                      the cover of the album
+<show folder>/poster.jpg                      drawn, or the cover of the album
+<show folder>/landscape.jpg, fanart.jpg, logo.png     drawn
+<show folder>/Season 2024/poster.jpg          drawn
 <show folder>/Season 2024/<stem>.mp4          a link
 <show folder>/Season 2024/<stem>.nfo
 <show folder>/Season 2024/<stem>-thumb.jpg    the preview of the video
@@ -10,20 +12,30 @@
 
 from pathlib import PurePosixPath
 
+from showrunner.artwork.jobs import ShowArtwork
+from showrunner.artwork.style import OutputKind
 from showrunner.model.naming import season_folder_name
 from showrunner.model.show import Show
+from showrunner.targets.artwork import POSTER_NAME, picture_files
 from showrunner.targets.base import DesiredFile, FileKind, ImageSource
 from showrunner.targets.nfo import episode_nfo, show_nfo
 
 SHOW_NFO_NAME = "tvshow.nfo"
-POSTER_NAME = "poster.jpg"
 THUMB_SUFFIX = "-thumb.jpg"
+PICTURE_NAMES = {
+    OutputKind.SERIES_POSTER: POSTER_NAME,
+    OutputKind.LANDSCAPE: "landscape.jpg",
+    OutputKind.FANART: "fanart.jpg",
+    OutputKind.LOGO: "logo.png",
+}
 
 
 class JellyfinLayout:
     name = "jellyfin"
 
-    def files(self, show: Show, folder_name: str) -> list[DesiredFile]:
+    def files(
+        self, show: Show, folder_name: str, artwork: ShowArtwork | None = None
+    ) -> list[DesiredFile]:
         root = PurePosixPath(folder_name)
         files = [
             DesiredFile(
@@ -33,17 +45,7 @@ class JellyfinLayout:
                 content=show_nfo(show),
             )
         ]
-        if show.cover_asset_id is not None:
-            files.append(
-                DesiredFile(
-                    path=root / POSTER_NAME,
-                    kind=FileKind.IMAGE,
-                    album_id=show.album_id,
-                    # Another cover is another asset; a new preview of the same asset is not
-                    # worth a download on every pass.
-                    image=ImageSource(show.cover_asset_id, str(show.cover_asset_id)),
-                )
-            )
+        files += picture_files(show, root, artwork, PICTURE_NAMES)
         for episode in show.episodes:
             base = root / season_folder_name(episode.season)
             files.append(

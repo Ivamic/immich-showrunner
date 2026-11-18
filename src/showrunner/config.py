@@ -88,6 +88,11 @@ class Settings(BaseSettings):
     title_date_format: str = "%Y-%m-%d %H:%M"
 
     sync_interval_seconds: int = Field(default=300, ge=30)
+    # Pictures drawn from the frames of the videos: poster, landscape, backdrop and logo of a
+    # show, poster of a season. Off: the poster is the cover of the album, as before.
+    artwork: bool = True
+    # Time a pass may spend looking at new videos for artwork; the rest waits for the next one.
+    artwork_budget_seconds: int = Field(default=240, ge=10)
 
     # The web page. The secret encrypts the Immich key the app keeps for what the user does on the
     # page; changing it signs everybody out. Without it the page can not be signed in to.

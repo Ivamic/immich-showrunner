@@ -14,8 +14,10 @@ The image is published on GitHub Container Registry (`ghcr.io/ivamic/immich-show
 
 1. As the Immich administrator, create a user for the media server, for example `jellyfin`.
 2. Sign in as that user and create an API key (Account Settings → API Keys) with only these
-   permissions: `album.read`, `asset.read`, `asset.view`, `person.read`, `user.read`.
-   With such a key the app can not change anything in Immich.
+   permissions: `album.read`, `asset.read`, `asset.view`, `asset.download`, `person.read`,
+   `user.read`. With such a key the app can not change anything in Immich. `asset.download`
+   lets the app read the original videos for the frames of its pictures; without it the frames
+   come from the smaller videos Immich converted for playing.
 3. Share an album with that user. Every video of the album becomes an episode.
 
 ## 2. The output folders
@@ -102,6 +104,8 @@ Status page.
 | `SHOWRUNNER_SHOW_PREFIX`, `SHOWRUNNER_PERSON_PREFIX` | `§ `, `• ` | A short mark before the title of a show and the name of a person. Use characters that are in the fonts of every client: the default skin of Kodi, for one, shows `◈` as a box |
 | `SHOWRUNNER_TITLE_DATE_FORMAT` | `%Y-%m-%d %H:%M` | The title of a video without a description, e.g. `%d.%m.%Y, %H:%M` |
 | `SHOWRUNNER_SYNC_INTERVAL_SECONDS` | `300` | Seconds between syncs; a full pass runs once an hour |
+| `SHOWRUNNER_ARTWORK` | `true` | Pictures drawn from the frames of the videos: the poster, landscape picture, backdrop and logo of a show and the poster of each season, in one of several styles. `false`: the poster is the cover of the album |
+| `SHOWRUNNER_ARTWORK_BUDGET_SECONDS` | `240` | Time a sync may spend looking at new videos for the pictures (about a second a video). A large library is looked at over several syncs; until then a show keeps the cover of its album |
 | `SHOWRUNNER_VERSION` | `0` | The version of the image; see [Updating](#updating) |
 
 After changing a setting: `docker compose up -d`, then `docker compose run --rm app sync`, so that

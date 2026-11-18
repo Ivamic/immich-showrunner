@@ -86,6 +86,9 @@ class Episode:
     # Where it stands in the order of its season.
     sort_at: datetime | None = None
     original_file_name: str = ""
+    # For artwork: the file of the video (changes only when it is replaced) and its length.
+    checksum: str = ""
+    duration_ms: int | None = None
 
 
 @dataclass(frozen=True)
@@ -215,6 +218,8 @@ def build_show(
             auto_plot=auto_plot,
             sort_at=edit.sort_at,
             original_file_name=asset.original_file_name,
+            checksum=asset.checksum or asset.updated_at.isoformat(),
+            duration_ms=asset.duration,
         )
         if edit.hidden:
             hidden.append(episode)

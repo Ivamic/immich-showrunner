@@ -3,7 +3,7 @@
 # sheet of squared paper.
 schema: 1
 id: polaroid
-version: 1
+version: 2
 names: {en: Polaroid, de: Polaroid, fr: Polaroid, it: Polaroid, ru: Полароид}
 max_frames: 12
 fonts:
@@ -119,6 +119,8 @@ outputs:
           - {box: [6, 10, 30, 70], rotate: -5}
           - {box: [36, 14, 30, 70], rotate: 3}
           - {box: [65, 8, 30, 70], rotate: -2}
+      - cells:
+          - scatter: {xs: [5, 37, 69], ys: [6, 50], size: [27, 42], jitter: 1.5, turn: 7}
       - cells:
           - scatter: {xs: [2, 26, 50, 74], ys: [6, 50], size: [24, 42], jitter: 1.5, turn: 7}
 

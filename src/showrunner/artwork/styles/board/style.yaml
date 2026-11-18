@@ -2,7 +2,7 @@
 # Board: prints pinned to a wooden board, the title typed on a crumpled note.
 schema: 1
 id: board
-version: 1
+version: 2
 names: {en: Pinboard, de: Pinnwand, fr: Tableau, it: Bacheca, ru: Доска}
 max_frames: 12
 fonts:
@@ -126,6 +126,8 @@ outputs:
       - cells: [{box: [30, 10, 40, 75], rotate: -2}]
       - cells:
           - scatter: {xs: [10, 38, 66], ys: [12], size: [24, 40], jitter: 1, turn: 5}
+      - cells:
+          - scatter: {xs: [6, 37, 68], ys: [8, 52], size: [26, 38], jitter: 0.8, turn: 5}
       - cells:
           - scatter: {xs: [2, 26, 50, 74], ys: [8, 52], size: [23, 38], jitter: 0.8, turn: 5}
 

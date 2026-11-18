@@ -2,9 +2,11 @@
 """Tables."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import DateTime, ForeignKey, MetaData, String, Text, false, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 # Names for constraints, so that migrations can refer to them.
@@ -139,3 +141,34 @@ class PendingRow(Base):
 
     target: Mapped[str] = mapped_column(String(16), primary_key=True)
     album_id: Mapped[UUID] = mapped_column(ForeignKey("show.album_id"), primary_key=True)
+
+
+class FrameLookRow(Base):
+    """What was learned about the frames of a video for artwork: their quality, faces and
+    where to crop them (not the pixels). A video whose checksum changed is looked at again."""
+
+    __tablename__ = "frame_look"
+
+    asset_id: Mapped[UUID] = mapped_column(primary_key=True)
+    checksum: Mapped[str] = mapped_column(Text)
+    # The way frames are looked at; a look of another version is made again.
+    version: Mapped[int] = mapped_column()
+    looks: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    # The video could not be read: not tried again until its checksum changes.
+    failed: Mapped[bool] = mapped_column(default=False, server_default=false())
+    analysed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class ArtworkRow(Base):
+    """The artwork of a show: its style (chosen at random once and kept), the seed of "other
+    frames", and what the user froze."""
+
+    __tablename__ = "artwork"
+
+    album_id: Mapped[UUID] = mapped_column(ForeignKey("show.album_id"), primary_key=True)
+    style_id: Mapped[str] = mapped_column(String(48))
+    seed: Mapped[int] = mapped_column(default=0, server_default="0")
+    # none, show (the pictures of the show, not of its seasons) or all.
+    frozen: Mapped[str] = mapped_column(String(8), default="none", server_default="none")

@@ -13,7 +13,7 @@ from pydantic import ValidationError
 
 from showrunner import __version__
 from showrunner.config import Settings, get_settings
-from showrunner.immich.client import ImmichError
+from showrunner.immich.client import ImmichError, can_download
 from showrunner.runner import (
     SetupError,
     check_api_key,
@@ -107,6 +107,17 @@ async def cmd_check(settings: Settings) -> int:
             line(version.major == 3, f"Immich {version} at {settings.immich_url}")
             for warning in await check_api_key(immich):
                 print("note  " + warning)
+            if settings.artwork:
+                if can_download(await immich.api_key_info()):
+                    line(True, "artwork: frames are read from the original videos")
+                else:
+                    print(
+                        "note  artwork: the API key has no asset.download, so frames come from "
+                        "the videos Immich converted for playing (smaller); add asset.download "
+                        "to the key for sharper pictures"
+                    )
+            else:
+                print("note  artwork is off (SHOWRUNNER_ARTWORK=false): posters are album covers")
             albums = await immich.albums()
             line(True, f"Immich: {len(albums)} album(s) visible to the API key")
     except (ImmichError, SetupError) as exc:
