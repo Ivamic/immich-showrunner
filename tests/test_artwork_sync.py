@@ -15,15 +15,16 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from fake_immich import FakeImmich, asset_id
 from showrunner.artwork.jobs import ArtworkJob, choose_style, plan_show
+from showrunner.artwork.make import Video
 from showrunner.artwork.quality import Quality
 from showrunner.artwork.select import LOOK_VERSION, FrameLook
 from showrunner.artwork.style import OutputKind, builtin_styles
+from showrunner.artwork.worker import HttpSource
 from showrunner.config import parse_path_map
 from showrunner.immich.models import Album, Asset
 from showrunner.model.show import Options, Show, build_show
 from showrunner.store.models import Base
 from showrunner.store.registry import Registry
-from showrunner.sync import artwork as artwork_step
 from showrunner.sync.artwork import ArtworkContext
 from showrunner.sync.executor import MARKER_NAME, Executor
 from showrunner.sync.service import Output, sync_outputs
@@ -169,17 +170,26 @@ def test_drawn_poster_takes_the_place_of_the_cover() -> None:
 # --- a whole pass -----------------------------------------------------------------------
 
 
+# The videos looked at by the fake step, across the passes of a test.
+LOOKED_AT: list[UUID] = []
+
+
 class FakeArtwork(ArtworkContext):
-    """Draws a picture as a few bytes naming its job; counts what it draws."""
+    """Looks at a video as three made-up frames; draws a picture as a few bytes naming its
+    job; counts what it draws. Nothing goes to the worker process."""
 
     def __init__(self, budget: float = 60.0) -> None:
         super().__init__(
             styles=STYLES,
-            source=lambda a: (f"http://immich.test/api/assets/{a}/original", {}),
+            source=HttpSource("http://immich.test/api", "key", original=True),
             budget_seconds=budget,
-            detector=None,  # type: ignore[arg-type]
+            worker=None,  # type: ignore[arg-type]
         )
         self.drawn: list[ArtworkJob] = []
+
+    async def look(self, video: Video) -> list[FrameLook]:
+        LOOKED_AT.append(video.asset_id)
+        return [fake_look(video.asset_id, t) for t in (1.0, 2.0, 3.0)]
 
     async def draw(self, job: ArtworkJob) -> bytes:
         self.drawn.append(job)
@@ -187,16 +197,10 @@ class FakeArtwork(ArtworkContext):
 
 
 @pytest.fixture
-def looked_at(monkeypatch: pytest.MonkeyPatch) -> list[UUID]:
-    """Looking at a video gives three made-up frames; the videos looked at are listed."""
-    seen: list[UUID] = []
-
-    def fake(video: Any, source: Any, detector: Any) -> list[FrameLook]:
-        seen.append(video.asset_id)
-        return [fake_look(video.asset_id, t) for t in (1.0, 2.0, 3.0)]
-
-    monkeypatch.setattr(artwork_step, "look_at_video", fake)
-    return seen
+def looked_at() -> list[UUID]:
+    """The videos looked at in this test."""
+    LOOKED_AT.clear()
+    return LOOKED_AT
 
 
 def files(root: Path) -> dict[str, bytes]:
@@ -333,19 +337,32 @@ async def test_choices_from_the_page_reach_the_pictures(
     assert f"{folder}/folder.jpg" not in written
     assert written[f"{folder}/landscape.jpg"].startswith(b"ART")
 
-    # Frozen: the next pass keeps what is drawn; other frames then change nothing.
-    await registry.save_artwork(album, style, use_cover=False, frozen="all", frozen_jobs=None)
+    # Other frames for one picture: only that one is drawn again.
+    await registry.save_artwork(album, style, use_cover=False)
     await registry.commit()
     await again()
-    assert (await registry.artworks())[album].frozen_jobs
-    await registry.save_artwork(album, style, seed=99)
+    drawn_jobs = (await registry.artworks())[album].drawn_jobs
+    assert "season_poster:2023" in drawn_jobs and "series_poster" in drawn_jobs
+    await registry.save_artwork(album, style, slot_seeds={"season_poster:2023": 7})
     await registry.commit()
-    assert (await again()).drawn == [], "frozen: nothing drawn again"
+    drawn = (await again()).drawn
+    assert [(j.kind, j.season, j.seed) for j in drawn] == [(OutputKind.SEASON_POSTER, 2023, 7)]
 
-    # Not frozen any more, and its style switched off: another style is chosen.
-    await registry.save_artwork(album, style, frozen="none", frozen_jobs=None)
+    # Pinned: the pinned pictures keep what is drawn, the others follow the album.
+    drawn_jobs = (await registry.artworks())[album].drawn_jobs
+    pinned = {k: v for k, v in drawn_jobs.items() if k != "landscape"}
+    await registry.save_artwork(album, style, pinned_jobs=pinned)
     await registry.set_style_enabled(style, False)
     await registry.commit()
     drawn = (await again()).drawn
+    assert [j.kind for j in drawn] == [OutputKind.LANDSCAPE], "only the one not pinned"
+    assert drawn[0].style_id != style
+    art = (await registry.artworks())[album]
+    assert art.style_id != style
+    assert art.drawn_jobs["series_poster"]["style_id"] == style, "the pinned keep their style"
+
+    # Unpinned again: they follow the new style.
+    await registry.save_artwork(album, art.style_id, pinned_jobs={})
+    await registry.commit()
+    drawn = (await again()).drawn
     assert drawn and all(job.style_id != style for job in drawn)
-    assert (await registry.artworks())[album].style_id != style

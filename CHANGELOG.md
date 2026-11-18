@@ -37,8 +37,11 @@ between releases.
   16:9 cover would be shown cut to 16:9.
 - **Pictures on the page of an album**: the poster, landscape picture, backdrop, logo and season
   posters the media servers have now; "Another style", "Other frames" and "Album cover as the
-  poster", each shown before and after it is applied, with "One more"; and freezing the pictures
-  (of the show only, or all) so that new videos leave them as they are.
+  poster", each shown before and after it is applied, with "One more"; a style chosen by name;
+  other frames for a single picture; and pinning pictures one by one (or all), so that they stay
+  as they are whatever happens to the album. While the pictures are drawn again or the videos of
+  an album are still being looked at, the page says so and shows the new pictures when they are
+  ready.
 - **A Styles page**: switch styles on or off; albums in a style switched off get another one.
 - **`asset.download`** for the Immich API key is recommended: the frames are then read from the
   original videos. Without it they come from the videos Immich converted for playing.
@@ -53,6 +56,10 @@ between releases.
   folder. Watched marks of such a show start anew in Kodi, and in Jellyfin if it keeps them by path.
 - **Renaming the folders held the sync** as a mass removal: links that move to a new folder for
   the same videos are no longer counted as removed. A real loss is still held.
+- **The page no longer stalls while pictures are made**: looking at videos and drawing run in a
+  process of their own.
+- **"Other frames" gives other pictures**: the leading frame is drawn from the best of all the
+  frames of the album, not from the same few.
 
 
 ## [0.2.1] - 2026-11-15

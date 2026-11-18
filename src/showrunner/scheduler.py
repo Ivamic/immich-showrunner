@@ -6,6 +6,7 @@ import contextlib
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -61,6 +62,8 @@ class State:
     notes: list[str] = field(default_factory=list)
     skipped: list[Skip] = field(default_factory=list)
     pictures_failed: list[str] = field(default_factory=list)
+    # Videos still to look at for the pictures, per album, as the last pass left them.
+    artwork_waiting: dict[UUID, int] = field(default_factory=dict)
     foreign: list[Foreign] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     # A pass asked for from the page; `force` carries out a held mass removal.
@@ -92,6 +95,7 @@ class State:
             :MAX_LISTED
         ]
         self.pictures_failed = [p for r in reports for p in r.pictures_failed][:MAX_LISTED]
+        self.artwork_waiting = dict(first.artwork_waiting)
         self.foreign = [Foreign(str(o.action.path), o.detail) for r in reports for o in r.foreign][
             :MAX_LISTED
         ]

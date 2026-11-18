@@ -9,6 +9,7 @@ from uuid import UUID
 
 import httpx2
 
+from showrunner.artwork.worker import HttpSource
 from showrunner.immich.models import (
     Album,
     ApiKeyInfo,
@@ -122,6 +123,10 @@ class ImmichClient:
         video Immich converted for playing."""
         path = "original" if original else "video/playback"
         return f"{self._base_url}/assets/{asset_id}/{path}", {"x-api-key": self._api_key}
+
+    def http_source(self, *, original: bool) -> HttpSource:
+        """Where videos are read from, as plain data for the worker of artwork."""
+        return HttpSource(self._base_url, self._api_key, original)
 
     async def server_version(self) -> ServerVersion:
         response = await self._request("GET", "/server/version")

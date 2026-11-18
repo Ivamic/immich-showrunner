@@ -170,17 +170,18 @@ class ArtworkRow(Base):
     album_id: Mapped[UUID] = mapped_column(ForeignKey("show.album_id"), primary_key=True)
     style_id: Mapped[str] = mapped_column(String(48))
     seed: Mapped[int] = mapped_column(default=0, server_default="0")
-    # none, show (the pictures of the show, not of its seasons) or all.
-    frozen: Mapped[str] = mapped_column(String(8), default="none", server_default="none")
-    # The jobs of the frozen pictures, as they were when frozen; none until the next pass takes
-    # them.
-    frozen_jobs: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
     # The poster of the show is the cover of the album in Immich, not a drawn one.
     use_cover: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # Other frames for single pictures: slot key (`season_poster:2024`) -> seed.
+    slot_seeds: Mapped[dict[str, int]] = mapped_column(JSONB, default=dict, server_default="{}")
+    # The jobs of the pictures as the last pass planned them (slot key -> job): what is shown.
+    drawn_jobs: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
+    # Pinned pictures, kept as they were drawn whatever happens to the album.
+    pinned_jobs: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
 
 
 class StyleSettingRow(Base):
-    """A style switched off on the page: no album gets it any more (unless frozen with it)."""
+    """A style switched off on the page: no album gets it any more (pinned pictures keep it)."""
 
     __tablename__ = "style_setting"
 

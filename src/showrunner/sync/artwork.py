@@ -5,20 +5,21 @@ every show.
 Looking at a video takes about a second, so a large library is looked at over several passes:
 each pass stops after its time budget. A show with videos still to look at is drawn from the
 videos looked at so far (or keeps the cover of its album while there are none) and is not
-stamped, so that the next quick pass comes back to it."""
+stamped, so that the next quick pass comes back to it.
+
+What the user chose on the page counts here: the style of the album, the cover as its poster,
+other frames for a single picture (a seed of its own), and pinned pictures, which are kept as
+they were drawn whatever happens to the album."""
 
 from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
-import anyio.to_thread
-
-from showrunner.artwork.faces import FaceDetector
 from showrunner.artwork.frames import FrameError, seconds
 from showrunner.artwork.jobs import (
     ArtworkJob,
@@ -26,10 +27,18 @@ from showrunner.artwork.jobs import (
     ShowArtwork,
     choose_style,
     plan_show,
+    slot_key,
 )
-from showrunner.artwork.make import ArtworkError, Video, VideoSource, draw, look_at_video
+from showrunner.artwork.make import ArtworkError, Video
 from showrunner.artwork.select import LOOK_VERSION, FrameLook
 from showrunner.artwork.style import OutputKind, Style
+from showrunner.artwork.worker import (
+    ArtworkWorker,
+    HttpSource,
+    draw_task,
+    look_task,
+    shared_worker,
+)
 from showrunner.model.show import SINGLE_SEASON, Show
 from showrunner.store.models import FrameLookRow
 from showrunner.store.registry import Registry
@@ -39,25 +48,37 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class ArtworkContext:
-    """What the artwork step needs; built once for the app."""
+    """What the artwork step needs. The slow work runs in the worker process."""
 
     styles: Mapping[str, Style]
-    source: VideoSource
+    source: HttpSource
     budget_seconds: float = 240.0
-    detector: FaceDetector = field(default_factory=FaceDetector)
+    worker: ArtworkWorker = field(default_factory=shared_worker)
     clock: Callable[[], float] = time.monotonic
 
+    async def look(self, video: Video) -> list[FrameLook]:
+        """The frames of a video, looked at. Raises FrameError."""
+        data = await self.worker.run(
+            look_task, str(video.asset_id), video.checksum, video.seconds, self.source
+        )
+        return [look for look in map(FrameLook.from_dict, data) if look is not None]
+
     async def draw(self, job: ArtworkJob) -> bytes:
-        return await anyio.to_thread.run_sync(draw, job, self.styles, self.source)
+        """A picture, encoded. Raises ArtworkError."""
+        return await self.worker.run(draw_task, job.to_dict(), self.source)
 
 
 @dataclass
 class ArtworkPlan:
     shows: dict[UUID, ShowArtwork] = field(default_factory=dict)
-    # Shows with videos still to look at: they keep the cover and are looked at again.
-    incomplete: set[UUID] = field(default_factory=set)
+    # Shows with videos still to look at, and how many: drawn from the others for now.
+    waiting: dict[UUID, int] = field(default_factory=dict)
     looked: int = 0
     unreadable: int = 0
+
+    @property
+    def incomplete(self) -> set[UUID]:
+        return set(self.waiting)
 
 
 async def plan_artwork(
@@ -78,9 +99,7 @@ async def plan_artwork(
         if context.clock() - started >= context.budget_seconds:
             break
         try:
-            found = await anyio.to_thread.run_sync(
-                look_at_video, video, context.source, context.detector
-            )
+            found = await context.look(video)
             failed = False
             result.looked += 1
         except FrameError as exc:
@@ -89,8 +108,9 @@ async def plan_artwork(
             result.unreadable += 1
         data = [item.to_dict() for item in found]
         await registry.save_frame_looks(video.asset_id, video.checksum, LOOK_VERSION, data, failed)
-    if result.looked or result.unreadable:
+        # Each look is kept at once: the work of a long pass is not lost if it stops.
         await registry.commit()
+    if result.looked or result.unreadable:
         rows = await registry.frame_looks(videos.keys())
 
     disabled = await registry.disabled_styles()
@@ -99,12 +119,10 @@ async def plan_artwork(
     for show, _ in shows:
         looks, waiting = looks_of(show, rows)
         if waiting:
-            # Not looked at yet: drawn from the other videos for now, and again later.
-            result.incomplete.add(show.album_id)
+            result.waiting[show.album_id] = waiting
         art = chosen.get(show.album_id)
-        frozen = art.frozen if art is not None else NOT_FROZEN
         style_id = art.style_id if art is not None and art.style_id in context.styles else None
-        if style_id is None or (style_id in disabled and frozen == NOT_FROZEN):
+        if style_id is None or style_id in disabled:
             style_id = choose_style(show.album_id, usable)
             await registry.save_artwork(show.album_id, style_id)
         jobs = (
@@ -113,41 +131,34 @@ async def plan_artwork(
                 looks,
                 context.styles[style_id],
                 art.seed if art is not None else 0,
+                seeds=art.slot_seeds if art is not None else None,
                 season_posters=show.seasons != (SINGLE_SEASON,),
             )
             if any(looks.values())
             else {}
         )
-        if art is not None and frozen != NOT_FROZEN:
-            if art.frozen_jobs is None:
-                # Frozen on the page: what is drawn now is kept from now on.
-                await registry.save_artwork(
-                    show.album_id, style_id, frozen_jobs=[j.to_dict() for j in jobs.values()]
-                )
-            else:
-                jobs = with_frozen(jobs, art.frozen_jobs, frozen, show.seasons)
+        if art is not None and art.pinned_jobs:
+            jobs = with_pinned(jobs, art.pinned_jobs, show.seasons)
         if art is not None and art.use_cover:
             jobs.pop((OutputKind.SERIES_POSTER, None), None)
+        drawn = {slot_key(*key): job.to_dict() for key, job in jobs.items()}
+        if art is None or (art.drawn_jobs or {}) != drawn:
+            await registry.save_artwork(show.album_id, style_id, drawn_jobs=drawn)
         if jobs:
             result.shows[show.album_id] = jobs
     return result
 
 
-NOT_FROZEN = "none"
-FROZEN_SHOW = "show"
-FROZEN_ALL = "all"
-
-
 def looks_of(
     show: Show, rows: Mapping[UUID, FrameLookRow]
-) -> tuple[dict[UUID, list[FrameLook]], bool]:
-    """The looks of the videos of a show, and whether some videos are still to look at."""
+) -> tuple[dict[UUID, list[FrameLook]], int]:
+    """The looks of the videos of a show, and how many videos are still to look at."""
     looks: dict[UUID, list[FrameLook]] = {}
-    waiting = False
+    waiting = 0
     for episode in show.episodes:
         row = rows.get(episode.asset_id)
         if row is None or row.checksum != episode.checksum or row.version != LOOK_VERSION:
-            waiting = True
+            waiting += 1
             continue
         looks[episode.asset_id] = [
             look for look in map(FrameLook.from_dict, row.looks) if look is not None
@@ -155,18 +166,17 @@ def looks_of(
     return looks, waiting
 
 
-def with_frozen(
+def with_pinned(
     jobs: Mapping[ArtworkKey, ArtworkJob],
-    frozen_jobs: list[dict[str, Any]],
-    frozen: str,
-    seasons: Sequence[int],
+    pinned: Mapping[str, dict[str, Any]],
+    seasons: tuple[int, ...],
 ) -> dict[ArtworkKey, ArtworkJob]:
-    """The pictures as frozen take the place of the ones planned now. Frozen as `show`, only
-    the pictures of the show are kept; frozen as `all`, the posters of the seasons too, while a
-    new season gets its poster as usual and a season that is gone loses it."""
+    """Pinned pictures take the place of the ones planned now; the poster of a season that is
+    gone goes with it."""
     result = dict(jobs)
-    for job in map(ArtworkJob.from_dict, frozen_jobs):
-        if job.season is None or (frozen == FROZEN_ALL and job.season in seasons):
+    for data in pinned.values():
+        job = ArtworkJob.from_dict(data)
+        if job.season is None or job.season in seasons:
             result[(job.kind, job.season)] = job
     return result
 
@@ -177,5 +187,5 @@ __all__ = [
     "ArtworkPlan",
     "looks_of",
     "plan_artwork",
-    "with_frozen",
+    "with_pinned",
 ]
