@@ -169,6 +169,66 @@ export const acceptInvitation = (id: string) =>
 	request<void>('POST', `/people/invitations/${id}/accept`);
 export const faceUrl = (id: string) => `/api/people/${id}/face`;
 
+export type ArtworkKind = 'series_poster' | 'season_poster' | 'landscape' | 'fanart' | 'logo';
+export type Frozen = 'none' | 'show' | 'all';
+
+export interface Style {
+	id: string;
+	/** The name of the style in each language of the page. */
+	names: Record<string, string>;
+	enabled: boolean;
+	/** Shows drawn in this style now. */
+	shows: number;
+}
+
+export interface ArtworkPicture {
+	kind: ArtworkKind;
+	season: number | null;
+	url: string;
+}
+
+export interface Artwork {
+	style_id: string | null;
+	seed: number;
+	use_cover: boolean;
+	frozen: Frozen;
+	pictures: ArtworkPicture[];
+}
+
+export interface ArtworkChoice {
+	style_id: string;
+	seed: number;
+	use_cover: boolean;
+}
+
+export interface ArtworkPreview {
+	choice: ArtworkChoice;
+	/** Data URLs by kind: series_poster (absent with the cover), landscape, fanart. */
+	pictures: Partial<Record<ArtworkKind, string>>;
+}
+
+export type ArtworkChange = 'style' | 'frames' | 'cover' | 'drawn';
+
+export const getStyles = () => request<Style[]>('GET', '/styles');
+export const editStyle = (id: string, enabled: boolean) =>
+	request<void>('PATCH', `/styles/${id}`, { enabled });
+export const getArtwork = (show: string) => request<Artwork>('GET', `/shows/${show}/artwork`);
+export const previewArtwork = (
+	show: string,
+	change: ArtworkChange,
+	current: ArtworkChoice | null,
+	seenStyles: string[]
+) =>
+	request<ArtworkPreview>('POST', `/shows/${show}/artwork/preview`, {
+		change,
+		current,
+		seen_styles: seenStyles
+	});
+export const applyArtwork = (show: string, choice: ArtworkChoice) =>
+	request<void>('PUT', `/shows/${show}/artwork`, choice);
+export const freezeArtwork = (show: string, frozen: Frozen) =>
+	request<void>('PUT', `/shows/${show}/artwork/frozen`, { frozen });
+
 export const getStatus = () => request<Status>('GET', '/status');
 /** A full pass right away; `force` carries out a mass removal that the last pass held. */
 export const syncNow = (force = false) => request<void>('POST', '/sync', { force });

@@ -299,3 +299,53 @@ async def test_looks_read_again_after_they_were_replaced(session: AsyncSession) 
     row = (await registry.frame_looks([asset]))[asset]
     assert row.version == LOOK_VERSION and len(row.looks) == 1
     assert before
+
+
+# --- choices made on the page -----------------------------------------------------------
+
+
+@needs_links
+async def test_choices_from_the_page_reach_the_pictures(
+    session: AsyncSession, tmp_path: Path, looked_at: list[UUID]
+) -> None:
+    immich, _ = family()
+    album = next(iter(immich.albums))
+    immich.albums[album]["albumThumbnailAssetId"] = str(asset_id(1))
+    registry = Registry(session)
+    folder = "Family [imm-00000001]"
+    stamp = iter(f"2026-02-{day:02d}T00:00:00.000Z" for day in range(1, 28))
+
+    async def again(art: FakeArtwork | None = None) -> FakeArtwork:
+        immich.touch(album, next(stamp))
+        art = art or FakeArtwork()
+        await one_pass(immich, session, tmp_path, art)
+        return art
+
+    await again()
+    style = (await registry.artworks())[album].style_id
+
+    # The cover of the album as the poster: the drawn poster gives way.
+    await registry.save_artwork(album, style, use_cover=True)
+    await registry.commit()
+    await again()
+    written = files(tmp_path)
+    assert written[f"{folder}/poster.jpg"].startswith(b"JPEG")
+    assert f"{folder}/folder.jpg" not in written
+    assert written[f"{folder}/landscape.jpg"].startswith(b"ART")
+
+    # Frozen: the next pass keeps what is drawn; other frames then change nothing.
+    await registry.save_artwork(album, style, use_cover=False, frozen="all", frozen_jobs=None)
+    await registry.commit()
+    await again()
+    assert (await registry.artworks())[album].frozen_jobs
+    await registry.save_artwork(album, style, seed=99)
+    await registry.commit()
+    assert (await again()).drawn == [], "frozen: nothing drawn again"
+
+    # Not frozen any more, and its style switched off: another style is chosen.
+    await registry.save_artwork(album, style, frozen="none", frozen_jobs=None)
+    await registry.set_style_enabled(style, False)
+    await registry.commit()
+    drawn = (await again()).drawn
+    assert drawn and all(job.style_id != style for job in drawn)
+    assert (await registry.artworks())[album].style_id != style

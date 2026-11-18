@@ -11,19 +11,27 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from typing import Any
 from uuid import UUID
 
 import anyio.to_thread
 
 from showrunner.artwork.faces import FaceDetector
 from showrunner.artwork.frames import FrameError, seconds
-from showrunner.artwork.jobs import ArtworkJob, ShowArtwork, choose_style, plan_show
+from showrunner.artwork.jobs import (
+    ArtworkJob,
+    ArtworkKey,
+    ShowArtwork,
+    choose_style,
+    plan_show,
+)
 from showrunner.artwork.make import ArtworkError, Video, VideoSource, draw, look_at_video
 from showrunner.artwork.select import LOOK_VERSION, FrameLook
-from showrunner.artwork.style import Style
+from showrunner.artwork.style import OutputKind, Style
 from showrunner.model.show import SINGLE_SEASON, Show
+from showrunner.store.models import FrameLookRow
 from showrunner.store.registry import Registry
 
 log = logging.getLogger(__name__)
@@ -85,37 +93,89 @@ async def plan_artwork(
         await registry.commit()
         rows = await registry.frame_looks(videos.keys())
 
-    styles = sorted(context.styles)
+    disabled = await registry.disabled_styles()
+    usable = sorted(s for s in context.styles if s not in disabled) or sorted(context.styles)
     chosen = await registry.artworks()
     for show, _ in shows:
-        looks: dict[UUID, list[FrameLook]] = {}
-        for episode in show.episodes:
-            row = rows.get(episode.asset_id)
-            if row is None or row.checksum != episode.checksum or row.version != LOOK_VERSION:
-                # Not looked at yet: drawn from the other videos for now, and again later.
-                result.incomplete.add(show.album_id)
-                continue
-            looks[episode.asset_id] = [
-                look for look in map(FrameLook.from_dict, row.looks) if look is not None
-            ]
-        if not any(looks.values()):
-            continue  # nothing to draw from yet: the cover of the album stays
+        looks, waiting = looks_of(show, rows)
+        if waiting:
+            # Not looked at yet: drawn from the other videos for now, and again later.
+            result.incomplete.add(show.album_id)
         art = chosen.get(show.album_id)
+        frozen = art.frozen if art is not None else NOT_FROZEN
         style_id = art.style_id if art is not None and art.style_id in context.styles else None
-        if style_id is None:
-            style_id = choose_style(show.album_id, styles)
-            await registry.set_artwork_style(show.album_id, style_id)
-        seed = art.seed if art is not None else 0
-        jobs = plan_show(
-            show,
-            looks,
-            context.styles[style_id],
-            seed,
-            season_posters=show.seasons != (SINGLE_SEASON,),
+        if style_id is None or (style_id in disabled and frozen == NOT_FROZEN):
+            style_id = choose_style(show.album_id, usable)
+            await registry.save_artwork(show.album_id, style_id)
+        jobs = (
+            plan_show(
+                show,
+                looks,
+                context.styles[style_id],
+                art.seed if art is not None else 0,
+                season_posters=show.seasons != (SINGLE_SEASON,),
+            )
+            if any(looks.values())
+            else {}
         )
+        if art is not None and frozen != NOT_FROZEN:
+            if art.frozen_jobs is None:
+                # Frozen on the page: what is drawn now is kept from now on.
+                await registry.save_artwork(
+                    show.album_id, style_id, frozen_jobs=[j.to_dict() for j in jobs.values()]
+                )
+            else:
+                jobs = with_frozen(jobs, art.frozen_jobs, frozen, show.seasons)
+        if art is not None and art.use_cover:
+            jobs.pop((OutputKind.SERIES_POSTER, None), None)
         if jobs:
             result.shows[show.album_id] = jobs
     return result
 
 
-__all__ = ["ArtworkContext", "ArtworkError", "ArtworkPlan", "plan_artwork"]
+NOT_FROZEN = "none"
+FROZEN_SHOW = "show"
+FROZEN_ALL = "all"
+
+
+def looks_of(
+    show: Show, rows: Mapping[UUID, FrameLookRow]
+) -> tuple[dict[UUID, list[FrameLook]], bool]:
+    """The looks of the videos of a show, and whether some videos are still to look at."""
+    looks: dict[UUID, list[FrameLook]] = {}
+    waiting = False
+    for episode in show.episodes:
+        row = rows.get(episode.asset_id)
+        if row is None or row.checksum != episode.checksum or row.version != LOOK_VERSION:
+            waiting = True
+            continue
+        looks[episode.asset_id] = [
+            look for look in map(FrameLook.from_dict, row.looks) if look is not None
+        ]
+    return looks, waiting
+
+
+def with_frozen(
+    jobs: Mapping[ArtworkKey, ArtworkJob],
+    frozen_jobs: list[dict[str, Any]],
+    frozen: str,
+    seasons: Sequence[int],
+) -> dict[ArtworkKey, ArtworkJob]:
+    """The pictures as frozen take the place of the ones planned now. Frozen as `show`, only
+    the pictures of the show are kept; frozen as `all`, the posters of the seasons too, while a
+    new season gets its poster as usual and a season that is gone loses it."""
+    result = dict(jobs)
+    for job in map(ArtworkJob.from_dict, frozen_jobs):
+        if job.season is None or (frozen == FROZEN_ALL and job.season in seasons):
+            result[(job.kind, job.season)] = job
+    return result
+
+
+__all__ = [
+    "ArtworkContext",
+    "ArtworkError",
+    "ArtworkPlan",
+    "looks_of",
+    "plan_artwork",
+    "with_frozen",
+]

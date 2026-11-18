@@ -13,6 +13,7 @@ import json
 import random
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from showrunner.artwork.select import FrameLook, choose
@@ -53,6 +54,56 @@ class ArtworkJob:
     text: str
     seed: int
     frames: tuple[ChosenFrame, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "album_id": str(self.album_id),
+            "kind": self.kind.value,
+            "season": self.season,
+            "style_id": self.style_id,
+            "style_version": self.style_version,
+            "text": self.text,
+            "seed": self.seed,
+            "frames": [
+                {
+                    "asset_id": str(f.asset_id),
+                    "at": f.at,
+                    "point": list(f.point),
+                    "region": list(f.region) if f.region else None,
+                }
+                for f in self.frames
+            ],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ArtworkJob:
+        return cls(
+            album_id=UUID(data["album_id"]),
+            kind=OutputKind(data["kind"]),
+            season=data["season"],
+            style_id=data["style_id"],
+            style_version=int(data["style_version"]),
+            text=data["text"],
+            seed=int(data["seed"]),
+            frames=tuple(
+                ChosenFrame(
+                    asset_id=UUID(f["asset_id"]),
+                    at=float(f["at"]),
+                    point=(float(f["point"][0]), float(f["point"][1])),
+                    region=(
+                        (
+                            float(f["region"][0]),
+                            float(f["region"][1]),
+                            float(f["region"][2]),
+                            float(f["region"][3]),
+                        )
+                        if f["region"]
+                        else None
+                    ),
+                )
+                for f in data["frames"]
+            ),
+        )
 
     @property
     def version(self) -> str:

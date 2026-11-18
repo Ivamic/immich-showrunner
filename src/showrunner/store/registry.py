@@ -22,6 +22,7 @@ from showrunner.store.models import (
     PersonDescriptionRow,
     PersonRow,
     ShowRow,
+    StyleSettingRow,
 )
 from showrunner.sync.plan import Entry
 from showrunner.targets.base import JELLYFIN, DesiredFile, FileKind
@@ -216,8 +217,35 @@ class Registry:
         )
 
     async def artworks(self) -> dict[UUID, ArtworkRow]:
-        rows = await self._session.scalars(select(ArtworkRow))
+        rows = await self._session.scalars(
+            select(ArtworkRow).execution_options(populate_existing=True)
+        )
         return {row.album_id: row for row in rows}
+
+    async def save_artwork(self, album_id: UUID, style_id: str, **values: Any) -> None:
+        """Set fields of the artwork of a show (`seed`, `use_cover`, `frozen`, `frozen_jobs`),
+        creating its row with `style_id` if there is none."""
+        statement = insert(ArtworkRow).values(album_id=album_id, style_id=style_id, **values)
+        await self._session.execute(
+            statement.on_conflict_do_update(
+                index_elements=[ArtworkRow.album_id],
+                set_={"style_id": style_id, **values},
+            )
+        )
+
+    async def disabled_styles(self) -> set[str]:
+        rows = await self._session.scalars(
+            select(StyleSettingRow.style_id).where(StyleSettingRow.enabled.is_(False))
+        )
+        return set(rows)
+
+    async def set_style_enabled(self, style_id: str, enabled: bool) -> None:
+        statement = insert(StyleSettingRow).values(style_id=style_id, enabled=enabled)
+        await self._session.execute(
+            statement.on_conflict_do_update(
+                index_elements=[StyleSettingRow.style_id], set_={"enabled": enabled}
+            )
+        )
 
     async def set_artwork_style(self, album_id: UUID, style_id: str) -> None:
         statement = insert(ArtworkRow).values(album_id=album_id, style_id=style_id)
