@@ -34,6 +34,14 @@ export function errorMessage(error: unknown): string {
 			return m.people_invitation_blocked();
 		case 'show_not_found':
 			return m.error_show_not_found();
+		case 'style_last':
+			return m.error_style_last();
+		case 'style_not_found':
+			return m.error_style_not_found();
+		case 'artwork_not_ready':
+			return m.error_artwork_not_ready();
+		case 'artwork_failed':
+			return m.error_artwork_failed();
 		default:
 			return m.error_unexpected();
 	}

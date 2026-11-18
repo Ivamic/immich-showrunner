@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, MetaData, String, Text, false, func
+from sqlalchemy import DateTime, ForeignKey, MetaData, String, Text, false, func, true
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -172,3 +172,17 @@ class ArtworkRow(Base):
     seed: Mapped[int] = mapped_column(default=0, server_default="0")
     # none, show (the pictures of the show, not of its seasons) or all.
     frozen: Mapped[str] = mapped_column(String(8), default="none", server_default="none")
+    # The jobs of the frozen pictures, as they were when frozen; none until the next pass takes
+    # them.
+    frozen_jobs: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+    # The poster of the show is the cover of the album in Immich, not a drawn one.
+    use_cover: Mapped[bool] = mapped_column(default=False, server_default=false())
+
+
+class StyleSettingRow(Base):
+    """A style switched off on the page: no album gets it any more (unless frozen with it)."""
+
+    __tablename__ = "style_setting"
+
+    style_id: Mapped[str] = mapped_column(String(48), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(default=True, server_default=true())

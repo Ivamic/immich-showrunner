@@ -35,6 +35,11 @@ between releases.
 - **In the Jellyfin folder the drawn poster is `folder.jpg`** (the cover of the album stays
   `poster.jpg`): Jellyfin keeps the size of a picture by its path, so a 2:3 poster written over a
   16:9 cover would be shown cut to 16:9.
+- **Pictures on the page of an album**: the poster, landscape picture, backdrop, logo and season
+  posters the media servers have now; "Another style", "Other frames" and "Album cover as the
+  poster", each shown before and after it is applied, with "One more"; and freezing the pictures
+  (of the show only, or all) so that new videos leave them as they are.
+- **A Styles page**: switch styles on or off; albums in a style switched off get another one.
 - **`asset.download`** for the Immich API key is recommended: the frames are then read from the
   original videos. Without it they come from the videos Immich converted for playing.
 

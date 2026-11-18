@@ -47,6 +47,7 @@
 			current: page.route.id?.startsWith('/albums') ?? false
 		},
 		{ href: resolve('/people'), label: m.nav_people(), current: page.route.id === '/people' },
+		{ href: resolve('/styles'), label: m.nav_styles(), current: page.route.id === '/styles' },
 		{ href: resolve('/'), label: m.nav_status(), current: page.route.id === '/' }
 	]);
 
