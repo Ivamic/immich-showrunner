@@ -29,6 +29,9 @@ SEARCH_PAGE_SIZE = 500
 REQUIRED_PERMISSIONS = frozenset(
     {"album.read", "asset.read", "asset.view", "person.read", "user.read"}
 )
+# Reading the original videos, for the frames of artwork; without it the frames come from the
+# video Immich converted for playing, which may be smaller.
+DOWNLOAD_PERMISSION = "asset.download"
 ALL_PERMISSIONS = "all"
 
 
@@ -78,6 +81,8 @@ class ImmichClient:
         headers = {"Accept": "application/json"}
         if api_key:
             headers["x-api-key"] = api_key
+        self._base_url = api_base_url(base_url)
+        self._api_key = api_key or ""
         self._http = httpx2.AsyncClient(
             base_url=api_base_url(base_url), headers=headers, timeout=timeout, transport=transport
         )
@@ -111,6 +116,12 @@ class ImmichClient:
                 response.status_code,
             )
         return response
+
+    def video_source(self, asset_id: UUID, *, original: bool) -> tuple[str, dict[str, str]]:
+        """Where a video is read from, and with which headers: the original file, or the
+        video Immich converted for playing."""
+        path = "original" if original else "video/playback"
+        return f"{self._base_url}/assets/{asset_id}/{path}", {"x-api-key": self._api_key}
 
     async def server_version(self) -> ServerVersion:
         response = await self._request("GET", "/server/version")
@@ -248,7 +259,11 @@ def missing_permissions(info: ApiKeyInfo) -> frozenset[str]:
 def excess_permissions(info: ApiKeyInfo) -> frozenset[str]:
     """Permissions the key has and the app never uses. A key with them could change the library;
     the app reports them, so that the key can be replaced by a read-only one."""
-    return frozenset(info.permissions) - REQUIRED_PERMISSIONS
+    return frozenset(info.permissions) - REQUIRED_PERMISSIONS - {DOWNLOAD_PERMISSION}
+
+
+def can_download(info: ApiKeyInfo) -> bool:
+    return ALL_PERMISSIONS in info.permissions or DOWNLOAD_PERMISSION in info.permissions
 
 
 def _bearer(token: str) -> dict[str, str]:

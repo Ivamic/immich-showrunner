@@ -4,6 +4,7 @@
 from collections.abc import Collection, Mapping
 from datetime import datetime
 from pathlib import PurePosixPath
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import delete, func, select
@@ -13,8 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from showrunner.model.naming import show_folder_name
 from showrunner.model.show import EpisodeEdit, ShowEdit
 from showrunner.store.models import (
+    ArtworkRow,
     EpisodeEditRow,
     FileRow,
+    FrameLookRow,
     PendingRow,
     PersonDescriptionRow,
     PersonRow,
@@ -175,6 +178,54 @@ class Registry:
             row = PersonDescriptionRow(immich_id=immich_id)
             self._session.add(row)
         row.text = text.strip()
+
+    async def frame_looks(self, asset_ids: Collection[UUID]) -> dict[UUID, FrameLookRow]:
+        if not asset_ids:
+            return {}
+        # Rows written by an upsert in this session must be read as they are now, not as the
+        # session last saw them.
+        rows = await self._session.scalars(
+            select(FrameLookRow)
+            .where(FrameLookRow.asset_id.in_(list(asset_ids)))
+            .execution_options(populate_existing=True)
+        )
+        return {row.asset_id: row for row in rows}
+
+    async def save_frame_looks(
+        self,
+        asset_id: UUID,
+        checksum: str,
+        version: int,
+        looks: list[dict[str, Any]],
+        failed: bool = False,
+    ) -> None:
+        values = {
+            "asset_id": asset_id,
+            "checksum": checksum,
+            "version": version,
+            "looks": looks,
+            "failed": failed,
+            "analysed_at": func.now(),
+        }
+        statement = insert(FrameLookRow).values(**values)
+        await self._session.execute(
+            statement.on_conflict_do_update(
+                index_elements=[FrameLookRow.asset_id],
+                set_={k: statement.excluded[k] for k in values if k != "asset_id"},
+            )
+        )
+
+    async def artworks(self) -> dict[UUID, ArtworkRow]:
+        rows = await self._session.scalars(select(ArtworkRow))
+        return {row.album_id: row for row in rows}
+
+    async def set_artwork_style(self, album_id: UUID, style_id: str) -> None:
+        statement = insert(ArtworkRow).values(album_id=album_id, style_id=style_id)
+        await self._session.execute(
+            statement.on_conflict_do_update(
+                index_elements=[ArtworkRow.album_id], set_={"style_id": style_id}
+            )
+        )
 
     async def commit(self) -> None:
         await self._session.commit()

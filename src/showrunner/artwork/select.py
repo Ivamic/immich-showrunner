@@ -24,8 +24,9 @@ from showrunner.artwork.focus import focus
 from showrunner.artwork.paint import Frame
 from showrunner.artwork.quality import Quality, assess
 
-LOOK_VERSION = 1
-"""Raised when the way frames are looked at changes, so kept looks are made again."""
+LOOK_VERSION = 3
+"""Raised when the way frames are taken or looked at changes (2: black bars of standing
+videos are cut off; 3: dark grey bars too), so kept looks are made again."""
 SIGNATURE_SIDE = 12
 FACE_BONUS = 0.12
 FACE_SIZE_BONUS = 0.5

@@ -19,6 +19,7 @@ from showrunner.immich.models import Album
 from showrunner.model.naming import show_folder_name
 from showrunner.model.show import Options, SeasonMode, Show, Skipped, build_show
 from showrunner.store.registry import Registry
+from showrunner.sync.artwork import ArtworkContext, ArtworkError, ArtworkPlan, plan_artwork
 from showrunner.sync.executor import MARKER_NAME, Executor, Outcome, Result, UnsafePathError
 from showrunner.sync.plan import Action, ActionType, Plan, make_plan
 from showrunner.targets.base import DesiredFile, ImageSource, Target
@@ -93,6 +94,7 @@ class ImmichView:
     read: list[Album] = field(default_factory=list)
     skipped: list[tuple[str, Skipped]] = field(default_factory=list)
     people: dict[str, UUID] = field(default_factory=dict)
+    artwork: ArtworkPlan = field(default_factory=ArtworkPlan)
 
 
 async def read_immich(
@@ -156,9 +158,11 @@ async def apply_output(
     registry: Registry,
     force: bool = False,
     pictures: dict[ImageSource, bytes] | None = None,
+    artwork: ArtworkContext | None = None,
 ) -> SyncReport:
     """Bring the output folder of one target in line with `view`. Nothing is committed here.
-    `pictures` keeps what was downloaded for one target, so that another takes it from there."""
+    `pictures` keeps what was downloaded or drawn for one target, so that another takes it
+    from there."""
     name = output.target.name
     report = SyncReport(
         dry_run=output.executor is None,
@@ -171,7 +175,7 @@ async def apply_output(
     )
     desired: list[DesiredFile] = []
     for show, folder in view.shows:
-        desired.extend(output.target.files(show, folder))
+        desired.extend(output.target.files(show, folder, view.artwork.shows.get(show.album_id)))
     recorded = await registry.entries(name)
     plan = make_plan(
         desired,
@@ -213,7 +217,7 @@ async def apply_output(
         return report
 
     cache = {} if pictures is None else pictures
-    actions = await _with_pictures(immich, plan.actions, report, cache)
+    actions = await _with_pictures(immich, plan.actions, report, cache, artwork)
     executor.ensure_marker()
     for action in actions:
         try:
@@ -249,6 +253,8 @@ async def finish_pass(view: ImmichView, registry: Registry, reports: Sequence[Sy
     await registry.remember_people(view.people)
     if not any(report.held or report.folder_missing for report in reports):
         failed = set().union(*(report.failed_albums for report in reports))
+        # Shows with videos still to look at for their pictures are read again next time.
+        failed |= view.artwork.incomplete
         for album in view.read:
             if album.id not in failed:
                 await registry.set_stamps(
@@ -265,15 +271,32 @@ async def sync_outputs(
     options: Options,
     full: bool = True,
     force: bool = False,
+    artwork: ArtworkContext | None = None,
 ) -> list[SyncReport]:
     """One pass for every output. A dry run (no output has an executor) writes nothing, neither
-    to the disks nor to the database."""
+    to the disks nor to the database. With `artwork`, the shows get pictures drawn from the
+    frames of their videos."""
     writes = any(output.executor is not None for output in outputs)
     view = await read_immich(immich, registry, options, full=full, record_shows=writes)
+    if artwork is not None and writes:
+        view.artwork = await plan_artwork(view.shows, registry, artwork)
+        if view.artwork.looked or view.artwork.unreadable:
+            log.info(
+                "artwork: looked at %d videos (%d could not be read); %d shows wait for more",
+                view.artwork.looked,
+                view.artwork.unreadable,
+                len(view.artwork.incomplete),
+            )
     pictures: dict[ImageSource, bytes] = {}
     reports = [
         await apply_output(
-            view, output, immich=immich, registry=registry, force=force, pictures=pictures
+            view,
+            output,
+            immich=immich,
+            registry=registry,
+            force=force,
+            pictures=pictures,
+            artwork=artwork,
         )
         for output in outputs
     ]
@@ -310,8 +333,9 @@ async def _with_pictures(
     actions: tuple[Action, ...],
     report: SyncReport,
     pictures: dict[ImageSource, bytes],
+    artwork: ArtworkContext | None = None,
 ) -> list[Action]:
-    """Download the pictures that have to be written, before anything is written.
+    """Download or draw the pictures that have to be written, before anything is written.
 
     A picture Immich can not give is left out of this pass and noted; it is tried again on the
     next one. When Immich does not answer at all, the pass stops here, before any change."""
@@ -322,6 +346,17 @@ async def _with_pictures(
             result.append(action)
             continue
         content = pictures.get(desired.image)
+        if content is None and desired.image.artwork is not None:
+            if artwork is None:
+                continue
+            try:
+                content = await artwork.draw(desired.image.artwork)
+            except ArtworkError as exc:
+                report.pictures_failed.append(f"{action.path}: {exc}")
+                report.failed_albums.add(action.album_id)
+                log.warning("picture %s not drawn: %s", action.path, exc)
+                continue
+            pictures[desired.image] = content
         if content is None:
             try:
                 if desired.image.of_person:

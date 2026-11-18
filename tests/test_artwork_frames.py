@@ -270,3 +270,24 @@ def test_face_box_helpers() -> None:
     face = Face(box=(0.1, 0.2, 0.3, 0.4), score=0.9)
     assert face.area == pytest.approx(0.12)
     assert face.center == pytest.approx((0.25, 0.4))
+
+
+def test_trim_bars_cuts_a_standing_video_in_a_wide_frame() -> None:
+    wide = Image.new("RGB", (640, 360), (0, 0, 0))
+    wide.paste(busy((200, 360)), (220, 0))
+    assert trim_bars(wide).size == (200, 360)
+
+
+def test_trim_bars_leaves_a_dark_scene() -> None:
+    """A stage in a dark hall: dark but uneven edges are not bars."""
+    rng = np.random.default_rng(3)
+    hall = rng.integers(0, 40, (360, 640, 3), dtype=np.uint8)
+    hall[:, 250:390] = 200
+    scene = Image.fromarray(hall)
+    assert trim_bars(scene).size == (640, 360)
+
+
+def test_trim_bars_cuts_dark_grey_padding() -> None:
+    padded = Image.new("RGB", (640, 360), (27, 27, 27))
+    padded.paste(busy((200, 360)), (220, 0))
+    assert trim_bars(padded).size == (200, 360)

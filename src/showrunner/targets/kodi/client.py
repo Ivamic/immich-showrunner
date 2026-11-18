@@ -8,6 +8,7 @@ stay: they belong to the files, and the names of the files never change."""
 
 import base64
 from collections.abc import Collection, Mapping
+from pathlib import PurePosixPath
 from types import TracebackType
 from typing import Any, Self
 from uuid import UUID
@@ -42,6 +43,13 @@ def folder_path(output_path: str, folder_name: str = "") -> str:
     if folder_name:
         path = f"{path}{separator}{folder_name}"
     return path + separator
+
+
+def kodi_file_path(output_path: str, relative: PurePosixPath) -> str:
+    """A file of the output folder as Kodi names it, with the separators Kodi uses there."""
+    folder = folder_path(output_path, "")
+    separator = folder[-1]
+    return folder + separator.join(relative.parts)
 
 
 class KodiClient:
@@ -136,6 +144,21 @@ class KodiClient:
             {"directory": directory, "content": "tvshows", "showdialogs": False},
         )
 
+    async def forget_pictures(self, folder: str) -> int:
+        """Drop what Kodi keeps of the pictures under a folder. Kodi checks a picture it keeps
+        at most once a day; a picture replaced under the same name would stay old until then."""
+        result = await self.call(
+            "Textures.GetTextures",
+            {
+                "properties": ["url"],
+                "filter": {"field": "url", "operator": "startswith", "value": folder},
+            },
+        )
+        textures = (result.get("textures") if isinstance(result, dict) else None) or []
+        for texture in textures:
+            await self.call("Textures.RemoveTexture", {"textureid": texture["textureid"]})
+        return len(textures)
+
     async def refresh_show(self, show_id: int) -> None:
         await self.call(
             "VideoLibrary.RefreshTVShow",
@@ -175,6 +198,7 @@ async def tell_kodi(
         if not await client.can_open(folder):
             raise KodiError(f"Kodi can not open {folder} now")
     for album in sorted(changed.keys() & known.keys(), key=str):
+        await client.forget_pictures(folder_path(output_path, changed[album]))
         await client.clean(folder_path(output_path, changed[album]))
     if changed:
         await client.scan(root)

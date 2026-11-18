@@ -4,15 +4,23 @@ scheduler of the server."""
 
 import logging
 from collections.abc import Collection
+from functools import cache
 from pathlib import PurePosixPath
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from showrunner.artwork.style import Style, builtin_styles
 from showrunner.config import Settings
-from showrunner.immich.client import ImmichClient, excess_permissions, missing_permissions
+from showrunner.immich.client import (
+    ImmichClient,
+    can_download,
+    excess_permissions,
+    missing_permissions,
+)
 from showrunner.model.show import Options
 from showrunner.store.registry import Registry
+from showrunner.sync.artwork import ArtworkContext
 from showrunner.sync.executor import Executor
 from showrunner.sync.service import Output, SyncReport, sync_outputs
 from showrunner.targets.base import JELLYFIN, KODI
@@ -79,7 +87,7 @@ def outputs_from(settings: Settings, *, dry_run: bool) -> list[Output]:
     if settings.kodi_output_dir is not None:
         outputs.append(
             Output(
-                KodiLayout(),
+                KodiLayout(settings.kodi_output_path),
                 None if dry_run else Executor(settings.kodi_output_dir, roots),
                 notify=kodi_client(settings) is not None,
             )
@@ -111,6 +119,32 @@ async def check_api_key(immich: ImmichClient) -> list[str]:
     return []
 
 
+@cache
+def styles() -> dict[str, Style]:
+    """The styles shipped with the app, read once."""
+    return builtin_styles()
+
+
+async def artwork_context(
+    settings: Settings, immich: ImmichClient
+) -> tuple[ArtworkContext, str | None]:
+    """What the artwork step needs for a pass, and a warning when the frames can not be read
+    from the original videos."""
+    original = can_download(await immich.api_key_info())
+    warning = None
+    if not original:
+        warning = (
+            "the Immich API key has no asset.download: frames for artwork are taken from the "
+            "videos Immich converted for playing, which may be smaller"
+        )
+    context = ArtworkContext(
+        styles=styles(),
+        source=lambda asset_id: immich.video_source(asset_id, original=original),
+        budget_seconds=settings.artwork_budget_seconds,
+    )
+    return context, warning
+
+
 async def sync_once(
     settings: Settings,
     sessions: async_sessionmaker[AsyncSession],
@@ -127,6 +161,11 @@ async def sync_once(
     notes: list[str] = []
     async with immich_client(settings) as immich, sessions() as session:
         notes.extend(await check_api_key(immich))
+        artwork = None
+        if settings.artwork and not dry_run:
+            artwork, warning = await artwork_context(settings, immich)
+            if warning:
+                notes.append(warning)
         reports = await sync_outputs(
             immich=immich,
             registry=Registry(session),
@@ -134,6 +173,7 @@ async def sync_once(
             options=options_from(settings),
             full=full,
             force=force,
+            artwork=artwork,
         )
         if dry_run:
             await session.rollback()

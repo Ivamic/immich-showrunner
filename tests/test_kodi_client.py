@@ -55,6 +55,8 @@ class FakeKodi:
             )
         elif method == "Application.GetProperties":
             result = {"version": {"major": 21, "minor": 3}}
+        elif method == "Textures.GetTextures":
+            result = {"textures": [{"textureid": 7, "url": "x"}, {"textureid": 8, "url": "y"}]}
         return httpx2.Response(200, json={"id": body["id"], "jsonrpc": "2.0", "result": result})
 
     def client(self) -> KodiClient:
@@ -95,12 +97,18 @@ async def test_changed_shows_are_cleaned_scanned_and_refreshed() -> None:
         "Files.GetDirectory",
         "VideoLibrary.GetTVShows",
         "Files.GetDirectory",
+        "Textures.GetTextures",
+        "Textures.RemoveTexture",
+        "Textures.RemoveTexture",
         "VideoLibrary.Clean",
         "VideoLibrary.Scan",
         "VideoLibrary.RefreshTVShow",
     ]
     assert kodi.calls[2][1]["directory"] == f"{OUTPUT}/Summer [imm-97769e09]/"
-    clean, scan, refresh = (params for _, params in kodi.calls[3:])
+    # What Kodi keeps of the pictures of the show is dropped: they may have been replaced.
+    assert kodi.calls[3][1]["filter"]["value"] == f"{OUTPUT}/Summer [imm-97769e09]/"
+    assert [params["textureid"] for _, params in kodi.calls[4:6]] == [7, 8]
+    clean, scan, refresh = (params for _, params in kodi.calls[6:])
     # The clean is limited to the folder of the show: Kodi never cleans the rest of the library.
     assert clean["directory"] == f"{OUTPUT}/Summer [imm-97769e09]/"
     assert scan["directory"] == f"{OUTPUT}/"
@@ -156,3 +164,18 @@ async def test_nothing_is_cleaned_when_kodi_can_not_open_the_folder_of_a_show() 
         with pytest.raises(KodiError, match="Summer"):
             await tell_kodi(client, OUTPUT, {A1: "Summer [imm-97769e09]"}, set())
     assert "VideoLibrary.Clean" not in kodi.methods()
+
+
+def test_kodi_names_a_file_with_its_own_separators() -> None:
+    from pathlib import PurePosixPath
+
+    from showrunner.targets.kodi.client import kodi_file_path
+
+    relative = PurePosixPath("Summer [imm-1]") / "Season 2024" / "poster.jpg"
+    assert (
+        kodi_file_path("smb://box/share/kodi/", relative)
+        == "smb://box/share/kodi/Summer [imm-1]/Season 2024/poster.jpg"
+    )
+    assert kodi_file_path(r"D:\media\kodi", relative) == (
+        r"D:\media\kodi\Summer [imm-1]\Season 2024\poster.jpg"
+    )

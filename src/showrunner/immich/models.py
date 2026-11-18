@@ -124,6 +124,8 @@ class Asset(ImmichModel):
     people: list[Person] = Field(default_factory=list)
     # A short hash of the thumbnail; it changes when Immich makes the thumbnail again.
     thumbhash: str | None = None
+    # A hash of the file itself (base64 SHA-1): it changes only when the video is replaced.
+    checksum: str | None = None
 
     @property
     def description(self) -> str:

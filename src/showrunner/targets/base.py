@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """What a target hands to the sync: the files that should exist in the output folder."""
 
+from __future__ import annotations
+
 import hashlib
 from dataclasses import dataclass
 from enum import StrEnum
@@ -8,6 +10,7 @@ from pathlib import PurePosixPath
 from typing import Protocol
 from uuid import UUID
 
+from showrunner.artwork.jobs import ArtworkJob, ShowArtwork
 from showrunner.model.show import Show
 
 # Names of the targets, as the registry keeps them.
@@ -25,13 +28,19 @@ class FileKind(StrEnum):
 
 @dataclass(frozen=True)
 class ImageSource:
-    """Which picture of Immich a file holds: the preview of an asset or, with `of_person`, the
-    face of a person (`asset_id` is then the id of the person). `version` changes when the
-    picture changes there, so that it is downloaded again only then."""
+    """Which picture a file holds: the preview of an asset of Immich, with `of_person` the face
+    of a person (`asset_id` is then the id of the person), or with `artwork` a picture the app
+    draws (`asset_id` is then the album). `version` changes when the picture changes, so that
+    it is downloaded or drawn again only then."""
 
     asset_id: UUID
     version: str
     of_person: bool = False
+    artwork: ArtworkJob | None = None
+
+    @classmethod
+    def of_artwork(cls, job: ArtworkJob) -> ImageSource:
+        return cls(job.album_id, job.version, artwork=job)
 
 
 @dataclass(frozen=True)
@@ -77,6 +86,9 @@ class DesiredFile:
 class Target(Protocol):
     name: str
 
-    def files(self, show: Show, folder_name: str) -> list[DesiredFile]:
-        """The files of `show` under the folder `folder_name` of the output folder."""
+    def files(
+        self, show: Show, folder_name: str, artwork: ShowArtwork | None = None
+    ) -> list[DesiredFile]:
+        """The files of `show` under the folder `folder_name` of the output folder. With
+        `artwork`, the pictures the app draws take the place of the album's cover."""
         ...

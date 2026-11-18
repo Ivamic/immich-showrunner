@@ -6,6 +6,7 @@ The season and the episode number are always written: both media servers would o
 them from the file name."""
 
 import re
+from collections.abc import Mapping
 from xml.etree import ElementTree as ET
 
 from showrunner.model.show import Episode, Show
@@ -27,13 +28,18 @@ def _render(root: ET.Element) -> bytes:
     return f'<?xml version="1.0" encoding="utf-8" standalone="yes"?>\n{body}\n'.encode()
 
 
-def show_nfo(show: Show) -> bytes:
+def show_nfo(show: Show, season_posters: Mapping[int, str] | None = None) -> bytes:
+    """`season_posters` maps seasons to the paths of their posters as the media server sees
+    them (Kodi takes the posters of seasons from here; a `seasonNNNN-poster.jpg` would make it
+    count thousands of empty seasons)."""
     root = ET.Element("tvshow")
     _add(root, "title", show.title)
     _add(root, "sorttitle", show.sort_title)
     if show.plot:
         _add(root, "plot", show.plot)
     _add(root, "uniqueid", str(show.album_id), type=UNIQUE_ID_TYPE, default="true")
+    for season, path in sorted((season_posters or {}).items()):
+        _add(root, "thumb", path, aspect="poster", type="season", season=str(season))
     return _render(root)
 
 
