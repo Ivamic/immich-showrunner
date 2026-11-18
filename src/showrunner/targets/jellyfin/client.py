@@ -5,6 +5,7 @@ A plain scan of the library does not read an NFO file again once Jellyfin knows 
 after every change the app asks Jellyfin to refresh the show."""
 
 import base64
+from collections.abc import Mapping
 from pathlib import PurePosixPath
 from types import TracebackType
 from typing import Any, Self
@@ -88,18 +89,29 @@ class JellyfinClient:
 
     async def shows(self) -> dict[UUID, str]:
         """The shows of the app that Jellyfin knows: Immich album id -> Jellyfin item id."""
+        return {album: item for album, (item, _) in (await self.show_folders()).items()}
+
+    async def show_folders(self) -> dict[UUID, tuple[str, str]]:
+        """The shows of the app that Jellyfin knows: Immich album id -> the Jellyfin item id and
+        the name of the folder Jellyfin reads it from."""
         response = await self._request(
             "GET",
             "/Items",
-            params={"includeItemTypes": "Series", "recursive": "true", "fields": "ProviderIds"},
+            params={
+                "includeItemTypes": "Series",
+                "recursive": "true",
+                "fields": "ProviderIds,Path",
+            },
         )
-        result: dict[UUID, str] = {}
+        result: dict[UUID, tuple[str, str]] = {}
         for item in response.json().get("Items", []):
             provider_ids = {k.lower(): v for k, v in (item.get("ProviderIds") or {}).items()}
             try:
-                result[UUID(provider_ids[UNIQUE_ID_TYPE])] = str(item["Id"])
+                album = UUID(provider_ids[UNIQUE_ID_TYPE])
             except (KeyError, ValueError):
                 continue
+            folder = PurePosixPath(str(item.get("Path") or "").replace("\\", "/")).name
+            result[album] = (str(item["Id"]), folder)
         return result
 
     async def refresh_show(self, item_id: str) -> None:
@@ -164,15 +176,25 @@ async def tell_jellyfin(
     output_folder: PurePosixPath,
     changed_albums: set[UUID],
     gone_albums: set[UUID],
+    folders: Mapping[UUID, str] | None = None,
 ) -> list[str]:
     """Make Jellyfin notice what a sync changed. Returns what was done, for the log.
 
-    A show Jellyfin already knows is refreshed by itself. A new show, or one whose album is no
-    longer shared, needs a scan of the library."""
+    A show Jellyfin already knows is refreshed by itself. A new show, one whose album is no
+    longer shared, or one whose folder moved (`folders` gives where each show is now) needs a
+    scan of the library: Jellyfin then drops the show in the old folder and finds it in the new
+    one."""
     done: list[str] = []
     if not changed_albums and not gone_albums:
         return done
-    known = await client.shows()
+    seen = await client.show_folders()
+    folders = folders or {}
+    moved = {
+        album
+        for album in changed_albums & seen.keys()
+        if album in folders and seen[album][1] and seen[album][1] != folders[album]
+    }
+    known = {album: item for album, (item, _) in seen.items() if album not in moved}
     new = changed_albums - known.keys()
     if new or gone_albums:
         library = await client.library_id(output_folder)

@@ -108,6 +108,9 @@ def test_safe_name_cuts_on_a_character_boundary() -> None:
 
 def test_folder_and_file_names() -> None:
     assert show_folder_name("Summer / lake", ALBUM_ID) == "Summer lake [imm-97769e09]"
+    # Jellyfin would read the date in the folder for the date of every episode of the show.
+    assert show_folder_name("2026-06_07 - Trip", ALBUM_ID) == "20260607 - Trip [imm-97769e09]"
+    assert show_folder_name("Party 31.12.2025", ALBUM_ID) == "Party 31122025 [imm-97769e09]"
     assert season_folder_name(2024) == "Season 2024"
     assert season_folder_name(1) == "Season 01"
     when = datetime(2024, 7, 15, 14, 32, tzinfo=UTC)

@@ -32,8 +32,21 @@ between releases.
   it keeps the cover of its album. A picture is drawn again only when what it is made of changes.
   Kodi gets the posters of seasons through the NFO of the show, and forgets its cached pictures of a
   changed show.
+- **In the Jellyfin folder the drawn poster is `folder.jpg`** (the cover of the album stays
+  `poster.jpg`): Jellyfin keeps the size of a picture by its path, so a 2:3 poster written over a
+  16:9 cover would be shown cut to 16:9.
 - **`asset.download`** for the Immich API key is recommended: the frames are then read from the
   original videos. Without it they come from the videos Immich converted for playing.
+
+### Fixed
+
+- **An album with a date in its name** (`2026-06_07 - Trip`) became one episode with every video as
+  a version of it: Jellyfin reads a date with separators anywhere in the path of an episode, the
+  folder of the show too. Folders of shows now write dates without separators, as file names
+  already did; an existing folder with such a date is renamed once (the database migration does
+  it, the next sync moves the files), and Jellyfin and Kodi are made to find the show in its new
+  folder. Watched marks of such a show start anew in Kodi, and in Jellyfin if it keeps them by path.
+
 
 ## [0.2.1] - 2026-11-15
 

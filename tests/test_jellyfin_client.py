@@ -35,7 +35,11 @@ class FakeJellyfin:
                 200,
                 json={
                     "Items": [
-                        {"Id": "series-1", "ProviderIds": {"immich": str(A1)}},
+                        {
+                            "Id": "series-1",
+                            "ProviderIds": {"immich": str(A1)},
+                            "Path": "/media/showrunner/2026-06_07 - Trip [imm-1]",
+                        },
                         {"Id": "series-2", "ProviderIds": {"Immich": str(A2)}},
                         {"Id": "a-film-show", "ProviderIds": {"Tvdb": "123"}},
                         {"Id": "broken", "ProviderIds": {"immich": "not-an-id"}},
@@ -110,6 +114,27 @@ async def test_new_show_needs_a_scan_of_its_library() -> None:
         "POST /Items/lib-immich/Refresh",
         "POST /Items/series-1/Refresh",
     ]
+
+
+async def test_show_in_a_moved_folder_needs_a_scan() -> None:
+    """The folder of the show was renamed: refreshing the item would read the old, empty folder;
+    a scan drops it and finds the show in the new one."""
+    fake = FakeJellyfin()
+    async with fake.client() as client:
+        done = await tell_jellyfin(client, OUTPUT, {A1}, set(), {A1: "20260607 - Trip [imm-1]"})
+    assert fake.calls == [
+        "GET /Items",
+        "GET /Library/VirtualFolders",
+        "POST /Items/lib-immich/Refresh",
+    ]
+    assert done == ["scanned the library"]
+
+
+async def test_show_in_its_folder_is_only_refreshed() -> None:
+    fake = FakeJellyfin()
+    async with fake.client() as client:
+        await tell_jellyfin(client, OUTPUT, {A1}, set(), {A1: "2026-06_07 - Trip [imm-1]"})
+    assert fake.calls == ["GET /Items", "POST /Items/series-1/Refresh"]
 
 
 async def test_gone_show_needs_a_scan() -> None:
