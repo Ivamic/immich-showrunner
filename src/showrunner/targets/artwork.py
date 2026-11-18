@@ -47,8 +47,8 @@ def picture_files(
                     image=ImageSource.of_artwork(job),
                 )
             )
-        if any(file.path == root / POSTER_NAME for file in files):
-            return files
+        if (OutputKind.SERIES_POSTER, None) in artwork and OutputKind.SERIES_POSTER in names:
+            return files  # the drawn poster takes the place of the cover
     if show.cover_asset_id is not None:
         files.append(
             DesiredFile(
