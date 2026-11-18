@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
+import cv2
+import numpy as np
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
 from showrunner.artwork.style import (
@@ -82,7 +84,13 @@ def draw_layers(
     size = canvas.size
     for layer in layers:
         if isinstance(layer, LinearGradient):
-            canvas.alpha_composite(linear_gradient(size, layer))
+            if layer.box is None:
+                canvas.alpha_composite(linear_gradient(size, layer))
+            else:
+                x, y, w, h = layer.box
+                left, top = round(x / 100 * size[0]), round(y / 100 * size[1])
+                part = (max(1, round(w / 100 * size[0])), max(1, round(h / 100 * size[1])))
+                _paste_clipped(canvas, linear_gradient(part, layer), left, top)
         elif isinstance(layer, RadialSpot):
             canvas.alpha_composite(radial_spot(size, layer))
         elif isinstance(layer, Vignette):
@@ -201,35 +209,77 @@ def place(canvas: Image.Image, piece: Image.Image, center: tuple[float, float]) 
 # --- frames in cells --------------------------------------------------------------------
 
 
+MAX_ZOOM = 1.6
+"""How much a frame may be enlarged beyond filling its cell, to keep faces out from under
+the title."""
+Space = tuple[float, float, float, float]
+"""x0, y0, x1, y1 in pixels: the part of a crop the text leaves free."""
+
+
 def cover(
     image: Image.Image,
     size: tuple[int, int],
     focus: tuple[float, float] = (0.5, 0.5),
     region: tuple[float, float, float, float] | None = None,
+    space: Space | None = None,
 ) -> Image.Image:
-    """Scale to fill the size and crop. The focus point goes as near the middle of the crop as
-    the edges allow; the region (faces), when it fits, stays whole."""
+    """Scale to fill the size and crop. The focus point goes as near the middle of the free
+    space (the whole crop by default) as the edges allow; the region (faces), when it fits,
+    stays whole inside the free space. If it does not fit there, the frame is enlarged step
+    by step, up to MAX_ZOOM."""
     width, height = max(1, size[0]), max(1, size[1])
-    scale = max(width / image.width, height / image.height)
+    free = space or (0.0, 0.0, float(width), float(height))
+    base = max(width / image.width, height / image.height)
+    across = (region[0], region[0] + region[2]) if region else None
+    down = (region[1], region[1] + region[3]) if region else None
+    zoom = 1.0
+    if region and space:
+        # Enlarge only as far as needed; if no zoom makes room, stay at the plain fill.
+        for step in (1.0, 1.1, 1.2, 1.3, 1.45, MAX_ZOOM):
+            full = (image.width * base * step, image.height * base * step)
+            if _fits(full[0], width, across, (free[0], free[2])) and _fits(
+                full[1], height, down, (free[1], free[3])
+            ):
+                zoom = step
+                break
+    scale = base * zoom
     full = (image.width * scale, image.height * scale)
-    spans = (region[0], region[0] + region[2]) if region else None
-    left = _offset(full[0], width, focus[0], spans)
-    spans = (region[1], region[1] + region[3]) if region else None
-    top = _offset(full[1], height, focus[1], spans)
+    left = _offset(full[0], width, focus[0], across, (free[0], free[2]))
+    top = _offset(full[1], height, focus[1], down, (free[1], free[3]))
     # Crop in the source first, so a large frame is not scaled whole.
     box = (left / scale, top / scale, (left + width) / scale, (top + height) / scale)
     return image.convert("RGBA").resize((width, height), RESAMPLE, box=box)
 
 
-def _offset(total: float, window: float, point: float, keep: tuple[float, float] | None) -> float:
-    """Start of the crop window along one side, in scaled pixels."""
-    offset = point * total - window / 2
+def _fits(
+    total: float, window: float, keep: tuple[float, float] | None, space: tuple[float, float]
+) -> bool:
+    """Whether some crop puts the kept span inside the free part of the window."""
+    if keep is None:
+        return True
+    start, end = keep[0] * total, keep[1] * total
+    if end - start > space[1] - space[0]:
+        return False
+    low, high = max(end - space[1], 0.0), min(start - space[0], total - window)
+    return low <= high + 0.5
+
+
+def _offset(
+    total: float,
+    window: float,
+    point: float,
+    keep: tuple[float, float] | None,
+    space: tuple[float, float],
+) -> float:
+    """Start of the crop window along one side, in scaled pixels. A kept span that fits the
+    free part stays inside it; one too long for it is left aside, and the focus point (the
+    middle of the faces) goes to the middle of the free part."""
+    middle = (space[0] + space[1]) / 2
+    offset = point * total - middle
     if keep is not None:
         start, end = keep[0] * total, keep[1] * total
-        if end - start <= window:
-            offset = min(max(offset, end - window), start)
-        else:
-            offset = (start + end) / 2 - window / 2
+        if end - start <= space[1] - space[0]:
+            offset = min(max(offset, end - space[1]), start - space[0])
     return min(max(offset, 0.0), max(0.0, total - window))
 
 
@@ -269,7 +319,16 @@ def shape_mask(
     if style.shape == "circle":
         draw.ellipse((0, 0, bw, bh), fill=255)
     elif style.shape == "diamond":
-        draw.polygon([(bw / 2, 0), (bw, bh / 2), (bw / 2, bh), (0, bh / 2)], fill=255)
+        # A square with rounded corners turned by 45 degrees, then fitted to the cell.
+        side = min(big) / math.sqrt(2)
+        square = Image.new("L", (round(min(big)), round(min(big))), 0)
+        inset = (square.width - side) / 2
+        ImageDraw.Draw(square).rounded_rectangle(
+            (inset, inset, inset + side, inset + side),
+            radius=style.radius * scale * SUPERSAMPLE,
+            fill=255,
+        )
+        mask = square.rotate(45, resample=Image.Resampling.BICUBIC).resize(big, RESAMPLE)
     elif style.shape == "polygon" and style.points:
         draw.polygon([(x / 100 * bw, y / 100 * bh) for x, y in style.points], fill=255)
     else:
@@ -285,9 +344,10 @@ def cell_piece(
     scale: float,
     assets: AssetResolver,
     rng: random.Random,
+    space: Space | None = None,
 ) -> tuple[Image.Image, tuple[float, float]]:
     """A framed frame with its attachments, on a transparent margin; and where the cell's
-    middle is in it."""
+    middle is in it. `space` is the part of the cell the text leaves free."""
     width, height = max(1, size[0]), max(1, size[1])
     tile = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     mat = style.mat
@@ -300,19 +360,34 @@ def cell_piece(
         )
     else:
         left, top, inner = 0, 0, (width, height)
-    picture = filtered(cover(frame.image, inner, frame.focus, frame.region), style, scale)
-    tile.alpha_composite(picture, dest=(left, top))
-    if style.border is not None:
+    shaped = style.shape != "rect" or style.radius
+    mask = shape_mask((width, height), style, scale, assets) if shaped else None
+    # Faces go where the frame is wholly seen: beside the text and inside the shape.
+    space = _meet(space, visible_part(mask) if mask is not None else None)
+    inner_space = None
+    if space is not None:
+        inner_space = (
+            min(max(0.0, space[0] - left), inner[0]),
+            min(max(0.0, space[1] - top), inner[1]),
+            min(max(0.0, space[2] - left), inner[0]),
+            min(max(0.0, space[3] - top), inner[1]),
+        )
+    picture = cover(frame.image, inner, frame.focus, frame.region, inner_space)
+    tile.alpha_composite(filtered(picture, style, scale), dest=(left, top))
+    if style.border is not None and not shaped:
         line = max(1, round(style.border.width * scale))
         ImageDraw.Draw(tile).rectangle(
             (0, 0, width - 1, height - 1), outline=rgba(style.border.color), width=line
         )
-    if style.shape != "rect" or style.radius:
-        tile.putalpha(
-            ImageChops.multiply(
-                tile.getchannel("A"), shape_mask((width, height), style, scale, assets)
-            )
-        )
+    if mask is not None:
+        if style.border is not None:
+            # The border follows the shape: the ring between the shape and its shrunk copy.
+            line = max(1, round(style.border.width * scale))
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * line + 1, 2 * line + 1))
+            inside = Image.fromarray(cv2.erode(np.asarray(mask), kernel))
+            ring = ImageChops.subtract(mask, inside)
+            tile.paste(rgba(style.border.color), (0, 0, width, height), ring)
+        tile.putalpha(ImageChops.multiply(tile.getchannel("A"), mask))
 
     # Room around the tile for attachments that stick out.
     margin = round(max(width, height) * 0.25) if style.attachments else 0
@@ -363,15 +438,94 @@ def draw_cell(
     scale: float,
     assets: AssetResolver,
     rng: random.Random,
+    avoid: Space | None = None,
 ) -> None:
+    """One framed frame. `avoid` is where the text will be (canvas pixels): faces are kept
+    out from under it."""
     x, y, w, h = rect
     # Whole pixels at both edges, so cells of a grid meet without seams.
     left, top, right, bottom = round(x), round(y), round(x + w), round(y + h)
-    piece, _ = cell_piece(frame, (right - left, bottom - top), style, scale, assets, rng)
+    space = free_space((left, top, right, bottom), avoid) if abs(rotate) <= 10 else None
+    piece, _ = cell_piece(frame, (right - left, bottom - top), style, scale, assets, rng, space)
     if rotate:
         piece = piece.rotate(-rotate, resample=Image.Resampling.BICUBIC, expand=True)
     piece, _ = with_shadow(piece, style.shadow, scale)
     place(canvas, piece, ((left + right) / 2, (top + bottom) / 2))
+
+
+def visible_part(mask: Image.Image) -> Space | None:
+    """The largest upright box wholly inside a shape: a band of full rows or of full columns
+    (a slanted strip), or a box of the cell's proportions around the middle (a diamond, a
+    circle); None when the shape fills its cell anyway."""
+    solid = np.asarray(mask) >= 250
+    height, width = solid.shape
+    if solid.mean() > 0.97:
+        return None
+    candidates: list[Space] = []
+    rows = np.flatnonzero(solid.mean(axis=1) >= 0.98)
+    if rows.size:
+        candidates.append((0.0, float(rows[0]), float(width), float(rows[-1] + 1)))
+    cols = np.flatnonzero(solid.mean(axis=0) >= 0.98)
+    if cols.size:
+        candidates.append((float(cols[0]), 0.0, float(cols[-1] + 1), float(height)))
+    low, high = 0.0, 1.0  # the share of the cell a centred box may take
+    for _ in range(12):
+        share = (low + high) / 2
+        x0, x1 = round(width * (1 - share) / 2), round(width * (1 + share) / 2)
+        y0, y1 = round(height * (1 - share) / 2), round(height * (1 + share) / 2)
+        if x1 > x0 and y1 > y0 and solid[y0:y1, x0:x1].all():
+            low = share
+        else:
+            high = share
+    if low > 0:
+        candidates.append(
+            (
+                width * (1 - low) / 2,
+                height * (1 - low) / 2,
+                width * (1 + low) / 2,
+                height * (1 + low) / 2,
+            )
+        )
+    if not candidates:
+        return None
+    return max(candidates, key=lambda box: (box[2] - box[0]) * (box[3] - box[1]))
+
+
+def _meet(a: Space | None, b: Space | None) -> Space | None:
+    """Both limits at once; when they leave too little, the text's limit alone."""
+    if a is None or b is None:
+        return a or b
+    both = (max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3]))
+    area = (both[2] - both[0]) * (both[3] - both[1])
+    if both[2] <= both[0] or both[3] <= both[1] or area < 0.15 * (a[2] - a[0]) * (a[3] - a[1]):
+        return a
+    return both
+
+
+def free_space(cell: Space, avoid: Space | None) -> Space | None:
+    """The largest part of the cell beside the text (above, below, left or right of it), in
+    the cell's own pixels; None when the text hardly touches the cell or leaves too little."""
+    if avoid is None:
+        return None
+    x0, y0, x1, y1 = cell
+    ax0, ay0, ax1, ay1 = avoid
+    w, h = x1 - x0, y1 - y0
+    overlap = max(0.0, min(x1, ax1) - max(x0, ax0)) * max(0.0, min(y1, ay1) - max(y0, ay0))
+    if w <= 0 or h <= 0 or overlap < 0.05 * w * h:
+        return None
+    parts = [
+        (0.0, 0.0, float(w), ay0 - y0),  # above
+        (0.0, ay1 - y0, float(w), float(h)),  # below
+        (0.0, 0.0, ax0 - x0, float(h)),  # left
+        (ax1 - x0, 0.0, float(w), float(h)),  # right
+    ]
+    parts = [p for p in parts if p[2] > p[0] and p[3] > p[1]]
+    if not parts:
+        return None
+    best = max(parts, key=lambda p: (p[2] - p[0]) * (p[3] - p[1]))
+    if (best[2] - best[0]) * (best[3] - best[1]) < 0.25 * w * h:
+        return None
+    return best
 
 
 def draw_decor(
@@ -404,6 +558,54 @@ def draw_decor(
 # --- text -------------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class TextPlacement:
+    face: ImageFont.FreeTypeFont
+    spacing: float
+    pitch: float
+    top: float
+    starts: list[float]
+    box: Rect
+    """The lines: left, top, width, height in pixels."""
+
+
+def place_text(
+    fitted: FittedText, spec: TextBlock, area: Rect, font_file: FontFile
+) -> TextPlacement:
+    face = font(font_file.path, fitted.size, font_file.index, font_file.variation)
+    spacing = spec.letter_spacing * fitted.size
+    ascent, descent = face.getmetrics()
+    pitch = fitted.size * spec.line_height
+    block_height = pitch * (len(fitted.lines) - 1) + ascent + descent
+    x, y, w, h = area
+    top = {"top": y, "center": y + (h - block_height) / 2, "bottom": y + h - block_height}[
+        spec.anchor
+    ]
+    widths = [_line_width(face, line, spacing) for line in fitted.lines] or [0.0]
+    starts = [
+        {"left": x, "center": x + (w - lw) / 2, "right": x + w - lw}[spec.align] for lw in widths
+    ]
+    return TextPlacement(
+        face, spacing, pitch, top, starts, (min(starts), top, max(widths), block_height)
+    )
+
+
+def text_extent(placement: TextPlacement, spec: TextBlock, scale: float) -> Space:
+    """Where the text covers the picture (with its plate's padding), to keep faces away."""
+    x, y, w, h = placement.box
+    plate = spec.plate
+    pad_x = plate.pad_x * scale if plate else 0.0
+    pad_top = plate.pad_top * scale if plate else 0.0
+    pad_bottom = plate.pad_bottom * scale if plate else 0.0
+    margin = h * 0.1
+    return (
+        x - pad_x - margin,
+        y - pad_top - margin,
+        x + w + pad_x + margin,
+        y + h + pad_bottom + margin,
+    )
+
+
 def draw_text(
     canvas: Image.Image,
     fitted: FittedText,
@@ -417,21 +619,9 @@ def draw_text(
     whole block can be turned and cast one shadow."""
     if not fitted.lines:
         return
-    face = font(font_file.path, fitted.size, font_file.index, font_file.variation)
-    spacing = spec.letter_spacing * fitted.size
-    ascent, descent = face.getmetrics()
-    pitch = fitted.size * spec.line_height
-    block_height = pitch * (len(fitted.lines) - 1) + ascent + descent
-    x, y, w, h = area
-    top = {"top": y, "center": y + (h - block_height) / 2, "bottom": y + h - block_height}[
-        spec.anchor
-    ]
-    widths = [_line_width(face, line, spacing) for line in fitted.lines]
-    starts = [
-        {"left": x, "center": x + (w - lw) / 2, "right": x + w - lw}[spec.align] for lw in widths
-    ]
-    text_box = (min(starts), top, max(widths), block_height)
-
+    at = place_text(fitted, spec, area, font_file)
+    face, spacing = at.face, at.spacing
+    text_box = at.box
     block = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     middle = (text_box[0] + text_box[2] / 2, text_box[1] + text_box[3] / 2)
     if spec.plate is not None:
@@ -442,7 +632,7 @@ def draw_text(
     stroke = round(spec.stroke.width * scale) if spec.stroke else 0
     stroke_fill = rgba(spec.stroke.color) if spec.stroke else None
     for i, line in enumerate(fitted.lines):
-        at_x, at_y = starts[i], top + pitch * i
+        at_x, at_y = at.starts[i], at.top + at.pitch * i
         pieces = [line] if not spacing else list(line)
         for piece in pieces:
             draw.text(

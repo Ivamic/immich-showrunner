@@ -23,6 +23,8 @@ from showrunner.artwork.paint import (
     draw_decor,
     draw_layers,
     draw_text,
+    place_text,
+    text_extent,
 )
 from showrunner.artwork.style import (
     Cell,
@@ -64,25 +66,11 @@ def render(
         canvas = Image.new("RGBA", output.size, (0, 0, 0, 0))
 
     layout = output.layout_for(min(len(frames), style.spec.max_frames)) if frames else None
-    decor = list(output.decor) + (list(layout.decor) if layout is not None else [])
-    for item in decor:
-        if not item.over:
-            draw_decor(canvas, item, _rect(item.box, width, height), scale, owner.path)
 
-    used = 0
-    if layout is not None:
-        cells = cells_of(output, layout, rng)
-        for i, (rect, rotate, look) in enumerate(cells):
-            draw_cell(canvas, frames[i % len(frames)], rect, rotate, look, scale, owner.path, rng)
-        used = min(len(cells), len(frames))
-
-    draw_layers(canvas, output.overlay, owner.path, scale)
-    for item in decor:
-        if item.over and not item.above_text:
-            draw_decor(canvas, item, _rect(item.box, width, height), scale, owner.path)
-
-    truncated = False
+    # The title is placed first, so the frames under it can keep faces out of its way.
     spec = text_block(output, layout)
+    fitted = None
+    avoid = None
     if spec is not None and text.strip():
         font_file = owner.font_path(spec.font)
         area = _rect(spec.area, width, height)
@@ -100,12 +88,35 @@ def render(
             height=area[3],
             line_height=spec.line_height,
         )
-        truncated = fitted.truncated
+        if fitted.lines and not spec.rotate:
+            avoid = text_extent(place_text(fitted, spec, area, font_file), spec, scale)
+
+    decor = list(output.decor) + (list(layout.decor) if layout is not None else [])
+    for item in decor:
+        if not item.over:
+            draw_decor(canvas, item, _rect(item.box, width, height), scale, owner.path)
+
+    used = 0
+    if layout is not None:
+        cells = cells_of(output, layout, rng)
+        for i, (rect, rotate, look) in enumerate(cells):
+            frame = frames[i % len(frames)]
+            draw_cell(canvas, frame, rect, rotate, look, scale, owner.path, rng, avoid)
+        used = min(len(cells), len(frames))
+
+    draw_layers(canvas, output.overlay, owner.path, scale)
+    if layout is not None:
+        draw_layers(canvas, layout.overlay, owner.path, scale)
+    for item in decor:
+        if item.over and not item.above_text:
+            draw_decor(canvas, item, _rect(item.box, width, height), scale, owner.path)
+
+    if spec is not None and fitted is not None:
         draw_text(canvas, fitted, spec, area, font_file, scale, owner.path)
     for item in decor:
         if item.above_text:
             draw_decor(canvas, item, _rect(item.box, width, height), scale, owner.path)
-    return Rendered(image=canvas, frames_used=used, truncated=truncated)
+    return Rendered(image=canvas, frames_used=used, truncated=fitted.truncated if fitted else False)
 
 
 def _rect(box: tuple[float, float, float, float], width: int, height: int) -> Rect:

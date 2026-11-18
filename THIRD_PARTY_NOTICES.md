@@ -67,6 +67,25 @@ Copyright (c) 2011, ParaType Ltd. (http://www.paratype.com/public), with Reserve
 Licensed under the SIL Open Font License, Version 1.1: see
 [`src/showrunner/artwork/styles/board/fonts/OFL.txt`](src/showrunner/artwork/styles/board/fonts/OFL.txt).
 
+## Rubik
+
+The title font of the Diagonals style, in `src/showrunner/artwork/styles/diagonal/fonts/`.
+
+Copyright 2015 The Rubik Project Authors (https://github.com/googlefonts/rubik).
+Licensed under the SIL Open Font License, Version 1.1: see
+[`src/showrunner/artwork/styles/diagonal/fonts/OFL.txt`](src/showrunner/artwork/styles/diagonal/fonts/OFL.txt).
+
+## Cormorant Garamond
+
+The fonts of the Editorial style, in `src/showrunner/artwork/styles/editorial/fonts/`.
+
+Copyright 2015 the Cormorant Project Authors (github.com/CatharsisFonts/Cormorant).
+Licensed under the SIL Open Font License, Version 1.1: see
+[`src/showrunner/artwork/styles/editorial/fonts/OFL.txt`](src/showrunner/artwork/styles/editorial/fonts/OFL.txt).
+
+The Diamonds style uses Marck Script (title) and Montserrat Bold (year), with their licenses in
+`src/showrunner/artwork/styles/diamonds/fonts/`.
+
 ## YuNet face detection model
 
 The model that finds faces in video frames for artwork, in `src/showrunner/artwork/models/`

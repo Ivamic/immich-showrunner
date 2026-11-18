@@ -8,7 +8,16 @@ from pathlib import Path
 import pytest
 from PIL import Image, ImageDraw
 
-from showrunner.artwork.paint import Frame, cover, linear_gradient, radial_spot, vignette
+from showrunner.artwork.paint import (
+    Frame,
+    cover,
+    free_space,
+    linear_gradient,
+    radial_spot,
+    shape_mask,
+    vignette,
+    visible_part,
+)
 from showrunner.artwork.render import encode, grid_rects, render
 from showrunner.artwork.style import (
     BUILTIN_STYLES,
@@ -117,7 +126,17 @@ def test_empty_title_has_no_lines() -> None:
 # --- the base style ---------------------------------------------------------------------
 
 
-BUILTIN = ["mosaic", "polaroid", "film", "afisha", "watercolor", "board"]
+BUILTIN = [
+    "mosaic",
+    "polaroid",
+    "film",
+    "afisha",
+    "watercolor",
+    "board",
+    "diamonds",
+    "diagonal",
+    "editorial",
+]
 LANGUAGES = {"en", "de", "fr", "it", "ru"}
 
 
@@ -438,3 +457,83 @@ def test_pin_goes_over_the_note(styles: dict[str, Style]) -> None:
     y = round((pins[0].box[1] + pins[0].box[3] / 2) / 100 * 1500)
     r, g, b, _ = with_title.getpixel((x - 4, y - 4))  # type: ignore[misc]
     assert min(r, g, b) > 200, "the white pin head, not the note's paper shade"
+
+
+# --- faces kept out from under the title ------------------------------------------------
+
+
+def _red_rows(image: Image.Image) -> list[int]:
+    """Rows of the middle column that are red (the "face" in these tests)."""
+    rows = []
+    for y in range(image.height):
+        pixel = image.getpixel((image.width // 2, y))
+        if isinstance(pixel, tuple) and pixel[0] > 200 and pixel[1] < 80:
+            rows.append(y)
+    return rows
+
+
+def test_faces_go_to_the_part_the_title_leaves_free() -> None:
+    """A tall frame with a face in its middle, in a square cell whose lower half the title
+    covers: the face moves up into the free half."""
+    frame = Image.new("RGB", (100, 200), (40, 90, 40))
+    frame.paste((230, 30, 30), (30, 90, 70, 120))  # the face
+    region = (0.3, 0.45, 0.4, 0.15)
+    plain = cover(frame, (100, 100), (0.5, 0.52), region)
+    free = cover(frame, (100, 100), (0.5, 0.52), region, space=(0, 0, 100, 50))
+    assert max(_red_rows(plain)) > 50, "without the title the face would be low"
+    assert _red_rows(free) and max(_red_rows(free)) <= 50
+
+
+def test_frame_is_enlarged_only_when_it_must_be() -> None:
+    """A frame as wide as the cell cannot move sideways: to get the face out from under a
+    title on the right, it is enlarged; with room to move, it is not."""
+    frame = Image.new("RGB", (200, 100), (40, 90, 40))
+    frame.paste((230, 30, 30), (130, 40, 150, 60))
+    region = (0.65, 0.4, 0.1, 0.2)
+    moved = cover(frame, (200, 100), (0.7, 0.5), region, space=(0, 0, 120, 100))
+    columns = [x for x in range(200) if moved.getpixel((x, 50))[0] > 200]  # type: ignore[index]
+    assert columns and max(columns) <= 120
+    assert len(columns) > 20, "enlarged: the face is wider than in the frame"
+    loose = Image.new("RGB", (400, 100), (40, 90, 40))
+    loose.paste((230, 30, 30), (300, 40, 320, 60))
+    shifted = cover(loose, (200, 100), (0.775, 0.5), (0.75, 0.4, 0.05, 0.2), (0, 0, 120, 100))
+    columns = [x for x in range(200) if shifted.getpixel((x, 50))[0] > 200]  # type: ignore[index]
+    assert columns and max(columns) <= 120 and len(columns) <= 21, "moved, not enlarged"
+
+
+def test_free_space_is_the_largest_part_beside_the_title() -> None:
+    cell = (0.0, 0.0, 100.0, 200.0)
+    assert free_space(cell, (0, 150, 100, 200)) == (0, 0, 100, 150)
+    assert free_space(cell, (0, 0, 100, 40)) == (0, 40, 100, 200)
+    assert free_space(cell, (500, 500, 600, 600)) is None, "the title is elsewhere"
+    assert free_space(cell, (0, 10, 100, 190)) is None, "too little is left"
+    assert free_space(cell, None) is None
+
+
+def test_diamond_has_rounded_corners_and_a_border_along_its_edge(tmp_path: Path) -> None:
+    from showrunner.artwork.style import CellStyle
+
+    sharp = shape_mask((200, 200), CellStyle(shape="diamond"), 1.0, lambda name: tmp_path / name)
+    round_ = shape_mask(
+        (200, 200), CellStyle(shape="diamond", radius=30), 1.0, lambda name: tmp_path / name
+    )
+    assert sharp.getpixel((100, 3)) > 100  # type: ignore[operator]
+    assert round_.getpixel((100, 3)) < 50  # type: ignore[operator]
+    assert sharp.getpixel((100, 100)) == round_.getpixel((100, 100)) == 255
+    assert sharp.getpixel((5, 5)) == 0
+
+
+def test_visible_part_of_a_slanted_band_and_a_diamond(tmp_path: Path) -> None:
+    from showrunner.artwork.style import CellStyle
+
+    band = CellStyle(shape="polygon", points=[(0, 0), (100, 40), (100, 100), (0, 60)])
+    mask = shape_mask((200, 100), band, 1.0, lambda name: tmp_path / name)
+    box = visible_part(mask)
+    assert box is not None
+    assert box[0] == 0 and box[2] == 200, "a band: full rows"
+    assert 38 <= box[1] <= 42 and 58 <= box[3] <= 62
+    diamond = shape_mask((200, 200), CellStyle(shape="diamond"), 1.0, lambda n: tmp_path / n)
+    middle = visible_part(diamond)
+    assert middle is not None
+    assert middle[0] == pytest.approx(50, abs=4) and middle[2] == pytest.approx(150, abs=4)
+    assert visible_part(Image.new("L", (50, 50), 255)) is None, "a full cell needs no limit"

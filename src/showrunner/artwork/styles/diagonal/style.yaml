@@ -1,0 +1,113 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Diagonals: slanted bands of frames on a light ground, the title in the gap between them.
+# At most six frames.
+schema: 1
+id: diagonal
+version: 1
+names: {en: Diagonals, de: Diagonalen, fr: Diagonales, it: Diagonali, ru: Диагонали}
+max_frames: 6
+fonts:
+  title: {file: fonts/Rubik.ttf, variation: ExtraBold}
+
+outputs:
+  series_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: &light {color: "#F5F4F2"}
+    cell: &slant {shape: polygon, points: [[0, 0], [100, 0], [100, 100], [0, 100]], radius: 10}
+    layouts:
+      - text: {area: [7, 72, 86, 22]}
+        cells:
+          - {box: [0, 2, 100, 66], style: {points: [[0, 0.0], [100, 0.0], [100, 75.76], [0, 100.0]]}}
+      - cells:
+          - {box: [0, 2.0, 100, 25.0], style: {points: [[0, 0.0], [100, 0.0], [100, 76.0], [0, 100.0]]}}
+          - {box: [0, 22.6, 100, 29.4], style: {points: [[0, 20.41], [100, 0.0], [100, 59.18], [0, 100.0]]}}
+          - {box: [0, 64, 100, 34], style: {points: [[0, 35.29], [100, 0.0], [100, 100.0], [0, 100.0]]}}
+      - cells:
+          - {box: [0, 2.0, 100, 16.67], style: {points: [[0, 0.0], [100, 0.0], [100, 76.0], [0, 100.0]]}}
+          - {box: [0, 16.27, 100, 19.07], style: {points: [[0, 20.98], [100, 0.0], [100, 58.04], [0, 100.0]]}}
+          - {box: [0, 28.93, 100, 23.07], style: {points: [[0, 34.68], [100, 0.0], [100, 47.98], [0, 100.0]]}}
+          - {box: [0, 64.0, 100, 19.33], style: {points: [[0, 62.07], [100, 0.0], [100, 58.62], [0, 100.0]]}}
+          - {box: [0, 76.93, 100, 13.73], style: {points: [[0, 58.25], [100, 0.0], [100, 70.87], [0, 100.0]]}}
+          - {box: [0, 88.27, 100, 9.73], style: {points: [[0, 41.1], [100, 0.0], [100, 100.0], [0, 100.0]]}}
+    text: &title
+      font: title
+      color: "#1E1E1E"
+      uppercase: true
+      letter_spacing: 0.01
+      area: [7, 54, 86, 11]
+      anchor: top
+      align: left
+      size: [18, 34]
+      max_lines: 2
+      line_height: 1.0
+
+  season_poster:
+    size: [1000, 1500]
+    design: [360, 540]
+    background: *light
+    cell: *slant
+    layouts:
+      - text: {area: [7, 72, 86, 22]}
+        cells:
+          - {box: [0, 2, 100, 66], style: {points: [[0, 0.0], [100, 0.0], [100, 75.76], [0, 100.0]]}}
+      - cells:
+          - {box: [0, 2.0, 100, 25.0], style: {points: [[0, 0.0], [100, 0.0], [100, 76.0], [0, 100.0]]}}
+          - {box: [0, 22.6, 100, 29.4], style: {points: [[0, 20.41], [100, 0.0], [100, 59.18], [0, 100.0]]}}
+          - {box: [0, 64.0, 100, 23.0], style: {points: [[0, 52.17], [100, 0.0], [100, 73.91], [0, 100.0]]}}
+          - {box: [0, 82.6, 100, 15.4], style: {points: [[0, 38.96], [100, 0.0], [100, 100.0], [0, 100.0]]}}
+    text:
+      <<: *title
+      area: [7, 53, 86, 13]
+      size: [76, 76]
+      max_lines: 1
+
+  landscape:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *light
+    cell: *slant
+    layouts:
+      - cells:
+          - {box: [1.2, 0, 58.8, 100], style: {points: [[0.0, 0], [100.0, 0], [88.1, 100], [0.0, 100]]}}
+      - cells:
+          - {box: [1.2, 0, 19.8, 100], style: {points: [[0.0, 0], [100.0, 0], [64.65, 100], [0.0, 100]]}}
+          - {box: [15.5, 0, 25.5, 100], style: {points: [[27.45, 0], [100.0, 0], [72.55, 100], [0.0, 100]]}}
+          - {box: [35.5, 0, 24.5, 100], style: {points: [[28.57, 0], [100.0, 0], [71.43, 100], [0.0, 100]]}}
+    text:
+      <<: *title
+      area: [63, 8, 34, 84]
+      anchor: center
+      size: [18, 40]
+      max_lines: 3
+
+  fanart:
+    size: [1920, 1080]
+    design: [640, 360]
+    background: *light
+    cell: *slant
+    layouts:
+      - cells:
+          - {box: [1, 0, 98, 100], style: {points: [[0.0, 0], [100.0, 0], [100.0, 100], [0.0, 100]]}}
+      - cells:
+          - {box: [1, 0, 25, 100], style: {points: [[0.0, 0], [100.0, 0], [68.0, 100], [0.0, 100]]}}
+          - {box: [20, 0, 30, 100], style: {points: [[26.67, 0], [100.0, 0], [73.33, 100], [0.0, 100]]}}
+          - {box: [44, 0, 30, 100], style: {points: [[26.67, 0], [100.0, 0], [73.33, 100], [0.0, 100]]}}
+          - {box: [68, 0, 31, 100], style: {points: [[25.81, 0], [100.0, 0], [100.0, 100], [0.0, 100]]}}
+
+  logo:
+    size: [800, 310]
+    design: [568, 220]
+    text:
+      font: title
+      color: "#FFFFFF"
+      uppercase: true
+      letter_spacing: 0.01
+      area: [6, 4, 88, 92]
+      anchor: center
+      align: center
+      size: [36, 84]
+      max_lines: 2
+      line_height: 1.0
+      stroke: {width: 1, color: "#000000B3"}
+      shadow: {dx: 0, dy: 2, blur: 8, color: "#00000080"}
