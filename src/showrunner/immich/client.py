@@ -234,6 +234,36 @@ class ImmichClient:
     async def album_videos(self, album_id: UUID) -> AsyncIterator[Asset]:
         """The videos of an album, with their descriptions and the people that the user of the
         key may see. Immich does not return trashed and hidden assets here."""
+        async for asset in self._album_assets(album_id, "VIDEO"):
+            yield asset
+
+    async def album_photos(self, album_id: UUID) -> AsyncIterator[Asset]:
+        """The photos of an album, as `album_videos` gives its videos."""
+        async for asset in self._album_assets(album_id, "IMAGE"):
+            yield asset
+
+    async def photo(self, asset_id: UUID, *, full: bool) -> tuple[bytes, str]:
+        """A photo to look at or to show: in full size (needs asset.download; the original
+        file itself for JPEG, a picture Immich made from it for HEIC and RAW when Immich makes
+        full-size pictures, its preview otherwise), or the preview of Immich. In whatever
+        format Immich gives it, with its media type."""
+        response = await self._request(
+            "GET",
+            f"/assets/{asset_id}/thumbnail",
+            params={"size": "fullsize" if full else "preview"},
+            headers={"Accept": "image/*"},
+            # For a photo that is a picture already, Immich sends the full size on to the
+            # original file.
+            follow_redirects=True,
+        )
+        media_type = response.headers.get("content-type", "")
+        if not media_type.startswith("image/"):
+            raise NotPictureError(
+                f"the photo {asset_id} came as {media_type or 'nothing'}", response.status_code
+            )
+        return response.content, media_type
+
+    async def _album_assets(self, album_id: UUID, kind: str) -> AsyncIterator[Asset]:
         page: str | None = "1"
         while page is not None:
             response = await self._request(
@@ -241,7 +271,7 @@ class ImmichClient:
                 "/search/metadata",
                 json={
                     "albumIds": [str(album_id)],
-                    "type": "VIDEO",
+                    "type": kind,
                     "withExif": True,
                     "withPeople": True,
                     "size": SEARCH_PAGE_SIZE,

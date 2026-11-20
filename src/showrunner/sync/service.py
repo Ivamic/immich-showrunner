@@ -22,6 +22,7 @@ from showrunner.store.registry import Registry
 from showrunner.sync.artwork import ArtworkContext, ArtworkError, ArtworkPlan, plan_artwork
 from showrunner.sync.executor import MARKER_NAME, Executor, Outcome, Result, UnsafePathError
 from showrunner.sync.plan import Action, ActionType, Plan, make_plan
+from showrunner.sync.slideshow import PhotoReport, SlideshowContext, look_at_photos
 from showrunner.targets.base import DesiredFile, ImageSource, Target
 
 log = logging.getLogger(__name__)
@@ -97,6 +98,7 @@ class ImmichView:
     skipped: list[tuple[str, Skipped]] = field(default_factory=list)
     people: dict[str, UUID] = field(default_factory=dict)
     artwork: ArtworkPlan = field(default_factory=ArtworkPlan)
+    photos: PhotoReport = field(default_factory=PhotoReport)
 
 
 async def read_immich(
@@ -258,6 +260,7 @@ async def finish_pass(view: ImmichView, registry: Registry, reports: Sequence[Sy
         failed = set().union(*(report.failed_albums for report in reports))
         # Shows with videos still to look at for their pictures are read again next time.
         failed |= view.artwork.incomplete
+        failed |= view.photos.incomplete
         for album in view.read:
             if album.id not in failed:
                 await registry.set_stamps(
@@ -275,10 +278,11 @@ async def sync_outputs(
     full: bool = True,
     force: bool = False,
     artwork: ArtworkContext | None = None,
+    slideshow: SlideshowContext | None = None,
 ) -> list[SyncReport]:
     """One pass for every output. A dry run (no output has an executor) writes nothing, neither
     to the disks nor to the database. With `artwork`, the shows get pictures drawn from the
-    frames of their videos."""
+    frames of their videos. With `slideshow`, the photos of the albums read are looked at."""
     writes = any(output.executor is not None for output in outputs)
     view = await read_immich(immich, registry, options, full=full, record_shows=writes)
     if artwork is not None and writes:
@@ -289,6 +293,22 @@ async def sync_outputs(
                 view.artwork.looked,
                 view.artwork.unreadable,
                 len(view.artwork.waiting),
+            )
+    if slideshow is not None and writes:
+        albums = [album for album in view.read if album.id not in view.hidden]
+        view.photos = await look_at_photos(immich, albums, registry, slideshow)
+        if view.photos.looked or view.photos.unreadable:
+            log.info(
+                "slideshows: looked at %d photos (%d could not be read); %d albums wait for more",
+                view.photos.looked,
+                view.photos.unreadable,
+                len(view.photos.waiting),
+            )
+        if view.photos.previews and slideshow.full:
+            log.warning(
+                "slideshows: %d photos came as previews of Immich, not in full size; turn on "
+                "full-size images in the image settings of Immich for HEIC and RAW photos",
+                view.photos.previews,
             )
     pictures: dict[ImageSource, bytes] = {}
     reports = [

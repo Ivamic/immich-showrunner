@@ -23,6 +23,7 @@ from showrunner.store.registry import Registry
 from showrunner.sync.artwork import ArtworkContext
 from showrunner.sync.executor import Executor
 from showrunner.sync.service import Output, SyncReport, sync_outputs
+from showrunner.sync.slideshow import SlideshowContext
 from showrunner.targets.base import JELLYFIN, KODI
 from showrunner.targets.jellyfin.client import JellyfinClient, JellyfinError, tell_jellyfin
 from showrunner.targets.jellyfin.layout import JellyfinLayout
@@ -166,6 +167,17 @@ async def sync_once(
             artwork, warning = await artwork_context(settings, immich)
             if warning:
                 notes.append(warning)
+        slideshow = None
+        if settings.slideshow and not dry_run:
+            full_size = can_download(await immich.api_key_info())
+            if not full_size:
+                notes.append(
+                    "the Immich API key has no asset.download: photos for slideshows are taken "
+                    "from the previews of Immich, which are smaller"
+                )
+            slideshow = SlideshowContext(
+                full=full_size, budget_seconds=settings.slideshow_budget_seconds
+            )
         reports = await sync_outputs(
             immich=immich,
             registry=Registry(session),
@@ -174,6 +186,7 @@ async def sync_once(
             full=full,
             force=force,
             artwork=artwork,
+            slideshow=slideshow,
         )
         if dry_run:
             await session.rollback()

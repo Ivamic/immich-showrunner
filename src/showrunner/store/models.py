@@ -161,6 +161,22 @@ class FrameLookRow(Base):
     )
 
 
+class PhotoLookRow(Base):
+    """What was learned about a photo for slideshows (not its pixels): see `FrameLookRow`.
+    `look` is empty for a photo that could not be read."""
+
+    __tablename__ = "photo_look"
+
+    asset_id: Mapped[UUID] = mapped_column(primary_key=True)
+    checksum: Mapped[str] = mapped_column(Text)
+    version: Mapped[int] = mapped_column()
+    look: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    failed: Mapped[bool] = mapped_column(default=False, server_default=false())
+    analysed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class ArtworkRow(Base):
     """The artwork of a show: its style (chosen at random once and kept), the seed of "other
     frames", and what the user froze."""

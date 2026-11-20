@@ -104,6 +104,11 @@ class GroupRequest(ImmichModel):
 
 class ExifInfo(ImmichModel):
     description: str | None = None
+    # Where a photo was taken, when the camera knew it.
+    latitude: float | None = None
+    longitude: float | None = None
+    city: str | None = None
+    country: str | None = None
 
 
 class Asset(ImmichModel):
@@ -126,6 +131,10 @@ class Asset(ImmichModel):
     thumbhash: str | None = None
     # A hash of the file itself (base64 SHA-1): it changes only when the video is replaced.
     checksum: str | None = None
+    # Size of a photo as it is shown, that is after turning it as its EXIF says.
+    width: int | None = None
+    height: int | None = None
+    original_mime_type: str | None = None
 
     @property
     def description(self) -> str:

@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""A small Immich for the tests: albums with videos, answered the way Immich 3.4 answers."""
+"""A small Immich for the tests: albums with videos and photos, answered the way Immich 3.4
+answers."""
 
 import io
 import json
@@ -40,6 +41,9 @@ class FakeImmich:
     # What the previews are served as.
     preview_type: str = "image/jpeg"
     requests: list[str] = field(default_factory=list)
+    photos: dict[UUID, list[dict[str, Any]]] = field(default_factory=dict)
+    # The pictures of the photos, by asset: what `fullsize` gives; `preview` gives a smaller copy.
+    photo_files: dict[str, bytes] = field(default_factory=dict)
 
     def add_album(self, n: int, name: str, *, stamp: str = "2026-01-01T00:00:00.000Z") -> UUID:
         key = album_id(n)
@@ -53,6 +57,38 @@ class FakeImmich:
             "albumUsers": [{"user": {"id": OWNER, "name": "Owner"}, "role": "owner"}],
         }
         self.videos[key] = []
+        self.photos[key] = []
+        return key
+
+    def add_photo(
+        self,
+        album: UUID,
+        n: int,
+        when: str,
+        content: bytes,
+        *,
+        size: tuple[int, int] = (64, 48),
+        checksum: str = "sum1",
+    ) -> UUID:
+        key = asset_id(n)
+        self.photos[album].append(
+            {
+                "id": str(key),
+                "type": "IMAGE",
+                "ownerId": OWNER,
+                "originalPath": f"/data/upload/owner/p{n}.jpg",
+                "originalFileName": f"IMG_{n}.jpg",
+                "localDateTime": when + ".000Z",
+                "updatedAt": "2026-01-01T00:00:00.000Z",
+                "exifInfo": {"description": "", "latitude": 43.7, "longitude": 7.26},
+                "people": [],
+                "checksum": checksum,
+                "width": size[0],
+                "height": size[1],
+                "originalMimeType": "image/jpeg",
+            }
+        )
+        self.photo_files[str(key)] = content
         return key
 
     def add_video(
@@ -90,8 +126,15 @@ class FakeImmich:
         if path.startswith("/api/people/") and path.endswith("/thumbnail"):
             body = f"JPEG face {path.split('/')[3]}".encode()
             return httpx2.Response(200, content=body, headers={"content-type": "image/jpeg"})
+        if path.startswith("/api/assets/") and path.endswith("/original"):
+            asset = path.split("/")[3]
+            if asset in self.photo_files:
+                content = self.photo_files[asset]
+                return httpx2.Response(200, content=content, headers={"content-type": "image/jpeg"})
         if path.startswith("/api/assets/") and path.endswith("/thumbnail"):
             asset = path.split("/")[3]
+            if asset in self.photo_files:
+                return self._photo(asset, request.url.params.get("size", "thumbnail"))
             version = next(
                 (
                     v.get("thumbhash", "")
@@ -109,9 +152,24 @@ class FakeImmich:
             return httpx2.Response(200, content=body, headers={"content-type": self.preview_type})
         if path == "/api/search/metadata":
             body = json.loads(request.content)
-            items = self.videos[UUID(body["albumIds"][0])]
+            album = UUID(body["albumIds"][0])
+            items = self.photos[album] if body.get("type") == "IMAGE" else self.videos[album]
             return httpx2.Response(200, json={"assets": {"items": items, "nextPage": None}})
         return httpx2.Response(404, json={"message": "not found"})
+
+    def _photo(self, asset: str, size: str) -> httpx2.Response:
+        content = self.photo_files[asset]
+        if size == "fullsize":
+            # As Immich does for a photo that is a picture already: on to the original file.
+            return httpx2.Response(302, headers={"location": f"/api/assets/{asset}/original"})
+        try:
+            with Image.open(io.BytesIO(content)) as picture:
+                picture.thumbnail((max(1, picture.width // 2), max(1, picture.height // 2)))
+                out = io.BytesIO()
+                picture.convert("RGB").save(out, "WEBP")
+        except OSError:  # not a picture: given as it is
+            return httpx2.Response(200, content=content, headers={"content-type": "image/webp"})
+        return httpx2.Response(200, content=out.getvalue(), headers={"content-type": "image/webp"})
 
     def client(self) -> ImmichClient:
         return ImmichClient(

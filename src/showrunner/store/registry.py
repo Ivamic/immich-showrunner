@@ -21,6 +21,7 @@ from showrunner.store.models import (
     PendingRow,
     PersonDescriptionRow,
     PersonRow,
+    PhotoLookRow,
     ShowRow,
     StyleSettingRow,
 )
@@ -212,6 +213,40 @@ class Registry:
         await self._session.execute(
             statement.on_conflict_do_update(
                 index_elements=[FrameLookRow.asset_id],
+                set_={k: statement.excluded[k] for k in values if k != "asset_id"},
+            )
+        )
+
+    async def photo_looks(self, asset_ids: Collection[UUID]) -> dict[UUID, PhotoLookRow]:
+        if not asset_ids:
+            return {}
+        rows = await self._session.scalars(
+            select(PhotoLookRow)
+            .where(PhotoLookRow.asset_id.in_(list(asset_ids)))
+            .execution_options(populate_existing=True)
+        )
+        return {row.asset_id: row for row in rows}
+
+    async def save_photo_look(
+        self,
+        asset_id: UUID,
+        checksum: str,
+        version: int,
+        look: dict[str, Any],
+        failed: bool = False,
+    ) -> None:
+        values = {
+            "asset_id": asset_id,
+            "checksum": checksum,
+            "version": version,
+            "look": look,
+            "failed": failed,
+            "analysed_at": func.now(),
+        }
+        statement = insert(PhotoLookRow).values(**values)
+        await self._session.execute(
+            statement.on_conflict_do_update(
+                index_elements=[PhotoLookRow.asset_id],
                 set_={k: statement.excluded[k] for k in values if k != "asset_id"},
             )
         )

@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""A process of its own for the slow work of artwork: looking at videos and drawing pictures.
+"""A process of its own for the slow work of artwork: looking at videos and photos and drawing
+pictures.
 
 That work is mostly Python and holds the interpreter: run in a thread of the app, it would make
 the page wait. In a separate process the page answers at once while the pictures are made. One
@@ -77,6 +78,13 @@ def preview_task(jobs: list[dict[str, Any]], source: HttpSource) -> list[bytes]:
     from showrunner.artwork.make import draw_small
 
     return draw_small([ArtworkJob.from_dict(j) for j in jobs], _styles(), source)
+
+
+def photo_look_task(asset_id: str, content: bytes) -> dict[str, Any]:
+    """The look of a photo for slideshows, as kept in the database. Raises PhotoError."""
+    from showrunner.slideshow.photos import look_at_photo
+
+    return look_at_photo(asset_id, content, _detector()).to_dict()
 
 
 # --- in the app ---------------------------------------------------------------------------
