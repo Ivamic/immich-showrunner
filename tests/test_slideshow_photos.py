@@ -4,6 +4,7 @@ by their hash; in the sync, photos are looked at within the time budget and an a
 still to look at is read again on the next pass."""
 
 import io
+from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 from uuid import UUID
@@ -16,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fake_immich import FakeImmich, asset_id
 from showrunner.artwork.faces import FaceDetector
 from showrunner.config import parse_path_map
+from showrunner.immich.models import Asset
 from showrunner.model.show import Options
 from showrunner.slideshow.models import CLIP
 from showrunner.slideshow.photos import (
@@ -31,7 +33,7 @@ from showrunner.slideshow.photos import (
 from showrunner.store.registry import Registry
 from showrunner.sync.executor import Executor
 from showrunner.sync.service import Output, sync_outputs
-from showrunner.sync.slideshow import SlideshowContext
+from showrunner.sync.slideshow import SlideshowContext, plan_inputs
 from showrunner.targets.jellyfin.layout import JellyfinLayout
 
 DATA = Path(__file__).parent / "data"
@@ -320,3 +322,20 @@ async def test_without_the_model_an_album_is_not_held_back(
     later = FakeSlideshow(model=False)
     await one_pass(immich, session, tmp_path, later)
     assert later.looked == [], "the album was stamped: no embedding is no reason to read it again"
+
+
+@pytest.mark.anyio
+async def test_the_photos_looked_at_are_what_the_cut_list_starts_from(
+    session: AsyncSession, tmp_path: Path
+) -> None:
+    immich, album = album_of_photos()
+    immich.photo_files[str(asset_id(12))] = b"broken file"
+    await one_pass(immich, session, tmp_path, FakeSlideshow(model=False))
+    assets = [Asset.model_validate(p) for p in immich.photos[album]]
+    rows = await Registry(session).photo_looks([a.id for a in assets])
+    inputs = plan_inputs(assets, rows)
+    assert [p.asset_id for p in inputs] == [asset_id(11)], "the broken one is not there"
+    (first,) = inputs
+    assert first.taken == datetime(2023, 7, 1, 10, 0)
+    assert (first.latitude, first.longitude) == (43.7, 7.26)
+    assert first.embedding is None

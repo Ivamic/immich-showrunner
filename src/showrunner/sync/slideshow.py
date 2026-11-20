@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
@@ -25,8 +25,10 @@ from uuid import UUID
 from showrunner.artwork.worker import ArtworkWorker, photo_look_task, shared_worker
 from showrunner.immich.client import ImmichClient, ImmichError, ImmichUnreachableError
 from showrunner.immich.models import Album, Asset
+from showrunner.slideshow.embed import unpack
 from showrunner.slideshow.models import CLIP, ensure
 from showrunner.slideshow.photos import PhotoError, PhotoLook, look_version
+from showrunner.slideshow.plan import PlanPhoto
 from showrunner.store.models import PhotoLookRow
 from showrunner.store.registry import Registry
 
@@ -172,6 +174,37 @@ async def look_at_photos(
     return report
 
 
+def plan_inputs(photos: Sequence[Asset], rows: Mapping[UUID, PhotoLookRow]) -> list[PlanPhoto]:
+    """The photos of an album as the cut list needs them: those looked at, by this version and
+    for their checksum, and readable. The embedding goes along when it is of the current model."""
+    version = look_version()
+    result: list[PlanPhoto] = []
+    for photo in photos:
+        row = rows.get(photo.id)
+        if row is None or row.failed or not _fresh(row, photo.checksum or "", version):
+            continue
+        look = PhotoLook.from_dict(row.look)
+        if look is None:
+            continue
+        embedding = (
+            unpack(row.embedding)
+            if row.embedding is not None and row.embedding_model == CLIP.id
+            else None
+        )
+        exif = photo.exif_info
+        result.append(
+            PlanPhoto(
+                asset_id=photo.id,
+                taken=photo.local_date_time.replace(tzinfo=None),
+                look=look,
+                latitude=exif.latitude if exif else None,
+                longitude=exif.longitude if exif else None,
+                embedding=embedding,
+            )
+        )
+    return result
+
+
 def _fresh(row: PhotoLookRow | None, checksum: str, version: int) -> bool:
     return row is not None and row.checksum == checksum and row.version == version
 
@@ -188,4 +221,4 @@ def _is_preview(look: PhotoLook, photo: Asset) -> bool:
     return side > 0 and look.given_side < side * PREVIEW_SHARE
 
 
-__all__ = ["PhotoReport", "SlideshowContext", "look_at_photos"]
+__all__ = ["PhotoReport", "SlideshowContext", "look_at_photos", "plan_inputs"]
