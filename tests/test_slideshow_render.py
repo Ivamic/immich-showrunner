@@ -173,3 +173,19 @@ def test_missing_music_leaves_nothing_behind(
     with pytest.raises(RenderError, match="music"):
         render_clip(scored, files, STYLE, out, OPTIONS, {})
     assert not out.exists()
+
+
+def test_the_credits_are_drawn_readably_in_every_style() -> None:
+    from PIL import Image as PilImage
+
+    from showrunner.slideshow.render import _contrast, _credits, _luminance, _readable
+
+    lines = ["\u201cPiece\u201d by Someone, CC BY 4.0, trimmed and faded"]
+    for style in builtin_styles().values():
+        image = _credits(style, lines)
+        assert image.size == (1920, 1080), style.id
+    dark = PilImage.new("RGB", (100, 100), (60, 40, 30))
+    assert _readable((70, 50, 40, 255), dark, 0, 100) == (255, 255, 255, 255)
+    light = PilImage.new("RGB", (100, 100), (240, 235, 225))
+    assert _readable((107, 74, 47, 255), light, 0, 100) == (107, 74, 47, 255), "the style's own"
+    assert _contrast(_luminance((255, 255, 255)), _luminance((0, 0, 0))) == pytest.approx(21)

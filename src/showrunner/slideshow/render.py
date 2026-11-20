@@ -17,7 +17,7 @@ import queue
 import threading
 import time
 from collections import OrderedDict
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -25,11 +25,12 @@ from typing import Any
 import av
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
-from showrunner.artwork.paint import Frame
+from showrunner.artwork.paint import Frame, rgba
 from showrunner.artwork.render import render
-from showrunner.artwork.style import OutputKind, Style
+from showrunner.artwork.style import OutputKind, Style, text_block
+from showrunner.artwork.text import font
 from showrunner.slideshow.photos import open_photo
 from showrunner.slideshow.plan import Clip, Layout, Rect, Shot, Transition
 
@@ -329,9 +330,91 @@ def _stills(
         frames.append(Frame(image=image))
     stills = {"title": _still(render(style, OutputKind.LANDSCAPE, frames, clip.caption, 0).image)}
     if clip.credits:
-        drawn = render(style, OutputKind.LANDSCAPE, [], CREDIT_LINE, 0).image
-        stills["credits"] = _still(drawn)
+        stills["credits"] = _still(_credits(style, clip.music_credits))
     return {k: _sized(v, options) for k, v in stills.items()}
+
+
+def _credits(style: Style, music: Sequence[str]) -> Image.Image:
+    """The credits: the background of the style's landscape picture, the music (a line a
+    piece) and, below it, the line of the app, in the font and colour of the style's title."""
+    canvas = render(style, OutputKind.LANDSCAPE, [], "", 0).image.convert("RGBA")
+    output, owner = style.output(OutputKind.LANDSCAPE)
+    spec = text_block(output, None)
+    color = rgba(spec.color) if spec is not None else (255, 255, 255, 255)
+    face = owner.font_path(spec.font) if spec is not None else None
+    width, height = canvas.size
+    lines: list[tuple[str, int]] = [(f"Music: {line}", round(height * 0.032)) for line in music]
+    lines.append((CREDIT_LINE, round(height * 0.042)))
+    draw = ImageDraw.Draw(canvas)
+    fonts = []
+    for text, size in lines:
+        font_size = size
+        while True:
+            loaded = (
+                font(face.path, font_size, face.index, face.variation)
+                if face is not None
+                else ImageFont.load_default(size=font_size)
+            )
+            if draw.textlength(text, font=loaded) <= width * 0.86 or font_size <= 12:
+                break
+            font_size -= 2
+        fonts.append(loaded)
+    gap = round(height * 0.02)
+    heights = [f.getbbox("Ag")[3] for f in fonts]
+    total = sum(heights) + gap * (len(lines) - 1) + (gap * 2 if music else 0)
+    y = _quiet_band(canvas, total)
+    color = _readable(color, canvas, y, total)
+    for index, ((text, _), loaded, line_height) in enumerate(
+        zip(lines, fonts, heights, strict=True)
+    ):
+        if music and index == len(lines) - 1:
+            y += gap * 2  # the line of the app apart from the music
+        x = (width - draw.textlength(text, font=loaded)) / 2
+        draw.text((x, y), text, font=loaded, fill=color)
+        y += line_height + gap
+    return canvas
+
+
+def _quiet_band(canvas: Image.Image, band: float) -> float:
+    """The top of the calmest stretch of the background `band` pixels high, near the middle:
+    not over the holes of a film strip or the pins of a board."""
+    grey = np.asarray(canvas.convert("L").resize((64, 90)), dtype=np.float32)
+    rows = grey.shape[0]
+    size = max(1, round(band / canvas.height * rows))
+    best: tuple[float, int] = (np.inf, (rows - size) // 2)
+    for top in range(round(rows * 0.08), round(rows * 0.92) - size + 1):
+        stretch = grey[max(0, top - 1) : top + size + 1]
+        middle = abs((top + size / 2) / rows - 0.5)
+        cost = float(stretch.std()) + 40 * middle
+        if cost < best[0]:
+            best = (cost, top)
+    return float(best[1] / rows * canvas.height)
+
+
+def _readable(
+    color: tuple[int, int, int, int], canvas: Image.Image, y: float, band: float
+) -> tuple[int, int, int, int]:
+    """The colour of the style when it stands out from the background under the text (WCAG
+    contrast of 3 or more), white or black otherwise."""
+    strip = canvas.convert("RGB").crop((0, round(y), canvas.width, round(y + band)))
+    behind = _luminance(tuple(np.asarray(strip, dtype=np.float32).reshape(-1, 3).mean(axis=0)))
+    if _contrast(_luminance(color[:3]), behind) >= 3:
+        return color
+    return (255, 255, 255, 255) if behind < 0.4 else (20, 20, 20, 255)
+
+
+def _luminance(rgb: Sequence[float]) -> float:
+    def channel(value: float) -> float:
+        v = value / 255
+        return v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
+
+    r, g, b = (channel(float(v)) for v in rgb[:3])
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _contrast(a: float, b: float) -> float:
+    light, dark = max(a, b), min(a, b)
+    return (light + 0.05) / (dark + 0.05)
 
 
 def _still(image: Image.Image) -> np.ndarray:
