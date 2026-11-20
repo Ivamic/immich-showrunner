@@ -128,6 +128,13 @@ def render_task(
     return {"frames": done.frames, "seconds": done.seconds, "elapsed": done.elapsed}
 
 
+def music_task(path: str) -> dict[str, Any]:
+    """The analysis of a piece of music, as kept. Raises MusicError."""
+    from showrunner.slideshow.music import analyse
+
+    return analyse(Path(path)).to_dict()
+
+
 # --- in the app ---------------------------------------------------------------------------
 
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
@@ -73,3 +74,41 @@ def best_words(embedding: np.ndarray, count: int = 3) -> list[tuple[str, float]]
     similarity = words.vectors @ vector
     order = np.argsort(-similarity)[:count]
     return [(words.texts[i], float(similarity[i])) for i in order]
+
+
+WORD_MOODS: dict[str, str] = {
+    "a group photo at a party": "upbeat",
+    "a photo of a child": "bright",
+    "a family photo": "bright",
+    "a selfie": "bright",
+    "a photo of people": "bright",
+    "a photo of the sea and a beach": "bright",
+    "a photo of a city street": "bright",
+    "a photo of a building": "bright",
+    "a photo of food on a table": "bright",
+    "a photo of an animal": "bright",
+    "a photo of a room": "bright",
+    "a landscape photo": "calm",
+    "a photo of mountains": "calm",
+    "a photo of flowers and plants": "calm",
+    "a photo of snow in winter": "calm",
+    "a photo taken at night": "calm",
+}
+"""What the music of a slideshow should feel like, by what its photos show."""
+
+
+def album_mood(embeddings: Sequence[np.ndarray]) -> str:
+    """The mood of the music for a slideshow: the words of photos each photo is closest to,
+    their moods counted over all photos (a party anywhere makes it upbeat more easily)."""
+    if not embeddings:
+        return "calm"
+    words = prompts()
+    photo_rows = [i for i, g in enumerate(words.groups) if g == "photo"]
+    counts: dict[str, float] = {}
+    for embedding in embeddings:
+        vector = embedding / max(float(np.linalg.norm(embedding)), 1e-12)
+        similarity = words.vectors[photo_rows] @ vector
+        best = words.texts[photo_rows[int(np.argmax(similarity))]]
+        mood = WORD_MOODS.get(best, "calm")
+        counts[mood] = counts.get(mood, 0.0) + (2.0 if mood == "upbeat" else 1.0)
+    return max(sorted(counts), key=lambda m: counts[m])
