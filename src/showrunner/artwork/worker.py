@@ -16,6 +16,7 @@ from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from functools import cache
+from pathlib import Path
 from typing import Any, TypeVar
 from uuid import UUID
 
@@ -80,11 +81,25 @@ def preview_task(jobs: list[dict[str, Any]], source: HttpSource) -> list[bytes]:
     return draw_small([ArtworkJob.from_dict(j) for j in jobs], _styles(), source)
 
 
-def photo_look_task(asset_id: str, content: bytes) -> dict[str, Any]:
-    """The look of a photo for slideshows, as kept in the database. Raises PhotoError."""
-    from showrunner.slideshow.photos import look_at_photo
+@cache
+def _embedder(model: str) -> Any:
+    from showrunner.slideshow.embed import Embedder
 
-    return look_at_photo(asset_id, content, _detector()).to_dict()
+    return Embedder(Path(model))
+
+
+def photo_look_task(
+    asset_id: str, content: bytes, model: str | None
+) -> tuple[dict[str, Any], bytes | None]:
+    """The look of a photo for slideshows, as kept in the database, and its embedding when the
+    model is given. Raises PhotoError."""
+    from showrunner.slideshow.embed import pack
+    from showrunner.slideshow.photos import look_at_picture, open_photo
+
+    picture, given_side = open_photo(content)
+    look = look_at_picture(asset_id, picture, given_side, _detector())
+    embedding = pack(_embedder(model).embed(picture)) if model is not None else None
+    return look.to_dict(), embedding
 
 
 # --- in the app ---------------------------------------------------------------------------

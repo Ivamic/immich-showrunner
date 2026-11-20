@@ -234,6 +234,8 @@ class Registry:
         version: int,
         look: dict[str, Any],
         failed: bool = False,
+        embedding: bytes | None = None,
+        embedding_model: str | None = None,
     ) -> None:
         values = {
             "asset_id": asset_id,
@@ -241,6 +243,8 @@ class Registry:
             "version": version,
             "look": look,
             "failed": failed,
+            "embedding": embedding,
+            "embedding_model": embedding_model,
             "analysed_at": func.now(),
         }
         statement = insert(PhotoLookRow).values(**values)

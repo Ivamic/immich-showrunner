@@ -30,10 +30,13 @@ services:
       # container that mounts it somewhere else.
       SHOWRUNNER_JELLYFIN_OUTPUT_PATH: "${SHOWRUNNER_JELLYFIN_OUTPUT_PATH:-${SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION:-${SHOWRUNNER_OUTPUT_LOCATION:-}}}"
     volumes:
-      # The only folders the app writes to. The Immich library is not mounted at all. A folder
-      # that is not set gets an empty volume that nothing uses.
+      # The only folders the app writes to: its output folders and its own data. The Immich
+      # library is not mounted at all. An output folder that is not set gets an empty volume that
+      # nothing uses.
       - "${SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION:-${SHOWRUNNER_OUTPUT_LOCATION:-unused-jellyfin}}:/output/jellyfin"
       - "${SHOWRUNNER_KODI_OUTPUT_LOCATION:-unused-kodi}:/output/kodi"
+      # Files of the app itself: models it downloads for slideshows.
+      - app-data:/data
     depends_on:
       db:
         condition: service_healthy
@@ -55,5 +58,6 @@ services:
 
 volumes:
   db-data:
+  app-data:
   unused-jellyfin:
   unused-kodi:

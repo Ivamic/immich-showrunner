@@ -7,7 +7,11 @@ pass stops after its time budget, and an album with photos still to look at is n
 that the next quick pass comes back to it.
 
 Photos are looked at in full size when the key may download them; otherwise, and for HEIC or RAW
-when Immich makes no full-size pictures, the preview of Immich is what there is."""
+when Immich makes no full-size pictures, the preview of Immich is what there is.
+
+The embedding of a photo needs the CLIP model, downloaded on the first photo to look at. Without
+it (no data folder, no network) a photo is looked at all the same and gets its embedding on a
+later full pass, once the model is there."""
 
 from __future__ import annotations
 
@@ -15,12 +19,15 @@ import logging
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from uuid import UUID
 
 from showrunner.artwork.worker import ArtworkWorker, photo_look_task, shared_worker
 from showrunner.immich.client import ImmichClient, ImmichError, ImmichUnreachableError
 from showrunner.immich.models import Album, Asset
+from showrunner.slideshow.models import CLIP, ensure
 from showrunner.slideshow.photos import PhotoError, PhotoLook, look_version
+from showrunner.store.models import PhotoLookRow
 from showrunner.store.registry import Registry
 
 log = logging.getLogger(__name__)
@@ -35,17 +42,27 @@ class SlideshowContext:
 
     full: bool
     """The key may download: photos are looked at in full size."""
+    data_dir: Path | None = None
+    """Where models are kept; without it photos get no embeddings."""
     budget_seconds: float = 240.0
     worker: ArtworkWorker = field(default_factory=shared_worker)
     clock: Callable[[], float] = time.monotonic
 
-    async def look(self, asset_id: UUID, content: bytes) -> PhotoLook:
-        """Raises PhotoError."""
-        data = await self.worker.run(photo_look_task, str(asset_id), content)
+    async def model(self) -> Path | None:
+        """The CLIP model, downloaded when it is missing; None when it can not be had now."""
+        return await ensure(CLIP, self.data_dir)
+
+    async def look(
+        self, asset_id: UUID, content: bytes, model: Path | None
+    ) -> tuple[PhotoLook, bytes | None]:
+        """The look of a photo and its embedding (with a model). Raises PhotoError."""
+        data, embedding = await self.worker.run(
+            photo_look_task, str(asset_id), content, str(model) if model is not None else None
+        )
         found = PhotoLook.from_dict(data)
         if found is None:  # pragma: no cover - the worker runs the same code
             raise PhotoError("the worker made a look of another version")
-        return found
+        return found, embedding
 
 
 @dataclass
@@ -54,6 +71,8 @@ class PhotoReport:
     unreadable: int = 0
     # Photos that came smaller than they are: previews instead of the photos.
     previews: int = 0
+    # Photos looked at without an embedding: the model is not there.
+    without_embedding: int = 0
     # Albums with photos still to look at, and how many.
     waiting: dict[UUID, int] = field(default_factory=dict)
 
@@ -62,14 +81,30 @@ class PhotoReport:
         return set(self.waiting)
 
 
+class _Model:
+    """The model, asked for once per pass and only when a photo needs it."""
+
+    def __init__(self, context: SlideshowContext) -> None:
+        self._context = context
+        self._asked = False
+        self.path: Path | None = None
+
+    async def get(self) -> Path | None:
+        if not self._asked:
+            self._asked = True
+            self.path = await self._context.model()
+        return self.path
+
+
 async def look_at_photos(
     immich: ImmichClient,
     albums: Sequence[Album],
     registry: Registry,
     context: SlideshowContext,
 ) -> PhotoReport:
-    """Look at the photos of `albums` that have no look of this version for their checksum.
-    Raises ImmichError when an album can not be listed (the pass stops, as for videos)."""
+    """Look at the photos of `albums` that have no look of this version for their checksum, or no
+    embedding of the current model while it is there. Raises ImmichError when an album can not be
+    listed (the pass stops, as for videos)."""
     report = PhotoReport()
     photos: dict[UUID, list[Asset]] = {}
     for album in albums:
@@ -77,6 +112,7 @@ async def look_at_photos(
     ids = {photo.id for every in photos.values() for photo in every}
     rows = await registry.photo_looks(ids)
     version = look_version()
+    model = _Model(context)
     started = context.clock()
     done: set[UUID] = set()
     stopped = False
@@ -84,56 +120,67 @@ async def look_at_photos(
         for photo in photos[album.id]:
             row = rows.get(photo.id)
             checksum = photo.checksum or ""
-            if photo.id in done or (
-                row is not None and row.checksum == checksum and row.version == version
-            ):
+            if photo.id in done:
                 continue
+            fresh = _fresh(row, checksum, version)
+            if fresh and (row is None or row.failed or row.embedding_model == CLIP.id):
+                continue
+            if fresh and await model.get() is None:
+                continue  # only the embedding is missing, and the model is not there
             if stopped or context.clock() - started >= context.budget_seconds:
                 stopped = True
-                report.waiting[album.id] = report.waiting.get(album.id, 0) + 1
+                if not fresh:
+                    report.waiting[album.id] = report.waiting.get(album.id, 0) + 1
                 continue
+            path = await model.get()
             try:
-                look = await _look(immich, context, photo)
+                content, _ = await immich.photo(photo.id, full=context.full)
+                found, embedding = await context.look(photo.id, content, path)
             except ImmichError as exc:
-                if not _transient(exc):
-                    log.warning("photo %s could not be read for slideshows: %s", photo.id, exc)
-                    look = None
-                else:
+                if _transient(exc):
                     # Not the photo's fault: it is tried again on the next pass.
                     log.warning("photos: Immich could not give a photo, the rest waits: %s", exc)
                     stopped = True
-                    report.waiting[album.id] = report.waiting.get(album.id, 0) + 1
+                    if not fresh:
+                        report.waiting[album.id] = report.waiting.get(album.id, 0) + 1
                     continue
+                log.warning("photo %s could not be read for slideshows: %s", photo.id, exc)
+                found, embedding = None, None
             except PhotoError as exc:
                 log.warning("photo %s could not be read for slideshows: %s", photo.id, exc)
-                look = None
-            if look is None:
+                found, embedding = None, None
+            if found is None:
                 report.unreadable += 1
                 await registry.save_photo_look(photo.id, checksum, version, {}, failed=True)
             else:
                 report.looked += 1
-                if _is_preview(look, photo):
+                if _is_preview(found, photo):
                     report.previews += 1
-                await registry.save_photo_look(photo.id, checksum, version, look.to_dict())
+                if embedding is None:
+                    report.without_embedding += 1
+                await registry.save_photo_look(
+                    photo.id,
+                    checksum,
+                    version,
+                    found.to_dict(),
+                    embedding=embedding,
+                    embedding_model=CLIP.id if embedding is not None else None,
+                )
             done.add(photo.id)
             # Each look is kept at once: the work of a long pass is not lost if it stops.
             await registry.commit()
     return report
 
 
-async def _look(immich: ImmichClient, context: SlideshowContext, photo: Asset) -> PhotoLook:
-    content, _ = await immich.photo(photo.id, full=context.full)
-    return await context.look(photo.id, content)
+def _fresh(row: PhotoLookRow | None, checksum: str, version: int) -> bool:
+    return row is not None and row.checksum == checksum and row.version == version
 
 
 def _transient(exc: ImmichError) -> bool:
     """An error of Immich or of the way to it, not of the photo: worth another try later."""
-    return (
-        isinstance(exc, ImmichUnreachableError)
-        or exc.status is None
-        or exc.status >= 500
-        or (exc.status in (401, 403, 429))
-    )
+    if isinstance(exc, ImmichUnreachableError) or exc.status is None:
+        return True
+    return exc.status >= 500 or exc.status in (401, 403, 429)
 
 
 def _is_preview(look: PhotoLook, photo: Asset) -> bool:

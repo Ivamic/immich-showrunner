@@ -120,6 +120,13 @@ def open_photo(content: bytes, long_side: int = WORK_SIDE) -> tuple[Image.Image,
 def look_at_photo(asset_id: str, content: bytes, detector: FaceDetector) -> PhotoLook:
     """Look at one photo. Blocking: run it in the worker. Raises PhotoError."""
     picture, given_side = open_photo(content)
+    return look_at_picture(asset_id, picture, given_side, detector)
+
+
+def look_at_picture(
+    asset_id: str, picture: Image.Image, given_side: int, detector: FaceDetector
+) -> PhotoLook:
+    """Look at a photo already opened by `open_photo`."""
     return PhotoLook(
         frame=look(asset_id, 0.0, picture, detector),
         width=picture.width,

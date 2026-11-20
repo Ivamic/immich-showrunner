@@ -17,6 +17,7 @@ from fake_immich import FakeImmich, asset_id
 from showrunner.artwork.faces import FaceDetector
 from showrunner.config import parse_path_map
 from showrunner.model.show import Options
+from showrunner.slideshow.models import CLIP
 from showrunner.slideshow.photos import (
     PHOTO_LOOK_VERSION,
     PhotoError,
@@ -117,16 +118,24 @@ def test_a_look_finds_the_face_and_survives_the_database() -> None:
 
 
 class FakeSlideshow(SlideshowContext):
-    """Looks at the photos in this process (with the real code), not in the worker."""
+    """Looks at the photos in this process (with the real code), not in the worker. With
+    `model`, the embedding is a made-up one: the last bytes of the photo."""
 
-    def __init__(self, *, full: bool = True, budget: float = 60.0) -> None:
+    def __init__(self, *, full: bool = True, budget: float = 60.0, model: bool = False) -> None:
         super().__init__(full=full, budget_seconds=budget, worker=None)  # type: ignore[arg-type]
         self.looked: list[UUID] = []
+        self.has_model = model
         self._detector = FaceDetector()
 
-    async def look(self, asset_id: UUID, content: bytes) -> PhotoLook:
+    async def model(self) -> Path | None:
+        return Path("/models/clip.onnx") if self.has_model else None
+
+    async def look(
+        self, asset_id: UUID, content: bytes, model: Path | None
+    ) -> tuple[PhotoLook, bytes | None]:
         self.looked.append(asset_id)
-        return look_at_photo(str(asset_id), content, self._detector)
+        found = look_at_photo(str(asset_id), content, self._detector)
+        return found, (b"EMB" + content[-8:] if model is not None else None)
 
 
 def album_of_photos(immich: FakeImmich | None = None) -> tuple[FakeImmich, UUID]:
@@ -263,3 +272,51 @@ async def test_a_photo_is_tried_again_when_immich_fails(
     again = FakeSlideshow()
     await one_pass(immich, session, tmp_path, again)
     assert asset_id(11) in again.looked, "the album was not stamped: tried again"
+
+
+@pytest.mark.anyio
+async def test_photos_get_their_embedding_once_the_model_is_there(
+    session: AsyncSession, tmp_path: Path
+) -> None:
+    immich, album = album_of_photos()
+    await one_pass(immich, session, tmp_path, FakeSlideshow(model=False))
+    rows = await Registry(session).photo_looks([asset_id(11)])
+    assert rows[asset_id(11)].embedding is None
+    assert rows[asset_id(11)].embedding_model is None
+
+    # The model came: a quick pass does not read the album again (it did not change) …
+    quick = FakeSlideshow(model=True)
+    await one_pass(immich, session, tmp_path, quick)
+    assert quick.looked == []
+    # … a full pass looks at its photos again for their embeddings, and only once.
+    full = FakeSlideshow(model=True)
+    async with immich.client() as client:
+        await sync_outputs(
+            immich=client,
+            registry=Registry(session),
+            outputs=[Output(JellyfinLayout(), Executor(tmp_path, [PurePosixPath("/mnt/immich")]))],
+            options=OPTIONS,
+            full=True,
+            slideshow=full,
+        )
+    assert sorted(full.looked) == [asset_id(11), asset_id(12)]
+    rows = await Registry(session).photo_looks([asset_id(11)])
+    embedding = rows[asset_id(11)].embedding
+    assert embedding is not None and embedding.startswith(b"EMB")
+    assert rows[asset_id(11)].embedding_model == CLIP.id
+    again = FakeSlideshow(model=True)
+    immich.touch(album, "2026-03-01T00:00:00.000Z")
+    await one_pass(immich, session, tmp_path, again)
+    assert again.looked == []
+
+
+@pytest.mark.anyio
+async def test_without_the_model_an_album_is_not_held_back(
+    session: AsyncSession, tmp_path: Path
+) -> None:
+    immich, _ = album_of_photos()
+    report = await one_pass(immich, session, tmp_path, FakeSlideshow(model=False))
+    assert report.ok
+    later = FakeSlideshow(model=False)
+    await one_pass(immich, session, tmp_path, later)
+    assert later.looked == [], "the album was stamped: no embedding is no reason to read it again"

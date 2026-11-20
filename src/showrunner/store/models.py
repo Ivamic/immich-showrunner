@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, MetaData, String, Text, false, func, true
+from sqlalchemy import DateTime, ForeignKey, LargeBinary, MetaData, String, Text, false, func, true
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -172,6 +172,10 @@ class PhotoLookRow(Base):
     version: Mapped[int] = mapped_column()
     look: Mapped[dict[str, Any]] = mapped_column(JSONB)
     failed: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # The CLIP embedding (float16) and the model it was made with; empty while the model is not
+    # there, so that the photo is looked at again once it is.
+    embedding: Mapped[bytes | None] = mapped_column(LargeBinary, default=None)
+    embedding_model: Mapped[str | None] = mapped_column(Text, default=None)
     analysed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

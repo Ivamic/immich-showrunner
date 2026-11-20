@@ -97,6 +97,8 @@ class Settings(BaseSettings):
     slideshow: bool = False
     # Time a pass may spend looking at new photos; the rest waits for the next one.
     slideshow_budget_seconds: int = Field(default=240, ge=10)
+    # Files of the app itself (models for slideshows); in the image, a volume of its own.
+    data_dir: Path | None = None
 
     # The web page. The secret encrypts the Immich key the app keeps for what the user does on the
     # page; changing it signs everybody out. Without it the page can not be signed in to.

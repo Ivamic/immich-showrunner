@@ -304,6 +304,11 @@ async def sync_outputs(
                 view.photos.unreadable,
                 len(view.photos.waiting),
             )
+        if view.photos.without_embedding:
+            log.info(
+                "slideshows: %d photos have no embedding yet, the model is not there",
+                view.photos.without_embedding,
+            )
         if view.photos.previews and slideshow.full:
             log.warning(
                 "slideshows: %d photos came as previews of Immich, not in full size; turn on "

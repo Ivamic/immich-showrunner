@@ -42,6 +42,9 @@ RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/
 COPY --from=build /app/venv /app/venv
 COPY --from=frontend /src/frontend/build /app/static
 COPY LICENSE THIRD_PARTY_NOTICES.md /app/
+# The data folder of the app (models for slideshows). Open to every user, as the container runs as
+# PUID:PGID; a new volume mounted here takes these permissions.
+RUN mkdir -m 1777 /data
 
 # The container runs as the user given in compose.yaml (PUID:PGID), so that the media server can
 # read what it writes; nothing here depends on a particular user.
@@ -49,7 +52,7 @@ ENV PATH=/app/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
 \
-    SHOWRUNNER_STATIC_DIR=/app/static
+    SHOWRUNNER_STATIC_DIR=/app/static     SHOWRUNNER_DATA_DIR=/data
 WORKDIR /app
 USER 1000:1000
 EXPOSE 8080

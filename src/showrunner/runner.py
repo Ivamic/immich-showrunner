@@ -176,8 +176,14 @@ async def sync_once(
                     "from the previews of Immich, which are smaller"
                 )
             slideshow = SlideshowContext(
-                full=full_size, budget_seconds=settings.slideshow_budget_seconds
+                full=full_size,
+                data_dir=settings.data_dir,
+                budget_seconds=settings.slideshow_budget_seconds,
             )
+            if settings.data_dir is None:
+                notes.append(
+                    "SHOWRUNNER_DATA_DIR is not set: photos for slideshows get no embeddings"
+                )
         reports = await sync_outputs(
             immich=immich,
             registry=Registry(session),
