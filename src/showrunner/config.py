@@ -97,6 +97,8 @@ class Settings(BaseSettings):
     slideshow: bool = False
     # Time a pass may spend looking at new photos; the rest waits for the next one.
     slideshow_budget_seconds: int = Field(default=240, ge=10)
+    # Threads a slideshow is drawn with: few, so that Immich and the media server keep theirs.
+    slideshow_threads: int = Field(default=2, ge=1, le=64)
     # Files of the app itself (models for slideshows); in the image, a volume of its own.
     data_dir: Path | None = None
 

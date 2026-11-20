@@ -298,3 +298,13 @@ def test_the_cut_list_is_plain_data() -> None:
     assert data["v"] >= 1 and data["album_id"] == str(ALBUM)
     assert isinstance(data["shots"][1]["move"], list)
     assert UUID(data["shots"][1]["asset_id"]) == asset_id(1)
+
+
+def test_a_cut_list_comes_back_from_its_data() -> None:
+    from showrunner.slideshow.plan import Clip
+
+    (clip,) = plan_album(ALBUM, "Trip", day(1, 8))
+    again = Clip.from_dict(clip.to_dict())
+    assert again.to_dict() == clip.to_dict()
+    assert again.version == clip.version
+    assert clip.caption == "Trip · 2024"

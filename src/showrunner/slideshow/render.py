@@ -1,0 +1,351 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""Drawing a slideshow from its cut list: frames from the photos, the camera moving smoothly
+(OpenCV, sub-pixel), dissolves and fades through black, the title and the credits in the style
+of the album, all encoded to H.264 with PyAV (D-090, D-098). No ffmpeg program is run.
+
+Blocking and slow (a minute or two for a few minutes of video): it runs in a worker process of
+its own. The frames are built while the previous ones are encoded, in another thread: both
+OpenCV and the encoder let go of the interpreter while they work."""
+
+from __future__ import annotations
+
+import contextlib
+import logging
+import math
+import os
+import queue
+import threading
+import time
+from collections import OrderedDict
+from collections.abc import Mapping
+from dataclasses import dataclass
+from pathlib import Path
+
+import av
+import cv2
+import numpy as np
+from PIL import Image
+
+from showrunner.artwork.paint import Frame
+from showrunner.artwork.render import render
+from showrunner.artwork.style import OutputKind, Style
+from showrunner.slideshow.photos import open_photo
+from showrunner.slideshow.plan import Clip, Layout, Rect, Shot, Transition
+
+log = logging.getLogger(__name__)
+
+CREDIT_LINE = "Made with Showrunner for Immich"
+"""Always in English (D-098)."""
+MAX_SIDE = 6000
+"""Photos are never decoded larger than this, whatever the camera needs."""
+BLUR_SIDE = 480
+"""The blurred background is made from a copy this small: as good, and quick."""
+BACKGROUND_DIM = 0.55
+QUEUE_FRAMES = 8
+
+
+class RenderError(RuntimeError):
+    """A slideshow could not be drawn: a photo is missing or can not be read."""
+
+
+@dataclass(frozen=True)
+class RenderOptions:
+    width: int = 1920
+    height: int = 1080
+    fps: int = 30
+    crf: int = 20
+    preset: str = "veryfast"
+    threads: int = 2
+
+
+@dataclass(frozen=True)
+class Rendered:
+    frames: int
+    seconds: float
+    elapsed: float
+
+
+def render_clip(
+    clip: Clip,
+    photos: Mapping[str, Path],
+    style: Style,
+    out: Path,
+    options: RenderOptions = RenderOptions(),
+) -> Rendered:
+    """Draw `clip` into the MP4 file `out` (written under another name and renamed when it is
+    done). `photos` gives the file of each photo of the clip by asset id. Raises RenderError."""
+    started = time.monotonic()
+    cv2.setNumThreads(max(1, options.threads))
+    pictures = _Pictures(clip, photos, options)
+    stills = _stills(clip, style, photos, options)
+    total = max(1, round(clip.seconds * options.fps))
+    partial = out.with_name(f".{out.name}.part")
+    frames: queue.Queue[np.ndarray | None] = queue.Queue(maxsize=QUEUE_FRAMES)
+    failure: list[BaseException] = []
+
+    def build() -> None:
+        try:
+            for index in range(total):
+                frames.put(_frame(clip, index / options.fps, pictures, stills, options))
+        except BaseException as exc:
+            failure.append(exc)
+        finally:
+            frames.put(None)
+
+    builder = threading.Thread(target=build, name="slideshow-frames", daemon=True)
+    builder.start()
+    written = 0
+    try:
+        with av.open(str(partial), "w", format="mp4", options={"movflags": "+faststart"}) as file:
+            stream = file.add_stream("libx264", rate=options.fps)
+            stream.width, stream.height = options.width, options.height
+            stream.pix_fmt = "yuv420p"
+            stream.options = {
+                "preset": options.preset,
+                "crf": str(options.crf),
+                "threads": str(max(1, options.threads)),
+            }
+            while (frame := frames.get()) is not None:
+                video = av.VideoFrame.from_ndarray(frame, format="bgr24")
+                for packet in stream.encode(video):
+                    file.mux(packet)
+                written += 1
+            for packet in stream.encode():
+                file.mux(packet)
+        builder.join()
+        if failure:
+            raise RenderError(f"the frames could not be made: {failure[0]}") from failure[0]
+        os.replace(partial, out)
+    finally:
+        # Let a builder that waits on a full queue finish, then leave no partial file behind.
+        while builder.is_alive():
+            with contextlib.suppress(queue.Empty):
+                frames.get(timeout=0.1)
+        partial.unlink(missing_ok=True)
+    return Rendered(
+        frames=written, seconds=written / options.fps, elapsed=time.monotonic() - started
+    )
+
+
+# --- the pictures ---------------------------------------------------------------------------
+
+
+@dataclass
+class _Picture:
+    image: np.ndarray
+    """BGR, at the size the camera needs."""
+    background: np.ndarray | None = None
+    """For a standing photo: the blurred copy behind it, at the size of the video."""
+
+
+class _Pictures:
+    """The photos of a clip, decoded when the camera first needs them; only the last few are
+    kept, as a shot needs its photo and at most the one before (a long clip would otherwise hold
+    gigabytes)."""
+
+    KEEP = 3
+
+    def __init__(self, clip: Clip, photos: Mapping[str, Path], options: RenderOptions) -> None:
+        self._shots = {str(s.asset_id): s for s in clip.shots if s.asset_id and s.move}
+        missing = [key for key in self._shots if key not in photos]
+        if missing:
+            raise RenderError(f"the photo {missing[0]} is missing")
+        self._photos = photos
+        self._options = options
+        self._kept: OrderedDict[str, _Picture] = OrderedDict()
+
+    def __getitem__(self, key: str) -> _Picture:
+        picture = self._kept.get(key)
+        if picture is None:
+            picture = self._load(key)
+            self._kept[key] = picture
+            while len(self._kept) > self.KEEP:
+                self._kept.popitem(last=False)
+        else:
+            self._kept.move_to_end(key)
+        return picture
+
+    def _load(self, key: str) -> _Picture:
+        shot = self._shots[key]
+        try:
+            content = self._photos[key].read_bytes()
+            # Opened once small to learn its shape, then at the size the camera needs.
+            probe, _ = open_photo(content, 256)
+            aspect = probe.width / max(1, probe.height)
+            picture, _ = open_photo(content, _needed_side(shot, aspect, self._options))
+        except (OSError, ValueError) as exc:
+            raise RenderError(f"the photo {key} could not be read: {exc}") from exc
+        bgr = cv2.cvtColor(np.asarray(picture), cv2.COLOR_RGB2BGR)
+        background = _blurred(bgr, self._options) if shot.layout is Layout.BLURRED else None
+        return _Picture(bgr, background)
+
+
+def _needed_side(shot: Shot, aspect: float, options: RenderOptions) -> int:
+    """The long side the photo is decoded at: enough pixels for the closest frame."""
+    assert shot.move is not None
+    width = min(rect[2] for rect in shot.move)
+    height = min(rect[3] for rect in shot.move)
+    if shot.layout is Layout.BLURRED:
+        # Shown whole, as high as the video: only its height matters.
+        photo_height = options.height / height
+        photo_width = photo_height * aspect
+    else:
+        photo_width = max(options.width / width, options.height / height * aspect)
+        photo_height = photo_width / aspect
+    return min(MAX_SIDE, math.ceil(max(photo_width, photo_height)))
+
+
+def _blurred(bgr: np.ndarray, options: RenderOptions) -> np.ndarray:
+    """The photo enlarged to cover the video, blurred and darkened."""
+    h, w = bgr.shape[:2]
+    scale = min(1.0, BLUR_SIDE / max(h, w))
+    small = cv2.resize(bgr, (max(1, round(w * scale)), max(1, round(h * scale))))
+    sh, sw = small.shape[:2]
+    target = options.width / options.height
+    if sw / sh < target:  # crop height
+        ch = max(1, round(sw / target))
+        top = (sh - ch) // 2
+        small = small[top : top + ch]
+    else:
+        cw = max(1, round(sh * target))
+        left = (sw - cw) // 2
+        small = small[:, left : left + cw]
+    blurred = cv2.GaussianBlur(small, (0, 0), sigmaX=max(2.0, small.shape[1] / 40))
+    large = cv2.resize(blurred, (options.width, options.height), interpolation=cv2.INTER_LINEAR)
+    return (large.astype(np.float32) * BACKGROUND_DIM).astype(np.uint8)
+
+
+def _stills(
+    clip: Clip, style: Style, photos: Mapping[str, Path], options: RenderOptions
+) -> dict[str, np.ndarray]:
+    """The title (the landscape picture of the style, from the photos of the clip) and the
+    credits, at the size of the video."""
+    frames = []
+    shown = [s for s in clip.shots if s.asset_id is not None]
+    for shot in shown[: style.spec.max_frames]:
+        key = str(shot.asset_id)
+        try:
+            image, _ = open_photo(photos[key].read_bytes())
+        except (KeyError, OSError, ValueError) as exc:
+            raise RenderError(f"the photo {key} could not be read: {exc}") from exc
+        frames.append(Frame(image=image))
+    stills = {"title": _still(render(style, OutputKind.LANDSCAPE, frames, clip.caption, 0).image)}
+    if clip.credits:
+        drawn = render(style, OutputKind.LANDSCAPE, [], CREDIT_LINE, 0).image
+        stills["credits"] = _still(drawn)
+    return {k: _sized(v, options) for k, v in stills.items()}
+
+
+def _still(image: Image.Image) -> np.ndarray:
+    if image.mode == "RGBA":
+        black = Image.new("RGBA", image.size, (0, 0, 0, 255))
+        image = Image.alpha_composite(black, image)
+    return cv2.cvtColor(np.asarray(image.convert("RGB")), cv2.COLOR_RGB2BGR)
+
+
+def _sized(bgr: np.ndarray, options: RenderOptions) -> np.ndarray:
+    if bgr.shape[1] == options.width and bgr.shape[0] == options.height:
+        return bgr
+    return cv2.resize(bgr, (options.width, options.height), interpolation=cv2.INTER_AREA)
+
+
+# --- the frames -----------------------------------------------------------------------------
+
+
+def _frame(
+    clip: Clip,
+    t: float,
+    pictures: _Pictures,
+    stills: Mapping[str, np.ndarray],
+    options: RenderOptions,
+) -> np.ndarray:
+    """The frame at time `t`: the shot on screen, mixed with the next one during its
+    transition."""
+    active = [s for s in clip.shots if s.start <= t < s.start + s.seconds]
+    if not active:
+        return np.zeros((options.height, options.width, 3), np.uint8)
+    current = active[-1]
+    image = _shot_frame(current, t, pictures, stills, options)
+    if len(active) == 1 or current.transition_seconds <= 0:
+        return image
+    previous = _shot_frame(active[-2], t, pictures, stills, options)
+    share = min(1.0, max(0.0, (t - current.start) / current.transition_seconds))
+    if current.transition is Transition.FADE_BLACK:
+        if share < 0.5:
+            return _dim(previous, 1 - 2 * share)
+        return _dim(image, 2 * share - 1)
+    if current.transition is Transition.DISSOLVE:
+        return cv2.addWeighted(previous, 1 - share, image, share, 0)
+    return image
+
+
+def _dim(image: np.ndarray, share: float) -> np.ndarray:
+    return cv2.convertScaleAbs(image, alpha=max(0.0, min(1.0, share)))
+
+
+def _shot_frame(
+    shot: Shot,
+    t: float,
+    pictures: _Pictures,
+    stills: Mapping[str, np.ndarray],
+    options: RenderOptions,
+) -> np.ndarray:
+    if shot.asset_id is None or shot.move is None:
+        still = stills.get(shot.kind)
+        if still is None:
+            return np.zeros((options.height, options.width, 3), np.uint8)
+        return still
+    picture = pictures[str(shot.asset_id)]
+    share = min(1.0, max(0.0, (t - shot.start) / max(shot.seconds, 1e-6)))
+    rect = _between(shot.move[0], shot.move[1], _ease(share))
+    if shot.layout is Layout.BLURRED and picture.background is not None:
+        return _over_blurred(picture, rect, options)
+    return _crop(picture.image, rect, options.width, options.height)
+
+
+def _ease(share: float) -> float:
+    """Slow at both ends: the camera starts and stops gently."""
+    return share * share * (3 - 2 * share)
+
+
+def _between(a: Rect, b: Rect, share: float) -> Rect:
+    return (
+        a[0] + (b[0] - a[0]) * share,
+        a[1] + (b[1] - a[1]) * share,
+        a[2] + (b[2] - a[2]) * share,
+        a[3] + (b[3] - a[3]) * share,
+    )
+
+
+def _crop(image: np.ndarray, rect: Rect, width: int, height: int) -> np.ndarray:
+    """The part `rect` of the image, brought to width x height, sub-pixel exact."""
+    h, w = image.shape[:2]
+    x, y, rw, rh = rect[0] * w, rect[1] * h, rect[2] * w, rect[3] * h
+    sx, sy = width / rw, height / rh
+    matrix = np.array([[sx, 0, -x * sx], [0, sy, -y * sy]], np.float32)
+    flags = cv2.INTER_AREA if sx < 0.5 else cv2.INTER_LINEAR
+    return cv2.warpAffine(
+        image, matrix, (width, height), flags=flags, borderMode=cv2.BORDER_REPLICATE
+    )
+
+
+def _over_blurred(picture: _Picture, rect: Rect, options: RenderOptions) -> np.ndarray:
+    """A standing photo: the part `rect` of it, as high as the video, in the middle of its
+    blurred copy."""
+    assert picture.background is not None
+    h, w = picture.image.shape[:2]
+    x, y, rw, rh = rect[0] * w, rect[1] * h, rect[2] * w, rect[3] * h
+    scale = options.height / rh
+    shown = rw * scale
+    left = (options.width - shown) / 2
+    matrix = np.array([[scale, 0, left - x * scale], [0, scale, -y * scale]], np.float32)
+    canvas = picture.background.copy()
+    cv2.warpAffine(
+        picture.image,
+        matrix,
+        (options.width, options.height),
+        dst=canvas,
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_TRANSPARENT,
+    )
+    return canvas

@@ -102,6 +102,30 @@ def photo_look_task(
     return look.to_dict(), embedding
 
 
+def render_task(
+    clip: dict[str, Any],
+    photos: dict[str, str],
+    style_id: str,
+    out: str,
+    options: dict[str, Any],
+) -> dict[str, float]:
+    """Draw a slideshow into `out`. Raises RenderError."""
+    from showrunner.slideshow.plan import Clip
+    from showrunner.slideshow.render import RenderError, RenderOptions, render_clip
+
+    style = _styles().get(style_id)
+    if style is None:
+        raise RenderError(f"there is no style {style_id!r}")
+    done = render_clip(
+        Clip.from_dict(clip),
+        {key: Path(path) for key, path in photos.items()},
+        style,
+        Path(out),
+        RenderOptions(**options),
+    )
+    return {"frames": done.frames, "seconds": done.seconds, "elapsed": done.elapsed}
+
+
 # --- in the app ---------------------------------------------------------------------------
 
 
@@ -126,6 +150,15 @@ class ArtworkWorker:
 @cache
 def shared_worker() -> ArtworkWorker:
     """The worker of the app, closed when the app ends."""
+    worker = ArtworkWorker()
+    atexit.register(worker.close)
+    return worker
+
+
+@cache
+def render_worker() -> ArtworkWorker:
+    """A worker of its own for drawing slideshows: minutes long, it must not hold up the
+    pictures and the looks on the page."""
     worker = ArtworkWorker()
     atexit.register(worker.close)
     return worker

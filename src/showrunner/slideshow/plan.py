@@ -133,6 +133,21 @@ class Shot:
             data["move"] = [[round(v, 4) for v in rect] for rect in self.move]
         return data
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Shot:
+        move = data.get("move")
+        return cls(
+            kind=data["kind"],
+            start=float(data["start"]),
+            seconds=float(data["seconds"]),
+            transition=Transition(data["transition"]),
+            transition_seconds=float(data["transition_seconds"]),
+            asset_id=UUID(data["asset_id"]) if data.get("asset_id") else None,
+            layout=Layout(data["layout"]) if data.get("layout") else None,
+            move=(_rect(move[0]), _rect(move[1])) if move else None,
+            scene=int(data.get("scene", 0)),
+        )
+
 
 @dataclass(frozen=True)
 class Clip:
@@ -170,10 +185,35 @@ class Clip:
             "shots": [s.to_dict() for s in self.shots],
         }
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Clip:
+        return cls(
+            album_id=UUID(data["album_id"]),
+            year=int(data["year"]),
+            part=int(data["part"]),
+            first=datetime.fromisoformat(data["first"]),
+            last=datetime.fromisoformat(data["last"]),
+            shots=tuple(Shot.from_dict(s) for s in data["shots"]),
+            left_out=int(data["left_out"]),
+            title=data["title"],
+            credits=bool(data["credits"]),
+        )
+
+    @property
+    def caption(self) -> str:
+        """The text of the title: the album and the year, and the months of a part."""
+        if self.part:
+            return f"{self.title} · {self.year} · {self.first:%m}-{self.last:%m}"
+        return f"{self.title} · {self.year}"
+
     @property
     def version(self) -> str:
         data = json.dumps(self.to_dict(), ensure_ascii=False, sort_keys=True).encode()
         return f"show-{hashlib.sha256(data).hexdigest()[:32]}"
+
+
+def _rect(values: Sequence[float]) -> Rect:
+    return (float(values[0]), float(values[1]), float(values[2]), float(values[3]))
 
 
 # --- the plan -------------------------------------------------------------------------------
