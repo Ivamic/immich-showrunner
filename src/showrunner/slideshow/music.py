@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import itertools
 import math
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -146,7 +147,7 @@ def decode(path: Path, rate: int, layout: str) -> np.ndarray:
         with av.open(str(path)) as file:
             _check_streams(file)
             resampler = av.AudioResampler(format="fltp", layout=layout, rate=rate)
-            for frame in file.decode(audio=0):
+            for frame in _frames(file, file.streams.audio[0]):
                 for out in resampler.resample(frame):
                     chunks.append(out.to_ndarray())
             for out in resampler.resample(None):
@@ -158,6 +159,26 @@ def decode(path: Path, rate: int, layout: str) -> np.ndarray:
     if not chunks:
         raise MusicError("it has no sound")
     return np.concatenate(chunks, axis=1).astype(np.float32)
+
+
+MAX_BAD_SHARE = 0.02
+"""A piece with more damaged packets than this share is refused; fewer are skipped (a short
+click at worst), as players do."""
+
+
+def _frames(file: Any, stream: Any) -> Iterator[Any]:
+    """The decoded frames of a stream, damaged packets left out."""
+    good = bad = 0
+    for packet in file.demux(stream):
+        try:
+            frames = packet.decode()
+        except av.error.InvalidDataError:
+            bad += 1
+            continue
+        good += 1
+        yield from frames
+    if bad and bad > MAX_BAD_SHARE * (good + bad):
+        raise MusicError(f"it is damaged: {bad} of {good + bad} packets can not be read")
 
 
 def _check_streams(file: Any) -> None:
@@ -183,7 +204,7 @@ def measure_loudness(path: Path) -> tuple[float, float]:
             meter.link_to(sink)
             graph.configure()
             last: Any = None
-            for frame in file.decode(stream):
+            for frame in _frames(file, stream):
                 graph.push(frame)
                 last = _drain(graph, last)
             graph.push(None)

@@ -165,3 +165,19 @@ def test_an_analysis_is_kept_as_plain_data(steady: MusicAnalysis) -> None:
     again = MusicAnalysis.from_dict(data)
     assert again is not None and again.to_dict() == data
     assert MusicAnalysis.from_dict({**data, "v": 0}) is None
+
+
+def test_a_few_damaged_packets_are_skipped_and_many_refused(tmp_path: Path) -> None:
+    path = write(tmp_path / "song.mp3", piece(seconds=40, bpm=120), codec="libmp3lame")
+    content = bytearray(path.read_bytes())
+    middle = len(content) // 2
+    content[middle : middle + 600] = bytes(range(256)) * 2 + bytes(88)
+    damaged = tmp_path / "damaged.mp3"
+    damaged.write_bytes(bytes(content))
+    assert analyse(damaged).tempo == pytest.approx(120, abs=2)
+    ruined = bytearray(path.read_bytes())
+    for at in range(4000, len(ruined) - 2000, 3000):
+        ruined[at : at + 400] = bytes(range(200)) * 2
+    (tmp_path / "ruined.mp3").write_bytes(bytes(ruined))
+    with pytest.raises(MusicError):
+        analyse(tmp_path / "ruined.mp3")
