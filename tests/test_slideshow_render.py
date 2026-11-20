@@ -131,3 +131,45 @@ def test_a_missing_photo_leaves_nothing_behind(
     with pytest.raises(RenderError):
         render_clip(clip, files, STYLE, out, OPTIONS)
     assert not out.exists() and not list(tmp_path.glob(".*.part"))
+
+
+def test_a_slideshow_gets_its_music(album: tuple[Clip, dict[str, Path]], tmp_path: Path) -> None:
+    from test_slideshow_music import piece, write
+
+    from showrunner.slideshow.music import analyse, measure_loudness
+    from showrunner.slideshow.score import Track, fit_to_music
+
+    clip, files = album
+    song = write(tmp_path / "song.wav", piece(seconds=60, bpm=120))
+    track = Track("song", analyse(song), "Song - Someone - CC0", "calm")
+    scored = fit_to_music(clip, [track])
+    out = tmp_path / "show.mp4"
+    render_clip(scored, files, STYLE, out, OPTIONS, {"song": song})
+    with av.open(str(out)) as file:
+        assert len(file.streams.audio) == 1
+        audio = file.streams.audio[0]
+        samples = np.concatenate([f.to_ndarray() for f in file.decode(audio)], axis=1)
+        heard = samples.shape[1] / audio.rate
+    assert heard == pytest.approx(scored.seconds, abs=0.1)
+    assert np.abs(samples[:, : audio.rate // 20]).max() < 0.05, "it fades in"
+    sound = write(tmp_path / "heard.wav", np.ascontiguousarray(samples), codec="pcm_f32le")
+    loudness, peak = measure_loudness(sound)
+    # Brought towards -16 LUFS as far as the peaks of the piece allow.
+    (part,) = scored.music
+    assert loudness == pytest.approx(track.analysis.loudness + part.gain_db, abs=1.0)
+    assert peak <= -0.5
+
+
+def test_missing_music_leaves_nothing_behind(
+    album: tuple[Clip, dict[str, Path]], tmp_path: Path
+) -> None:
+    from showrunner.slideshow.plan import AudioPart
+
+    clip, files = album
+    scored = Clip.from_dict(
+        {**clip.to_dict(), "music": [AudioPart("gone", 0, 0, 5, 1, 1, 0).to_dict()]}
+    )
+    out = tmp_path / "show.mp4"
+    with pytest.raises(RenderError, match="music"):
+        render_clip(scored, files, STYLE, out, OPTIONS, {})
+    assert not out.exists()

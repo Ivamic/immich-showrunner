@@ -108,6 +108,7 @@ def render_task(
     style_id: str,
     out: str,
     options: dict[str, Any],
+    music: dict[str, str] | None = None,
 ) -> dict[str, float]:
     """Draw a slideshow into `out`. Raises RenderError."""
     from showrunner.slideshow.plan import Clip
@@ -122,6 +123,7 @@ def render_task(
         style,
         Path(out),
         RenderOptions(**options),
+        {key: Path(path) for key, path in (music or {}).items()},
     )
     return {"frames": done.frames, "seconds": done.seconds, "elapsed": done.elapsed}
 

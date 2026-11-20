@@ -20,6 +20,7 @@ from collections import OrderedDict
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import av
 import cv2
@@ -71,14 +72,17 @@ def render_clip(
     style: Style,
     out: Path,
     options: RenderOptions = RenderOptions(),
+    music: Mapping[str, Path] | None = None,
 ) -> Rendered:
     """Draw `clip` into the MP4 file `out` (written under another name and renamed when it is
-    done). `photos` gives the file of each photo of the clip by asset id. Raises RenderError."""
+    done). `photos` gives the file of each photo of the clip by asset id, `music` the file of
+    each piece of its music by id. Raises RenderError."""
     started = time.monotonic()
     cv2.setNumThreads(max(1, options.threads))
     pictures = _Pictures(clip, photos, options)
     stills = _stills(clip, style, photos, options)
     total = max(1, round(clip.seconds * options.fps))
+    sound = _mix(clip, music or {}, total / options.fps) if clip.music else None
     partial = out.with_name(f".{out.name}.part")
     frames: queue.Queue[np.ndarray | None] = queue.Queue(maxsize=QUEUE_FRAMES)
     failure: list[BaseException] = []
@@ -105,13 +109,19 @@ def render_clip(
                 "crf": str(options.crf),
                 "threads": str(max(1, options.threads)),
             }
+            audio = _AudioOut(file, sound) if sound is not None else None
             while (frame := frames.get()) is not None:
                 video = av.VideoFrame.from_ndarray(frame, format="bgr24")
                 for packet in stream.encode(video):
                     file.mux(packet)
                 written += 1
+                if audio is not None:
+                    # Sound up to the time of this frame, so that the two are interleaved.
+                    audio.write_until(written / options.fps)
             for packet in stream.encode():
                 file.mux(packet)
+            if audio is not None:
+                audio.finish()
         builder.join()
         if failure:
             raise RenderError(f"the frames could not be made: {failure[0]}") from failure[0]
@@ -125,6 +135,94 @@ def render_clip(
     return Rendered(
         frames=written, seconds=written / options.fps, elapsed=time.monotonic() - started
     )
+
+
+# --- the sound ------------------------------------------------------------------------------
+
+
+AUDIO_RATE = 48000
+AUDIO_BITRATE = 192_000
+PEAK = 10 ** (-1 / 20)
+"""The mix never goes above -1 dBFS."""
+
+
+def _mix(clip: Clip, music: Mapping[str, Path], seconds: float) -> np.ndarray:
+    """The music of the clip as one stereo track at AUDIO_RATE, `seconds` long: each part at
+    its place, brought to its gain, faded in and out."""
+    from showrunner.slideshow.music import MusicError, decode
+
+    length = round(seconds * AUDIO_RATE)
+    mix = np.zeros((2, length), np.float32)
+    decoded: dict[str, np.ndarray] = {}
+    for part in clip.music:
+        path = music.get(part.track)
+        if path is None:
+            raise RenderError(f"the music {part.track} is missing")
+        if part.track not in decoded:
+            try:
+                decoded[part.track] = decode(path, AUDIO_RATE, "stereo")
+            except MusicError as exc:
+                raise RenderError(f"the music {part.track} could not be read: {exc}") from exc
+        source = decoded[part.track]
+        first = round(part.source_start * AUDIO_RATE)
+        at = round(part.at * AUDIO_RATE)
+        count = min(round(part.seconds * AUDIO_RATE), source.shape[1] - first, length - at)
+        if count <= 0:
+            continue
+        piece = source[:, first : first + count] * np.float32(10 ** (part.gain_db / 20))
+        piece *= _envelope(count, part.fade_in, part.fade_out)
+        mix[:, at : at + count] += piece
+    peak = float(np.abs(mix).max(initial=0.0))
+    if peak > PEAK:
+        mix *= np.float32(PEAK / peak)
+    return mix
+
+
+def _envelope(count: int, fade_in: float, fade_out: float) -> np.ndarray:
+    """Gain over a part: rising over `fade_in`, falling over `fade_out` (quarter sine waves, so
+    that two pieces crossing over keep their joint loudness)."""
+    gain = np.ones(count, np.float32)
+    rise = min(count, round(fade_in * AUDIO_RATE))
+    if rise > 0:
+        gain[:rise] = np.sin(np.linspace(0, np.pi / 2, rise, dtype=np.float32))
+    fall = min(count, round(fade_out * AUDIO_RATE))
+    if fall > 0:
+        gain[count - fall :] *= np.cos(np.linspace(0, np.pi / 2, fall, dtype=np.float32))
+    return gain
+
+
+class _AudioOut:
+    """AAC sound written alongside the frames."""
+
+    FRAME = 1024
+
+    def __init__(self, file: Any, sound: np.ndarray) -> None:
+        self._file = file
+        self._sound = sound
+        self._stream = file.add_stream("aac", rate=AUDIO_RATE)
+        self._stream.layout = "stereo"
+        self._stream.bit_rate = AUDIO_BITRATE
+        self._done = 0
+
+    def write_until(self, seconds: float) -> None:
+        stop = min(self._sound.shape[1], round(seconds * AUDIO_RATE))
+        while self._done + self.FRAME <= stop:
+            self._write(self._done + self.FRAME)
+
+    def finish(self) -> None:
+        while self._done < self._sound.shape[1]:
+            self._write(min(self._sound.shape[1], self._done + self.FRAME))
+        for packet in self._stream.encode():
+            self._file.mux(packet)
+
+    def _write(self, stop: int) -> None:
+        chunk = np.ascontiguousarray(self._sound[:, self._done : stop])
+        frame = av.AudioFrame.from_ndarray(chunk, format="fltp", layout="stereo")
+        frame.sample_rate = AUDIO_RATE
+        frame.pts = self._done
+        for packet in self._stream.encode(frame):
+            self._file.mux(packet)
+        self._done = stop
 
 
 # --- the pictures ---------------------------------------------------------------------------

@@ -201,11 +201,14 @@ def measure_loudness(path: Path) -> tuple[float, float]:
 
 
 def _drain(graph: Any, last: Any) -> Any:
+    """The last frame that carries the measurements: a short frame at the very end does not."""
     while True:
         try:
-            last = graph.pull()
+            frame = graph.pull()
         except (av.error.BlockingIOError, av.error.EOFError, BlockingIOError, EOFError):
             return last
+        if "lavfi.r128.I" in frame.metadata:
+            last = frame
 
 
 def sounding(mono: np.ndarray) -> tuple[float, float]:

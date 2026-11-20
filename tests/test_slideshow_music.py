@@ -127,6 +127,10 @@ def test_loudness_is_measured_as_ebu_r128_says(tmp_path: Path) -> None:
     loudness, peak = measure_loudness(path)
     assert loudness == pytest.approx(-23.0, abs=0.1)
     assert peak == pytest.approx(-23.0, abs=0.5)
+    # A length that ends in a short frame of the meter: still measured.
+    odd = sine[: 44100 * 19 + 1234]
+    path = write(tmp_path / "odd.wav", np.stack([odd, odd]), codec="pcm_f32le", rate=44100)
+    assert measure_loudness(path)[0] == pytest.approx(-23.0, abs=0.2)
 
 
 def test_compressed_music_is_read(tmp_path: Path) -> None:

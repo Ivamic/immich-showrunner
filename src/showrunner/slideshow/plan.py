@@ -150,6 +150,34 @@ class Shot:
 
 
 @dataclass(frozen=True)
+class AudioPart:
+    """A stretch of a piece of music under the slideshow."""
+
+    track: str
+    """The piece: its id in the music set, or the name of the user's file."""
+    source_start: float
+    """Where in the piece it begins, seconds."""
+    at: float
+    """Where in the slideshow it begins."""
+    seconds: float
+    fade_in: float
+    fade_out: float
+    gain_db: float
+    """Brings the piece to the loudness of slideshows."""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {k: (round(v, 3) if isinstance(v, float) else v) for k, v in asdict(self).items()}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> AudioPart:
+        return cls(
+            track=str(data["track"]),
+            **{k: float(data[k]) for k in ("source_start", "at", "seconds", "fade_in", "fade_out")},
+            gain_db=float(data["gain_db"]),
+        )
+
+
+@dataclass(frozen=True)
 class Clip:
     album_id: UUID
     year: int
@@ -162,6 +190,9 @@ class Clip:
     """Photos of these months not shown: junk, near copies, too many in a scene."""
     title: str
     credits: bool
+    music: tuple[AudioPart, ...] = ()
+    music_credits: tuple[str, ...] = ()
+    """Who made the music and under which licence, a line a piece."""
 
     @property
     def seconds(self) -> float:
@@ -183,6 +214,8 @@ class Clip:
             "credits": self.credits,
             "left_out": self.left_out,
             "shots": [s.to_dict() for s in self.shots],
+            "music": [m.to_dict() for m in self.music],
+            "music_credits": list(self.music_credits),
         }
 
     @classmethod
@@ -197,6 +230,8 @@ class Clip:
             left_out=int(data["left_out"]),
             title=data["title"],
             credits=bool(data["credits"]),
+            music=tuple(AudioPart.from_dict(m) for m in data.get("music", [])),
+            music_credits=tuple(data.get("music_credits", [])),
         )
 
     @property
@@ -520,6 +555,7 @@ def _around(point: tuple[float, float], width: float, height: float, region: Rec
 
 
 __all__ = [
+    "AudioPart",
     "Clip",
     "Layout",
     "PlanPhoto",
