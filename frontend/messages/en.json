@@ -245,5 +245,13 @@
 	"album_slideshow_days": "Day by day",
 	"album_slideshow_day": "Day",
 	"album_slideshow_col_photos": "Photos",
-	"album_slideshow_col_shown": "Shown"
+	"album_slideshow_col_shown": "Shown",
+	"slideshow_drawing": "Drawing “{show}: {title}”",
+	"slideshow_drawing_album": "Drawing “{title}”",
+	"slideshow_drawing_photos": "fetching the photos",
+	"slideshow_drawing_queue": "{count} more waiting in this sync",
+	"album_slideshow_download": "Download",
+	"album_slideshow_trash": "Drawn before ({count})",
+	"album_slideshow_trash_hint": "A slideshow drawn again or removed is kept here for a while, then deleted.",
+	"album_slideshow_trash_item": "{size} MB · put here {put} · deleted after {leaves}"
 }

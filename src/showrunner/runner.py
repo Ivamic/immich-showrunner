@@ -79,6 +79,14 @@ def outputs_from(settings: Settings, *, dry_run: bool) -> list[Output]:
     """The targets that have an output folder. Raises SetupError when none has."""
     roots = [m.target for m in settings.path_mappings]
     slideshows = settings.slideshow_media_path
+    days = settings.slideshow_trash_days
+    # The trash of slideshows (D-105): in the folder of slideshows; without one, in the data
+    # folder, for the first output folder only (the others hold the same copies).
+    copies_trash = (
+        settings.data_dir / "trash"
+        if settings.slideshow_dir is None and settings.data_dir is not None
+        else None
+    )
     if slideshows is not None:
         roots.append(slideshows)  # the output folders link into the folder of slideshows
     outputs: list[Output] = []
@@ -86,7 +94,7 @@ def outputs_from(settings: Settings, *, dry_run: bool) -> list[Output]:
         outputs.append(
             Output(
                 JellyfinLayout(slideshows),
-                None if dry_run else Executor(settings.jellyfin_dir, roots),
+                None if dry_run else Executor(settings.jellyfin_dir, roots, copies_trash, days),
                 notify=jellyfin_client(settings) is not None,
             )
         )
@@ -94,14 +102,27 @@ def outputs_from(settings: Settings, *, dry_run: bool) -> list[Output]:
         outputs.append(
             Output(
                 KodiLayout(settings.kodi_output_path, slideshows),
-                None if dry_run else Executor(settings.kodi_output_dir, roots),
+                None
+                if dry_run
+                else Executor(
+                    settings.kodi_output_dir,
+                    roots,
+                    copies_trash if settings.jellyfin_dir is None else None,
+                    days,
+                ),
                 notify=kodi_client(settings) is not None,
             )
         )
     if outputs and settings.slideshow_dir is not None:
         # The folder of slideshows holds files only (no links): no roots for links.
         outputs.insert(
-            0, Output(SlideshowStore(), None if dry_run else Executor(settings.slideshow_dir, []))
+            0,
+            Output(
+                SlideshowStore(),
+                None
+                if dry_run
+                else Executor(settings.slideshow_dir, [], settings.slideshow_dir / ".trash", days),
+            ),
         )
     if not outputs:
         raise SetupError(

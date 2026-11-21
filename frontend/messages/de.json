@@ -245,5 +245,13 @@
 	"album_slideshow_days": "Tag für Tag",
 	"album_slideshow_day": "Tag",
 	"album_slideshow_col_photos": "Fotos",
-	"album_slideshow_col_shown": "Gezeigt"
+	"album_slideshow_col_shown": "Gezeigt",
+	"slideshow_drawing": "Wird erstellt: „{show}: {title}“",
+	"slideshow_drawing_album": "Wird erstellt: „{title}“",
+	"slideshow_drawing_photos": "Fotos werden geladen",
+	"slideshow_drawing_queue": "{count} weitere warten in dieser Synchronisierung",
+	"album_slideshow_download": "Herunterladen",
+	"album_slideshow_trash": "Früher erstellt ({count})",
+	"album_slideshow_trash_hint": "Ein neu erstellter oder entfernter Film bleibt eine Weile hier und wird dann gelöscht.",
+	"album_slideshow_trash_item": "{size} MB · hierher verschoben am {put} · gelöscht nach dem {leaves}"
 }

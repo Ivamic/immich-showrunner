@@ -245,5 +245,13 @@
 	"album_slideshow_days": "Giorno per giorno",
 	"album_slideshow_day": "Giorno",
 	"album_slideshow_col_photos": "Foto",
-	"album_slideshow_col_shown": "Mostrate"
+	"album_slideshow_col_shown": "Mostrate",
+	"slideshow_drawing": "Creazione di «{show}: {title}»",
+	"slideshow_drawing_album": "Creazione di «{title}»",
+	"slideshow_drawing_photos": "caricamento delle foto",
+	"slideshow_drawing_queue": "altri {count} in attesa in questa sincronizzazione",
+	"album_slideshow_download": "Scarica",
+	"album_slideshow_trash": "Creati in precedenza ({count})",
+	"album_slideshow_trash_hint": "Una presentazione ricreata o rimossa resta qui per un po’, poi viene eliminata.",
+	"album_slideshow_trash_item": "{size} MB · spostato qui il {put} · eliminato dopo il {leaves}"
 }

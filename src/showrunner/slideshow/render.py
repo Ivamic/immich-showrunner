@@ -10,6 +10,7 @@ OpenCV and the encoder let go of the interpreter while they work."""
 from __future__ import annotations
 
 import contextlib
+import json
 import logging
 import math
 import os
@@ -44,6 +45,8 @@ BLUR_SIDE = 480
 """The blurred background is made from a copy this small: as good, and quick."""
 BACKGROUND_DIM = 0.55
 QUEUE_FRAMES = 8
+PROGRESS_EVERY = 30
+"""Frames between two notes of how far the drawing is (for the page)."""
 
 
 class RenderError(RuntimeError):
@@ -74,6 +77,7 @@ def render_clip(
     out: Path,
     options: RenderOptions = RenderOptions(),
     music: Mapping[str, Path] | None = None,
+    progress: Path | None = None,
 ) -> Rendered:
     """Draw `clip` into the MP4 file `out` (written under another name and renamed when it is
     done). `photos` gives the file of each photo of the clip by asset id, `music` the file of
@@ -119,6 +123,8 @@ def render_clip(
                 if audio is not None:
                     # Sound up to the time of this frame, so that the two are interleaved.
                     audio.write_until(written / options.fps)
+                if progress is not None and written % PROGRESS_EVERY == 0:
+                    _progress(progress, written, total)
             for packet in stream.encode():
                 file.mux(packet)
             if audio is not None:
@@ -136,6 +142,16 @@ def render_clip(
     return Rendered(
         frames=written, seconds=written / options.fps, elapsed=time.monotonic() - started
     )
+
+
+def _progress(path: Path, done: int, total: int) -> None:
+    """How far the drawing is, for the page: written whole, never half."""
+    partial = path.with_name(f".{path.name}.part")
+    try:
+        partial.write_text(json.dumps({"frames": done, "total": total}), encoding="utf-8")
+        os.replace(partial, path)
+    except OSError:
+        pass  # only a note for the page
 
 
 # --- the sound ------------------------------------------------------------------------------

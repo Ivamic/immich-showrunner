@@ -5,6 +5,9 @@ and refused with the reason when they are no music for slideshows."""
 
 import asyncio
 import hashlib
+import json
+import os
+import time
 from collections.abc import Iterator
 from datetime import date
 from pathlib import Path, PurePosixPath
@@ -159,6 +162,63 @@ def test_the_slideshows_of_an_album_their_state_and_a_look(
     look = client.get(f"/api/shows/{album}/slideshow/video?year=2024&part=0")
     assert look.status_code == 200 and look.content == b"the slideshow"
     assert look.headers["content-type"] == "video/mp4"
+
+
+def test_a_slideshow_is_saved_under_the_name_of_the_show(
+    client: TestClient, world: World, empty_database: str, tmp_path: Path
+) -> None:
+    album = world.album
+    plan_of(empty_database, album)
+    draw(empty_database, tmp_path / "store", album, "v1", b"the slideshow")
+    saved = client.get(f"/api/shows/{album}/slideshow/video?year=2024&part=0&download=1")
+    assert saved.status_code == 200 and saved.content == b"the slideshow"
+    assert "Family%20-%20Photos%202024.mp4" in saved.headers["content-disposition"]
+    assert saved.headers["content-disposition"].startswith("attachment")
+
+
+def test_the_slideshows_drawn_before_are_listed_and_saved_from_the_trash(
+    client: TestClient, world: World, empty_database: str, tmp_path: Path
+) -> None:
+    album = world.album
+    plan_of(empty_database, album)
+    assert client.get(f"/api/shows/{album}/slideshow/trash").json() == []
+
+    async def folder_of(registry: Registry) -> str:
+        return (await registry.shows())[album].folder_name
+
+    trash = tmp_path / "store" / ".trash" / in_db(empty_database, folder_of)
+    trash.mkdir(parents=True)
+    (trash / "Photos 2024 (until 20261101-120000).mp4").write_bytes(b"before")
+    (listed,) = client.get(f"/api/shows/{album}/slideshow/trash").json()
+    assert listed["name"] == "Photos 2024 (until 20261101-120000).mp4" and listed["size"] == 6
+    url = f"/api/shows/{album}/slideshow/trash/file"
+    got = client.get(url, params={"name": listed["name"]})
+    assert got.status_code == 200 and got.content == b"before"
+    for name in ("../x.mp4", ".hidden", "missing.mp4"):
+        assert client.get(url, params={"name": name}).status_code == 404
+
+
+def test_the_drawing_now_is_shown_with_how_far_it_is(client: TestClient, tmp_path: Path) -> None:
+    assert client.get("/api/slideshow/progress").json() is None
+    work = tmp_path / "data" / "slideshows"
+    work.mkdir(parents=True)
+    note = {
+        "album_id": None,
+        "show": "Family",
+        "title": "Photos 2024",
+        "started": "2026-11-21T10:00:00+00:00",
+        "queue": 2,
+    }
+    (work / "progress.json").write_text(json.dumps(note), encoding="utf-8")
+    fetching = client.get("/api/slideshow/progress").json()
+    assert fetching["title"] == "Photos 2024" and fetching["percent"] is None
+    assert fetching["queue"] == 2
+    (work / "frames.json").write_text(json.dumps({"frames": 450, "total": 1800}), encoding="utf-8")
+    assert client.get("/api/slideshow/progress").json()["percent"] == 25
+    old = time.time() - 3600
+    for name in ("progress.json", "frames.json"):
+        os.utime(work / name, (old, old))
+    assert client.get("/api/slideshow/progress").json() is None, "left over from a stopped pass"
 
 
 def test_a_choice_for_an_album_asks_for_a_pass(client: TestClient, world: World) -> None:

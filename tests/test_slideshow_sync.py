@@ -6,12 +6,15 @@ show of slideshows only."""
 
 import hashlib
 import os
+from collections.abc import Awaitable, Callable
 from datetime import date, datetime, timedelta
 from pathlib import Path, PurePosixPath
 from typing import Any
+from uuid import UUID
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from test_slideshow_photos import FakeSlideshow, jpeg, scene
 
 from fake_immich import FakeImmich, album_id
@@ -182,11 +185,18 @@ class FakeSpecials(SpecialsContext):
             clock=lambda: 0.0,
         )
         self.made: list[str] = []
+        self.queues: list[int] = []
+        self.while_drawing: Callable[[], Awaitable[None]] | None = None
 
     async def music(self) -> list[Track]:
         return []
 
-    async def draw(self, immich: ImmichClient, special: Special) -> tuple[Path, str]:
+    async def draw(
+        self, immich: ImmichClient, special: Special, album_id: UUID | None = None, queue: int = 0
+    ) -> tuple[Path, str]:
+        self.queues.append(queue)
+        if self.while_drawing is not None:
+            await self.while_drawing()
         if self.drawn(special.version):
             return self._drawn[special.version]
         self.made.append(f"{special.year}-{special.part}")
@@ -231,6 +241,27 @@ def specials_in(out: Path) -> dict[str, bytes]:
 
 
 @pytest.mark.anyio
+async def test_the_page_can_save_a_choice_while_a_slideshow_is_drawn(
+    session: AsyncSession, engine: AsyncEngine, tmp_path: Path
+) -> None:
+    out, data = tmp_path / "out", tmp_path / "data"
+    out.mkdir()
+    specials = FakeSpecials(data)
+    saved = []
+
+    async def save_a_choice() -> None:
+        async with engine.connect() as other:
+            await other.execute(text("SET lock_timeout = '2s'"))
+            result = await other.execute(text("UPDATE album_slideshow SET music_seed = music_seed"))
+            saved.append(result.rowcount)
+            await other.rollback()
+
+    specials.while_drawing = save_a_choice
+    assert (await one_pass(photo_album(years=(2024,)), session, out, specials)).ok
+    assert saved == [1], "the plan is kept before drawing, nothing waits for the drawing"
+
+
+@pytest.mark.anyio
 async def test_an_album_of_photos_becomes_a_show_of_slideshows(
     session: AsyncSession, tmp_path: Path
 ) -> None:
@@ -246,6 +277,7 @@ async def test_an_album_of_photos_becomes_a_show_of_slideshows(
         "20241231-235900 Photos 2024 [slideshow 2024 0].mp4",
     ]
     assert specials.made == ["2024-0", "2023-0"], "the newest year first"
+    assert specials.queues == [1, 0], "the page sees how many wait"
     assert (out / "Holidays [imm-00000001]" / "tvshow.nfo").exists()
     assert not list(data.glob("slideshows/*.mp4")), "nothing drawn is kept (D-101)"
 
@@ -417,3 +449,52 @@ def test_a_copy_gives_way_to_a_link_and_back(tmp_path: Path) -> None:
         ActionType.REPLACE, copy.path, FileKind.LINK, copy.album_id, link, entry_of(back)
     )
     assert executor.apply(stale).result is Result.FOREIGN
+
+
+# --- the trash (D-105) ------------------------------------------------------------------------
+
+
+def test_a_slideshow_drawn_again_or_removed_goes_to_the_trash(tmp_path: Path) -> None:
+    from showrunner.sync.executor import empty_trash
+
+    out, trash = tmp_path / "store", tmp_path / "store" / ".trash"
+    out.mkdir()
+    executor = Executor(out, [], trash, 90)
+    first = video_file(tmp_path, b"first slideshow")
+    executor.apply(Action(ActionType.CREATE, first.path, first.kind, first.album_id, first))
+    second = video_file(tmp_path, b"second slideshow", "v2")
+    executor.apply(
+        Action(
+            ActionType.REPLACE, first.path, FileKind.VIDEO, first.album_id, second, entry_of(first)
+        )
+    )
+    assert (out / first.path).read_bytes() == b"second slideshow"
+    (kept,) = (trash / "Trip").iterdir()
+    assert kept.read_bytes() == b"first slideshow" and kept.name.startswith("s (until ")
+    gone = Action(
+        ActionType.REMOVE, first.path, FileKind.VIDEO, first.album_id, None, entry_of(second)
+    )
+    assert executor.apply(gone).result is Result.DONE
+    assert not (out / first.path).exists()
+    assert sorted(p.read_bytes() for p in (trash / "Trip").iterdir()) == [
+        b"first slideshow",
+        b"second slideshow",
+    ]
+    # 90 days on, the trash empties itself; a younger file stays.
+    old, young = sorted((trash / "Trip").iterdir())
+    os.utime(old, (0, 0))
+    assert empty_trash(trash, 90) == 1
+    assert list((trash / "Trip").iterdir()) == [young]
+
+
+def test_without_a_trash_a_slideshow_is_removed(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    out.mkdir()
+    executor = Executor(out, [])
+    first = video_file(tmp_path, b"first slideshow")
+    executor.apply(Action(ActionType.CREATE, first.path, first.kind, first.album_id, first))
+    gone = Action(
+        ActionType.REMOVE, first.path, FileKind.VIDEO, first.album_id, None, entry_of(first)
+    )
+    executor.apply(gone)
+    assert not any(p.is_file() for p in tmp_path.rglob("*.mp4") if "out" in p.parts)

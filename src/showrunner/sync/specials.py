@@ -14,13 +14,16 @@ removed at the end of the pass: no copy is kept (D-101)."""
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
+import os
 import shutil
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
+from uuid import UUID
 
 from showrunner.artwork.jobs import choose_style
 from showrunner.artwork.worker import ArtworkWorker, music_task, render_task, render_worker
@@ -96,13 +99,43 @@ class SpecialsContext:
             self._started = self.clock()
         return self.clock() - self._started < self.budget_seconds
 
-    async def draw(self, immich: ImmichClient, special: Special) -> tuple[Path, str]:
+    @property
+    def progress_file(self) -> Path:
+        """What is being drawn now and how many wait (for the page)."""
+        return self.work / "progress.json"
+
+    @property
+    def frames_file(self) -> Path:
+        """How far the drawing is, written by the worker."""
+        return self.work / "frames.json"
+
+    def note(self, **values: object) -> None:
+        """Note what the drawing does now, for the page (written whole, never half)."""
+        self.work.mkdir(parents=True, exist_ok=True)
+        partial = self.progress_file.with_name(".progress.json.part")
+        try:
+            partial.write_text(json.dumps(values, default=str), encoding="utf-8")
+            os.replace(partial, self.progress_file)
+        except OSError:
+            pass
+
+    async def draw(
+        self, immich: ImmichClient, special: Special, album_id: UUID | None = None, queue: int = 0
+    ) -> tuple[Path, str]:
         """The slideshow drawn (once a pass for all outputs) and the SHA-256 of its file.
         Raises RenderError, or ImmichError when a photo can not be had."""
         kept = self._drawn.get(special.version)
         if kept is not None:
             return kept
         clip: Clip = special.clip
+        self.frames_file.unlink(missing_ok=True)
+        self.note(
+            album_id=album_id,
+            show=clip.title,
+            title=special.title,
+            started=datetime.now(UTC).isoformat(),
+            queue=queue,
+        )
         folder = self.work / "work" / special.version
         folder.mkdir(parents=True, exist_ok=True)
         try:
@@ -126,6 +159,7 @@ class SpecialsContext:
                 str(out),
                 {"threads": self.threads},
                 music,
+                str(self.frames_file),
             )
         finally:
             shutil.rmtree(folder, ignore_errors=True)
@@ -139,6 +173,8 @@ class SpecialsContext:
             path.unlink(missing_ok=True)
         self._drawn.clear()
         self._started = None
+        self.progress_file.unlink(missing_ok=True)
+        self.frames_file.unlink(missing_ok=True)
 
 
 async def plan_specials(

@@ -19,6 +19,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Dialog from '#lib/ui/Dialog.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
+	import SlideshowProgress from '#lib/SlideshowProgress.svelte';
 
 	let settings = $state<SlideshowSettings | null>(null);
 	let music = $state<Track[] | null>(null);
@@ -147,6 +148,7 @@
 
 <h1>{m.slideshow_heading()}</h1>
 <p class="intro">{m.slideshow_intro()}</p>
+<SlideshowProgress />
 
 {#if error}
 	<div class="st-banner st-banner--danger" role="alert">

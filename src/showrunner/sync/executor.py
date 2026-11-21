@@ -15,8 +15,10 @@ import hashlib
 import os
 import secrets
 import shutil
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
 
@@ -73,13 +75,41 @@ class UnsafePathError(Exception):
 
 
 class Executor:
-    def __init__(self, output_dir: Path, link_roots: Sequence[PurePosixPath]) -> None:
+    def __init__(
+        self,
+        output_dir: Path,
+        link_roots: Sequence[PurePosixPath],
+        trash: Path | None = None,
+        trash_days: int = 90,
+    ) -> None:
         """`output_dir` must exist. `link_roots` are the folders links may point into: the targets
-        of the path mappings."""
+        of the path mappings. With `trash`, a slideshow the app replaces or removes is moved
+        there (D-105) instead of being lost."""
         if not output_dir.is_dir():
             raise UnsafePathError(f"the output folder {str(output_dir)!r} does not exist")
         self._root = output_dir.resolve(strict=True)
         self._link_roots = tuple(link_roots)
+        self.trash = trash
+        self.trash_days = trash_days
+
+    def _to_trash(self, path: Path, relative: PurePosixPath) -> None:
+        """Move a slideshow the app wrote into the trash, under its folder and name with the time
+        it was put there; the same file put there twice is kept once."""
+        assert self.trash is not None
+        stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+        folder = self.trash / (relative.parts[0] if len(relative.parts) > 1 else "")
+        folder.mkdir(parents=True, exist_ok=True)
+        name = f"{path.stem} (until {stamp})"
+        target = folder / f"{name}{path.suffix}"
+        number = 1
+        while target.exists():
+            if _hash(target) == _hash(path):
+                path.unlink()  # this very file is in the trash already
+                return
+            number += 1
+            target = folder / f"{name} {number}{path.suffix}"
+        shutil.move(str(path), target)
+        os.utime(target)  # the days in the trash count from now
 
     def has_marker(self) -> bool:
         path = self._root / MARKER_NAME
@@ -191,6 +221,8 @@ class Executor:
             written_by_app = action.entry is not None and action.entry.content_hash == current
             if not written_by_app:
                 return Result.FOREIGN, "the file was changed or created by somebody else"
+            if self.trash is not None and action.kind is FileKind.VIDEO:
+                self._to_trash(path, action.path)
         path.parent.mkdir(parents=True, exist_ok=True)
         temp = path.with_name(TEMP_PREFIX + secrets.token_hex(6))
         try:
@@ -224,7 +256,10 @@ class Executor:
             return Result.GONE, ""
         if _hash(path) != action.entry.content_hash:
             return Result.FOREIGN, "the file was changed by somebody else"
-        path.unlink()
+        if self.trash is not None and action.kind is FileKind.VIDEO:
+            self._to_trash(path, action.path)
+        else:
+            path.unlink()
         self._prune(path.parent)
         return Result.DONE, ""
 
@@ -239,6 +274,25 @@ class Executor:
             except OSError:
                 return
             folder = folder.parent
+
+
+def empty_trash(trash: Path, days: int, now: float | None = None) -> int:
+    """Remove from the trash the slideshows put there more than `days` ago (by the time of the
+    file); the number removed. Nothing outside the trash is touched."""
+    if not trash.is_dir():
+        return 0
+    limit = (time.time() if now is None else now) - days * 86400
+    removed = 0
+    for path in trash.rglob("*"):
+        if path.is_symlink() or not path.is_file():
+            continue
+        if path.stat().st_mtime < limit:
+            path.unlink()
+            removed += 1
+    for folder in sorted((p for p in trash.rglob("*") if p.is_dir()), reverse=True):
+        if not any(folder.iterdir()):
+            folder.rmdir()
+    return removed
 
 
 def _hash(path: Path) -> str:

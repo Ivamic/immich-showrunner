@@ -245,5 +245,13 @@
 	"album_slideshow_days": "По дням",
 	"album_slideshow_day": "День",
 	"album_slideshow_col_photos": "Фото",
-	"album_slideshow_col_shown": "Показано"
+	"album_slideshow_col_shown": "Показано",
+	"slideshow_drawing": "Создаётся «{show}: {title}»",
+	"slideshow_drawing_album": "Создаётся «{title}»",
+	"slideshow_drawing_photos": "загружаются фото",
+	"slideshow_drawing_queue": "ещё в очереди этой синхронизации: {count}",
+	"album_slideshow_download": "Загрузить",
+	"album_slideshow_trash": "Прежние версии ({count})",
+	"album_slideshow_trash_hint": "Перерисованный или удалённый ролик хранится здесь какое-то время, потом удаляется.",
+	"album_slideshow_trash_item": "{size} МБ · сюда {put} · удалится после {leaves}"
 }

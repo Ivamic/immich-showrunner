@@ -104,6 +104,8 @@ class Settings(BaseSettings):
     # The credits at the end of a slideshow (the music and the line of the app). Off: none; the
     # music is still named in the description of the episode (D-088).
     slideshow_credits: bool = True
+    # Days a slideshow drawn again or removed stays in the trash (D-105).
+    slideshow_trash_days: int = Field(default=90, ge=1)
     # The folder of the slideshows the app draws, by album (D-102); the output folders get links
     # to them. Without it every output folder gets a copy of each slideshow.
     slideshow_dir: Path | None = None

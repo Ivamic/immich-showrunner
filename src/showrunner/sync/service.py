@@ -21,7 +21,14 @@ from showrunner.model.naming import show_folder_name
 from showrunner.model.show import Options, SeasonMode, Show, Skipped, build_show
 from showrunner.store.registry import Registry
 from showrunner.sync.artwork import ArtworkContext, ArtworkError, ArtworkPlan, plan_artwork
-from showrunner.sync.executor import MARKER_NAME, Executor, Outcome, Result, UnsafePathError
+from showrunner.sync.executor import (
+    MARKER_NAME,
+    Executor,
+    Outcome,
+    Result,
+    UnsafePathError,
+    empty_trash,
+)
 from showrunner.sync.plan import Action, ActionType, Plan, make_plan
 from showrunner.sync.slideshow import PhotoReport, SlideshowContext, look_at_photos
 from showrunner.sync.specials import RenderError, SpecialsContext, plan_specials
@@ -339,6 +346,11 @@ async def sync_outputs(
             )
     if slideshow is not None and specials is not None and writes:
         view.shows = await plan_specials(view.shows, view.photos, registry, specials)
+    if writes:
+        # What was read and planned is kept before anything is drawn: drawing takes long, and
+        # rows held until the end would keep the page waiting when it saves a choice. The
+        # albums are stamped only at the end, so a pass that stops is read again.
+        await registry.commit()
     pictures: dict[ImageSource, bytes] = {}
     # The folder of slideshows first: the output folders link only to slideshows that are there,
     # and a slideshow replaced there makes its show changed for the media servers (D-102).
@@ -364,6 +376,12 @@ async def sync_outputs(
             renewed |= report.renewed_albums
     if specials is not None:
         specials.clean()
+    for output in outputs:
+        executor = output.executor
+        if executor is not None and executor.trash is not None:
+            emptied = empty_trash(executor.trash, executor.trash_days)
+            if emptied:
+                log.info("slideshows: %d old ones left the trash", emptied)
     if writes:
         await finish_pass(view, registry, reports)
     return reports
@@ -472,14 +490,20 @@ async def _with_videos(
         return actions
     drawn: dict[PurePosixPath, Action] = {}
     left: set[PurePosixPath] = set()
-    for action in sorted(wanted, key=lambda a: -_year_of(a)):
+    ordered = sorted(wanted, key=lambda a: -_year_of(a))
+    for position, action in enumerate(ordered):
         assert action.desired is not None and action.desired.video is not None
         special = action.desired.video.special
         if specials is None or not (specials.drawn(special.version) or specials.budget_left()):
             left.add(action.path)
             continue
         try:
-            path, digest = await specials.draw(immich, special)
+            path, digest = await specials.draw(
+                immich,
+                special,
+                action.desired.video.album_id,
+                queue=len(ordered) - position - 1,
+            )
         except (RenderError, ImmichError, OSError) as exc:
             report.slideshows_failed.append(f"{action.path}: {exc}")
             log.warning("slideshow %s not drawn: %s", action.path, exc)

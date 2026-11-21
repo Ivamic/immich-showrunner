@@ -316,8 +316,36 @@ export const putAlbumSlideshow = (
 	show: string,
 	change: { enabled?: boolean | null; mood?: Mood | null; other_music?: boolean }
 ) => request<AlbumSlideshow>('PUT', `/shows/${show}/slideshow`, change);
-export const slideshowVideoUrl = (show: string, s: Slideshow) =>
-	`/api/shows/${show}/slideshow/video?year=${s.year}&part=${s.part}`;
+export const slideshowVideoUrl = (show: string, s: Slideshow, download = false) =>
+	`/api/shows/${show}/slideshow/video?year=${s.year}&part=${s.part}${download ? '&download=1' : ''}`;
+
+/** A slideshow drawn before, kept in the trash for a while (D-105). */
+export interface TrashedSlideshow {
+	name: string;
+	size: number;
+	put_at: string;
+	leaves_at: string;
+}
+
+export const getSlideshowTrash = (show: string) =>
+	request<TrashedSlideshow[]>('GET', `/shows/${show}/slideshow/trash`);
+export const trashedSlideshowUrl = (show: string, t: TrashedSlideshow) =>
+	`/api/shows/${show}/slideshow/trash/file?name=${encodeURIComponent(t.name)}`;
+
+/** The slideshow being drawn now. */
+export interface SlideshowProgress {
+	album_id: string | null;
+	show: string;
+	title: string;
+	started: string;
+	/** Slideshows waiting after this one in the pass. */
+	queue: number;
+	/** Null while the photos are fetched. */
+	percent: number | null;
+}
+
+export const getSlideshowProgress = () =>
+	request<SlideshowProgress | null>('GET', '/slideshow/progress');
 
 export interface Track {
 	id: string;

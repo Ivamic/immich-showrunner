@@ -3,6 +3,7 @@
 length, the title first, each photo in its place, black in the middle of a fade, a standing
 photo over its blurred copy, and nothing left behind when a photo is missing."""
 
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -83,10 +84,13 @@ def test_a_slideshow_is_drawn_frame_by_frame(
 ) -> None:
     clip, files = album
     out = tmp_path / "show.mp4"
-    done = render_clip(clip, files, STYLE, out, OPTIONS)
+    progress = tmp_path / "frames.json"
+    done = render_clip(clip, files, STYLE, out, OPTIONS, progress=progress)
     assert out.exists() and not list(tmp_path.glob(".*.part"))
     frames = frames_of(out)
     assert len(frames) == done.frames == round(clip.seconds * OPTIONS.fps)
+    noted = json.loads(progress.read_text(encoding="utf-8"))
+    assert noted["total"] == done.frames and 0 < noted["frames"] <= done.frames, "for the page"
     assert frames[0].shape == (180, 320, 3)
 
     title = at(frames, 1.0)

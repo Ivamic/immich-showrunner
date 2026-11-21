@@ -6,8 +6,11 @@ A change is saved and the full pass it asks for plans and draws the slideshows, 
 other edit. Only files the app wrote are ever served: a slideshow it drew, a piece of music in
 its data folder."""
 
+import json
 import os
+import re
 import secrets
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
@@ -210,9 +213,16 @@ async def choose(
 
 @router.get("/shows/{album_id}/slideshow/video")
 async def video(
-    album_id: UUID, year: int, part: int, user: CurrentUser, db: DbDep, settings: SettingsDep
+    album_id: UUID,
+    year: int,
+    part: int,
+    user: CurrentUser,
+    db: DbDep,
+    settings: SettingsDep,
+    download: bool = False,
 ) -> FileResponse:
-    """A slideshow the app drew for the album; nothing else is served."""
+    """A slideshow the app drew for the album, to watch or (`download`) to save under the name
+    of the show and the slideshow; nothing else is served."""
     row = _row_of(await _video_rows(db, album_id), year, part)
     folders = {
         SLIDESHOWS: settings.slideshow_dir,
@@ -225,7 +235,133 @@ async def video(
     file = (folder / row.path).resolve()
     if not file.is_relative_to(folder.resolve()) or not file.is_file():
         raise ApiError(404, "slideshow_not_found")
-    return FileResponse(file, media_type="video/mp4")
+    if not download:
+        return FileResponse(file, media_type="video/mp4")
+    show = (await Registry(db).shows()).get(album_id)
+    choice = (await Registry(db).album_slideshows()).get(album_id)
+    planned = next(
+        (
+            p
+            for p in (choice.planned if choice is not None else [])
+            if (p["year"], p["part"]) == (year, part)
+        ),
+        None,
+    )
+    title = planned["title"] if planned else f"Photos {year}"
+    # The title given on the page, or the name of the folder without its id.
+    show_title = (
+        (show.title or re.sub(r"\s*\[imm-[0-9a-f]+\]$", "", show.folder_name))
+        if show is not None
+        else ""
+    )
+    name = safe_name(f"{show_title} - {title}.mp4" if show_title else f"{title}.mp4")
+    return FileResponse(file, media_type="video/mp4", filename=name)
+
+
+class ProgressOut(BaseModel):
+    """The slideshow being drawn now."""
+
+    album_id: UUID | None
+    show: str
+    title: str
+    started: datetime
+    queue: int
+    """Slideshows waiting after this one in the pass."""
+    percent: int | None
+    """None while the photos are fetched."""
+
+
+STALE_SECONDS = 600
+"""A note older than this is left over from a pass that stopped."""
+
+
+def _read_json(path: Path) -> dict[str, Any] | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+@router.get("/slideshow/progress")
+async def progress(user: CurrentUser, settings: SettingsDep) -> ProgressOut | None:
+    """What is being drawn now and how far, or null when nothing is."""
+    if settings.data_dir is None:
+        return None
+    work = settings.data_dir / "slideshows"
+    note = _read_json(work / "progress.json")
+    if note is None:
+        return None
+    frames_file = work / "frames.json"
+    times = [p.stat().st_mtime for p in (work / "progress.json", frames_file) if p.exists()]
+    if not times or datetime.now(UTC).timestamp() - max(times) > STALE_SECONDS:
+        return None
+    frames = _read_json(frames_file) or {}
+    total = frames.get("total") or 0
+    percent = min(100, int(100 * frames.get("frames", 0) / total)) if total else None
+    try:
+        return ProgressOut(**note, percent=percent)
+    except ValueError:
+        return None
+
+
+class TrashOut(BaseModel):
+    name: str
+    size: int
+    put_at: datetime
+    """When it was put in the trash."""
+    leaves_at: datetime
+    """When the trash lets it go."""
+
+
+def _trash_of(settings: Settings, folder: str) -> Path | None:
+    """The folder of an album in the trash of slideshows (D-105)."""
+    if settings.slideshow_dir is not None:
+        return settings.slideshow_dir / ".trash" / folder
+    if settings.data_dir is not None:
+        return settings.data_dir / "trash" / folder
+    return None
+
+
+async def _show_folder(db: DbDep, album_id: UUID) -> str:
+    show = (await Registry(db).shows()).get(album_id)
+    if show is None:
+        raise ApiError(404, "show_not_found")
+    return show.folder_name
+
+
+@router.get("/shows/{album_id}/slideshow/trash")
+async def trash(
+    album_id: UUID, user: CurrentUser, db: DbDep, settings: SettingsDep
+) -> list[TrashOut]:
+    """The slideshows of the album drawn before, kept in the trash for a while."""
+    folder = _trash_of(settings, await _show_folder(db, album_id))
+    if folder is None or not folder.is_dir():
+        return []
+    days = timedelta(days=settings.slideshow_trash_days)
+    result = []
+    for path in sorted(folder.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+        if path.is_symlink() or not path.is_file():
+            continue
+        put = datetime.fromtimestamp(path.stat().st_mtime, UTC)
+        result.append(
+            TrashOut(name=path.name, size=path.stat().st_size, put_at=put, leaves_at=put + days)
+        )
+    return result
+
+
+@router.get("/shows/{album_id}/slideshow/trash/file")
+async def trash_file(
+    album_id: UUID, name: str, user: CurrentUser, db: DbDep, settings: SettingsDep
+) -> FileResponse:
+    """A slideshow from the trash of the album, to save."""
+    folder = _trash_of(settings, await _show_folder(db, album_id))
+    if folder is None or "/" in name or "\\" in name or name.startswith("."):
+        raise ApiError(404, "slideshow_not_found")
+    file = (folder / name).resolve()
+    if not file.is_relative_to(folder.resolve()) or not file.is_file():
+        raise ApiError(404, "slideshow_not_found")
+    return FileResponse(file, media_type="video/mp4", filename=name)
 
 
 # --- music ------------------------------------------------------------------------------------

@@ -1,18 +1,23 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- The slideshows of a show (D-103): on or off for this album, the mood of the music, other
-     music, and the slideshows of its years with their state and a look at each one drawn. -->
+     music, and the slideshows of its years with their state, a look at each one drawn and its
+     file to save; the one being drawn now, and the ones drawn before, kept in the trash (D-105). -->
 <script lang="ts">
 	import {
 		MOODS,
 		getAlbumSlideshow,
 		getSlideshowSettings,
+		getSlideshowTrash,
 		putAlbumSlideshow,
 		slideshowVideoUrl,
+		trashedSlideshowUrl,
 		type AlbumSlideshow,
 		type Mood,
 		type Slideshow,
-		type SlideshowSettings
+		type SlideshowSettings,
+		type TrashedSlideshow
 	} from '#lib/api.js';
+	import SlideshowProgress from '#lib/SlideshowProgress.svelte';
 	import { errorMessage } from '#lib/errors.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import Dialog from '#lib/ui/Dialog.svelte';
@@ -30,10 +35,15 @@
 	let saved = $state(false);
 	let busy = $state(false);
 	let watching = $state<Slideshow | null>(null);
+	let trashed = $state<TrashedSlideshow[]>([]);
 
 	async function load() {
 		try {
-			[album, settings] = await Promise.all([getAlbumSlideshow(show), getSlideshowSettings()]);
+			[album, settings, trashed] = await Promise.all([
+				getAlbumSlideshow(show),
+				getSlideshowSettings(),
+				getSlideshowTrash(show).catch(() => [])
+			]);
 			error = null;
 		} catch (e) {
 			error = errorMessage(e);
@@ -80,6 +90,8 @@
 	const duration = (seconds: number) =>
 		`${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, '0')}`;
 	const on = $derived(album?.enabled !== false);
+	const megabytes = (bytes: number) => (bytes / 1e6).toFixed(1);
+	const day = (iso: string) => new Date(iso).toLocaleDateString();
 
 	/** "left out: near copies 840, over the limit of a scene 346, …; 20 photos not looked at yet" */
 	function reasons(s: Slideshow): string {
@@ -113,6 +125,7 @@
 			<Icon name="circle-check" /><span class="st-banner__body">{m.album_slideshow_saved()}</span>
 		</div>
 	{/if}
+	<SlideshowProgress {show} onchange={load} />
 	{#if settings && !settings.enabled}
 		<p class="hint">{m.album_slideshow_off_global()}</p>
 	{/if}
@@ -230,11 +243,53 @@
 								>
 									{m.album_slideshow_watch()}
 								</button>
+								<!-- eslint-disable svelte/no-navigation-without-resolve -- a file of the API, not a page -->
+								<a
+									class="st-btn st-btn--sm st-btn--secondary"
+									href={slideshowVideoUrl(show, slideshow, true)}
+									download
+								>
+									<Icon name="download" size={16} />
+									{m.album_slideshow_download()}
+								</a>
+								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							{/if}
 						</li>
 					{/each}
 				</ul>
 			{/if}
+		{/if}
+		{#if trashed.length}
+			<details class="trash">
+				<summary>{m.album_slideshow_trash({ count: String(trashed.length) })}</summary>
+				<p class="hint">{m.album_slideshow_trash_hint()}</p>
+				<ul>
+					{#each trashed as item (item.name)}
+						<li>
+							<div class="about">
+								<div>{item.name}</div>
+								<div class="meta">
+									{m.album_slideshow_trash_item({
+										size: megabytes(item.size),
+										put: day(item.put_at),
+										leaves: day(item.leaves_at)
+									})}
+								</div>
+							</div>
+							<!-- eslint-disable svelte/no-navigation-without-resolve -- a file of the API, not a page -->
+							<a
+								class="st-btn st-btn--sm st-btn--secondary"
+								href={trashedSlideshowUrl(show, item)}
+								download
+							>
+								<Icon name="download" size={16} />
+								{m.album_slideshow_download()}
+							</a>
+							<!-- eslint-enable svelte/no-navigation-without-resolve -->
+						</li>
+					{/each}
+				</ul>
+			</details>
 		{/if}
 	{/if}
 </section>
@@ -291,6 +346,13 @@
 	.meta {
 		color: var(--color-text-muted);
 		font-size: var(--text-sm);
+	}
+	a.st-btn {
+		text-decoration: none;
+	}
+	.trash {
+		margin-top: var(--space-4);
+		max-width: 60rem;
 	}
 	details {
 		margin-top: var(--space-1);
