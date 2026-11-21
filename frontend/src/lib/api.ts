@@ -319,6 +319,28 @@ export const putAlbumSlideshow = (
 export const slideshowVideoUrl = (show: string, s: Slideshow, download = false) =>
 	`/api/shows/${show}/slideshow/video?year=${s.year}&part=${s.part}${download ? '&download=1' : ''}`;
 
+/** What became of a photo in the plan of a slideshow. */
+export interface TracedPhoto {
+	id: string;
+	taken: string;
+	scene: number;
+	/** The photo its group of near copies gave way to; null when it is in none. */
+	group: string | null;
+	fate: 'shown' | 'series' | 'scene' | 'junk' | 'poor' | 'other';
+	score: number;
+}
+
+export interface SlideshowPlan {
+	year: number;
+	part: number;
+	title: string;
+	photos: TracedPhoto[];
+}
+
+export const getSlideshowPlan = (show: string, year: number, part: number) =>
+	request<SlideshowPlan>('GET', `/shows/${show}/slideshow/plan?year=${year}&part=${part}`);
+export const previewUrl = (assetId: string) => `/api/thumbnails/${assetId}?size=preview`;
+
 /** A slideshow drawn before, kept in the trash for a while (D-105). */
 export interface TrashedSlideshow {
 	name: string;

@@ -5,6 +5,7 @@ the drawn file written by the executor like any file of the app; an album of pho
 show of slideshows only."""
 
 import hashlib
+import json
 import os
 from collections.abc import Awaitable, Callable
 from dataclasses import replace
@@ -29,7 +30,7 @@ from showrunner.store.registry import Registry
 from showrunner.sync.executor import Executor, Result
 from showrunner.sync.plan import Action, ActionType, Entry
 from showrunner.sync.service import Output, sync_outputs
-from showrunner.sync.specials import SpecialsContext, specials_of
+from showrunner.sync.specials import SpecialsContext, plan_file, specials_of
 from showrunner.targets.base import DesiredFile, FileKind, VideoSource
 from showrunner.targets.jellyfin.layout import JellyfinLayout
 from showrunner.targets.kodi.layout import KodiLayout
@@ -321,6 +322,9 @@ async def test_an_album_of_photos_becomes_a_show_of_slideshows(
     ]
     assert specials.made == ["2024-0", "2023-0"], "the newest year first"
     assert specials.queues == [1, 0], "the page sees how many wait"
+    kept = json.loads(plan_file(data, album_id(1)).read_text(encoding="utf-8"))
+    assert [(s["year"], s["part"]) for s in kept["slideshows"]] == [(2023, 0), (2024, 0)]
+    assert {p["fate"] for s in kept["slideshows"] for p in s["photos"]} == {"shown"}
     assert (out / "Holidays [imm-00000001]" / "tvshow.nfo").exists()
     assert not list(data.glob("slideshows/*.mp4")), "nothing drawn is kept (D-101)"
 

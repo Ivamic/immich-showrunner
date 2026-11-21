@@ -392,6 +392,15 @@ def test_the_report_says_why_each_photo_was_left_out_day_by_day() -> None:
     assert second == {"date": "2024-07-02", "photos": 6, "shown": 6}
     assert "report" not in clip.to_dict(), "not part of the cut list: nothing is drawn again"
 
+    trace = {item["id"]: item for item in clip.trace}
+    assert len(trace) == len(photos), "every photo of its time"
+    assert trace[str(asset_id(1))]["fate"] == "shown"
+    assert trace[str(asset_id(2))]["fate"] == "series"
+    assert trace[str(asset_id(2))]["group"] == trace[str(asset_id(1))]["group"] == str(asset_id(1))
+    assert trace[str(asset_id(3))]["fate"] == "junk" and trace[str(asset_id(3))]["group"] is None
+    assert trace[str(asset_id(40))]["scene"] > trace[str(asset_id(1))]["scene"], "another day"
+    assert "trace" not in clip.to_dict()
+
 
 def test_a_walk_of_photos_each_like_the_one_before_is_not_one_series() -> None:
     from showrunner.slideshow.plan import series

@@ -23,6 +23,7 @@
 	import Dialog from '#lib/ui/Dialog.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
 	import StatusBadge from '#lib/ui/StatusBadge.svelte';
+	import { resolve } from '$app/paths';
 
 	let { show }: { show: string } = $props();
 
@@ -228,6 +229,16 @@
 									</div>
 								{/if}
 							</div>
+							<a
+								class="st-btn st-btn--sm st-btn--secondary"
+								href={resolve('/albums/[id]/slideshow/[year]/[part]', {
+									id: show,
+									year: String(slideshow.year),
+									part: String(slideshow.part)
+								})}
+							>
+								{m.slideshow_plan_details()}
+							</a>
 							{#if slideshow.state === 'drawn'}
 								<StatusBadge tone="success" dot>{m.album_slideshow_state_drawn()}</StatusBadge>
 							{:else if slideshow.state === 'older'}

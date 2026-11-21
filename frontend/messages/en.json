@@ -253,5 +253,16 @@
 	"album_slideshow_download": "Download",
 	"album_slideshow_trash": "Drawn before ({count})",
 	"album_slideshow_trash_hint": "A slideshow drawn again or removed is kept here for a while, then deleted.",
-	"album_slideshow_trash_item": "{size} MB · put here {put} · deleted after {leaves}"
+	"album_slideshow_trash_item": "{size} MB · put here {put} · deleted after {leaves}",
+	"slideshow_plan_details": "How it was chosen",
+	"slideshow_plan_back": "Back to the album",
+	"slideshow_plan_intro": "How the photos were chosen, day by day and scene by scene. Framed: shown. Beside a framed photo on the same grey: its near copies. Faded: over the share of the day. Click a photo to see it larger.",
+	"slideshow_plan_redrawing": "The slideshow is still being drawn again: this is the plan it will be drawn by.",
+	"slideshow_plan_none": "No plan yet: it comes with the next sync.",
+	"slideshow_plan_day": "shown {shown} of {photos}",
+	"slideshow_plan_shown": "shown",
+	"slideshow_plan_copy": "copy",
+	"slideshow_plan_over": "over the share",
+	"slideshow_plan_apart": "Screenshots, documents and poor photos ({count})",
+	"slideshow_plan_score": "score {score}"
 }

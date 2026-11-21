@@ -33,6 +33,9 @@ between releases.
   and its slideshows with their state, to watch on the page or download under the name of the show.
   Why photos were left out (near copies, over the share of a day, screenshots and documents, poor
   quality), in all and day by day. The cards of the albums count their slideshows.
+- **How a slideshow was chosen**, on a page of its own: every photo of its time, day by day and
+  scene by scene: those shown, each group of near copies beside the photo it gave way to, those
+  over the share of the day, and apart the screenshots and documents.
 - **The slideshow being drawn** is shown on the page: which one, how far, and how many wait.
 - **A trash for slideshows**: a slideshow drawn again or removed is kept for
   `SHOWRUNNER_SLIDESHOW_TRASH_DAYS` (90) days in `.trash` in the folder of slideshows (in the data

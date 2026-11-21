@@ -198,6 +198,40 @@ def test_the_slideshows_drawn_before_are_listed_and_saved_from_the_trash(
         assert client.get(url, params={"name": name}).status_code == 404
 
 
+def test_what_became_of_each_photo_is_shown_for_a_slideshow(
+    client: TestClient, world: World, tmp_path: Path
+) -> None:
+    album = world.album
+    url = f"/api/shows/{album}/slideshow/plan?year=2024&part=0"
+    assert client.get(url).status_code == 404
+    photos = [
+        {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "taken": "2024-07-01T09:00:00",
+            "scene": 0,
+            "group": "00000000-0000-0000-0000-000000000001",
+            "fate": "shown",
+            "score": 0.8,
+        },
+        {
+            "id": "00000000-0000-0000-0000-000000000002",
+            "taken": "2024-07-01T09:00:05",
+            "scene": 0,
+            "group": "00000000-0000-0000-0000-000000000001",
+            "fate": "series",
+            "score": 0.6,
+        },
+    ]
+    kept = {"slideshows": [{"year": 2024, "part": 0, "title": "Photos 2024", "photos": photos}]}
+    path = tmp_path / "data" / "slideshow-plans" / f"{album}.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(kept), encoding="utf-8")
+    got = client.get(url).json()
+    assert got["title"] == "Photos 2024"
+    assert [p["fate"] for p in got["photos"]] == ["shown", "series"]
+    assert client.get(f"/api/shows/{album}/slideshow/plan?year=2023&part=0").status_code == 404
+
+
 def test_the_drawing_now_is_shown_with_how_far_it_is(client: TestClient, tmp_path: Path) -> None:
     assert client.get("/api/slideshow/progress").json() is None
     work = tmp_path / "data" / "slideshows"

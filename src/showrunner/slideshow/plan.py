@@ -210,6 +210,8 @@ class Clip:
     """Who made the music and under which licence, a line a piece."""
     report: dict[str, Any] = field(default_factory=dict, compare=False, repr=False)
     """Why photos were left out (`_report`): for the page only, not in the cut list."""
+    trace: list[dict[str, Any]] = field(default_factory=list, compare=False, repr=False)
+    """What became of each photo of its time (`_trace`): for the page only, not in the cut list."""
 
     @property
     def seconds(self) -> float:
@@ -291,12 +293,13 @@ def plan_album(
         by_year.setdefault(WHOLE_ALBUM if whole else photo.taken.year, []).append(photo)
     for year, every in sorted(by_year.items()):
         fates: dict[UUID, str] = {}
+        groups: dict[UUID, UUID] = {}
         cut: list[list[PlanPhoto]] = []
         kept_days: list[list[list[PlanPhoto]]] = []
         for one_day in _days(every):
             day_scenes = scenes(one_day)
             cut += day_scenes
-            kept = [_keep(scene, fates) for scene in day_scenes]
+            kept = [_keep(scene, fates, groups) for scene in day_scenes]
             kept_days.append([scene for scene in kept if scene])
         shares = _shares([sum(len(s) for s in d) for d in kept_days])
         chosen_days = [_pick(d, share, fates) for d, share in zip(kept_days, shares, strict=True)]
@@ -331,6 +334,7 @@ def plan_album(
                     title=title,
                     credits=credits,
                     report=_report(span, shown, fates, sum(1 for s in cut if s[0] in span)),
+                    trace=_trace(span, shown, fates, groups, cut),
                 )
             )
     return clips
@@ -355,6 +359,29 @@ def _report(
         "scenes": scene_count,
         "days": [{"date": d, **counts} for d, counts in sorted(days.items())],
     }
+
+
+def _trace(
+    span: Sequence[PlanPhoto],
+    shown: set[UUID],
+    fates: dict[UUID, str],
+    groups: dict[UUID, UUID],
+    cut: Sequence[Sequence[PlanPhoto]],
+) -> list[dict[str, Any]]:
+    """Each photo of a slideshow's time, in the order of taking: when it was taken, its scene,
+    the photo of its group of near copies, what became of it and its score (for the page)."""
+    scene_of = {p.asset_id: index for index, scene in enumerate(cut) for p in scene}
+    return [
+        {
+            "id": str(p.asset_id),
+            "taken": p.taken.isoformat(timespec="seconds"),
+            "scene": scene_of.get(p.asset_id, 0),
+            "group": str(groups[p.asset_id]) if p.asset_id in groups else None,
+            "fate": "shown" if p.asset_id in shown else fates.get(p.asset_id, "other"),
+            "score": round(p.look.score, 3),
+        }
+        for p in span
+    ]
 
 
 def scenes(photos: Sequence[PlanPhoto]) -> list[list[PlanPhoto]]:
@@ -443,11 +470,17 @@ def _pick(
     return result
 
 
-def _keep(scene: Sequence[PlanPhoto], fates: dict[UUID, str] | None = None) -> list[PlanPhoto]:
+def _keep(
+    scene: Sequence[PlanPhoto],
+    fates: dict[UUID, str] | None = None,
+    groups: dict[UUID, UUID] | None = None,
+) -> list[PlanPhoto]:
     """The photos of a scene that may go into the slideshow, in the order of taking: without
     junk, near copies and (when there are better ones) poor photos. `fates` learns why each
-    photo left out was left out: "junk", "series" or "poor"."""
+    photo left out was left out: "junk", "series" or "poor"; `groups`, the photo each near copy
+    gave way to (and that photo itself)."""
     fate = fates if fates is not None else {}
+    group = groups if groups is not None else {}
     kept = []
     for p in scene:
         if p.embedding is not None and is_junk(p.embedding):
@@ -458,6 +491,8 @@ def _keep(scene: Sequence[PlanPhoto], fates: dict[UUID, str] | None = None) -> l
     kept = [max(run, key=_score) for run in runs]
     for run, kept_one in zip(runs, kept, strict=True):
         for p in run:
+            if len(run) > 1:
+                group[p.asset_id] = kept_one.asset_id
             if p is not kept_one:
                 fate[p.asset_id] = "series"
     good = [p for p in kept if p.look.score >= POOR]

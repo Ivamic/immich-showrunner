@@ -206,6 +206,7 @@ async def plan_specials(
         if choice is not None and choice.enabled is False:
             # Switched off for this album on the page: its slideshows go.
             await registry.save_album_slideshow(show.album_id, planned=[])
+            plan_file(context.data_dir, show.album_id).unlink(missing_ok=True)
             result.append((show, folder))
             continue
         inputs = plan_inputs(assets, rows)
@@ -240,8 +241,38 @@ async def plan_specials(
             auto_mood=auto,
             planned=[summary(s, waiting.get(s.year, 0)) for s in specials],
         )
+        keep_plan(context.data_dir, show.album_id, specials)
         result.append((replace(show, specials=specials), folder))
     return result
+
+
+def plan_file(data_dir: Path, album_id: UUID) -> Path:
+    """What became of each photo of the album's slideshows, for the page (D-106)."""
+    return data_dir / "slideshow-plans" / f"{album_id}.json"
+
+
+def keep_plan(data_dir: Path, album_id: UUID, specials: Sequence[Special]) -> None:
+    """Write what became of each photo, when it changed (written whole, never half)."""
+    path = plan_file(data_dir, album_id)
+    text = json.dumps(
+        {
+            "slideshows": [
+                {"year": s.year, "part": s.part, "title": s.title, "photos": s.clip.trace}
+                for s in specials
+            ]
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    try:
+        if path.is_file() and path.read_text(encoding="utf-8") == text:
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        partial = path.with_name(f".{path.name}.part")
+        partial.write_text(text, encoding="utf-8")
+        os.replace(partial, path)
+    except OSError as exc:
+        log.warning("slideshows: the plan of album %s could not be kept: %s", album_id, exc)
 
 
 def music_in_turn(clips: Sequence[Clip], pieces: Sequence[Track]) -> list[Clip]:

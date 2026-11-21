@@ -44,6 +44,7 @@ from showrunner.slideshow.library import (
 from showrunner.slideshow.music import MAX_BYTES, MusicAnalysis, MusicError
 from showrunner.store.models import FileRow
 from showrunner.store.registry import Registry
+from showrunner.sync.specials import plan_file
 from showrunner.targets.base import JELLYFIN, KODI, SLIDESHOWS, FileKind
 
 router = APIRouter()
@@ -185,6 +186,42 @@ async def album_slideshow(
         auto_mood=choice.auto_mood if choice is not None else None,
         slideshows=slideshows,
     )
+
+
+class TracedPhoto(BaseModel):
+    """What became of a photo in the plan of a slideshow."""
+
+    id: UUID
+    taken: datetime
+    scene: int
+    group: UUID | None
+    """The photo its group of near copies gave way to; null when it is in none."""
+    fate: Literal["shown", "series", "scene", "junk", "poor", "other"]
+    score: float
+
+
+class SlideshowPlanOut(BaseModel):
+    year: int
+    part: int
+    title: str
+    photos: list[TracedPhoto]
+
+
+@router.get("/shows/{album_id}/slideshow/plan")
+async def slideshow_plan(
+    album_id: UUID, year: int, part: int, user: CurrentUser, settings: SettingsDep
+) -> SlideshowPlanOut:
+    """What became of each photo of a slideshow's time, as planned last (D-106)."""
+    if settings.data_dir is None:
+        raise ApiError(404, "slideshow_not_found")
+    try:
+        data = json.loads(plan_file(settings.data_dir, album_id).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ApiError(404, "slideshow_not_found") from exc
+    for item in data.get("slideshows", []):
+        if (item.get("year"), item.get("part")) == (year, part):
+            return SlideshowPlanOut.model_validate(item)
+    raise ApiError(404, "slideshow_not_found")
 
 
 @router.put("/shows/{album_id}/slideshow")

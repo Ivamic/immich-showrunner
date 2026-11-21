@@ -253,5 +253,16 @@
 	"album_slideshow_download": "Scarica",
 	"album_slideshow_trash": "Creati in precedenza ({count})",
 	"album_slideshow_trash_hint": "Una presentazione ricreata o rimossa resta qui per un po’, poi viene eliminata.",
-	"album_slideshow_trash_item": "{size} MB · spostato qui il {put} · eliminato dopo il {leaves}"
+	"album_slideshow_trash_item": "{size} MB · spostato qui il {put} · eliminato dopo il {leaves}",
+	"slideshow_plan_details": "Come è stata scelta",
+	"slideshow_plan_back": "Torna all’album",
+	"slideshow_plan_intro": "Come sono state scelte le foto, giorno per giorno e scena per scena. Con cornice: mostrate. Accanto, sullo stesso grigio: i quasi-doppioni. Sbiadite: oltre la quota del giorno. Un clic ingrandisce una foto.",
+	"slideshow_plan_redrawing": "La presentazione è ancora in creazione: questo è il piano seguito.",
+	"slideshow_plan_none": "Ancora nessun piano: arriva con la prossima sincronizzazione.",
+	"slideshow_plan_day": "mostrate {shown} su {photos}",
+	"slideshow_plan_shown": "mostrate",
+	"slideshow_plan_copy": "copia",
+	"slideshow_plan_over": "oltre la quota",
+	"slideshow_plan_apart": "Screenshot, documenti e foto scadenti ({count})",
+	"slideshow_plan_score": "punteggio {score}"
 }

@@ -281,7 +281,9 @@ placed after that season. An album of photos only becomes a show of slideshows o
   photos (25 of 150, 40 of 400), shared among its scenes. The parts of a year go on with the next
   piece of music. The camera moves slowly towards the faces; a standing photo is shown whole over a blurred
   copy of itself. The title and the credits are drawn in the style of the album. The page of the
-  album says why photos were left out, in all and day by day.
+  album says why photos were left out, in all and day by day; "How it was chosen" shows every
+  photo of a slideshow, scene by scene: those shown, each group of near copies beside the photo it
+  gave way to, those over the share of the day, and apart the screenshots and documents.
 - **Music**: a set of 28 free pieces (CC BY and public domain, listed in
   [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)) and your own, added on the page. The music of
   an album follows what its photos show (calm, bright, upbeat; wistful and solemn only when you choose

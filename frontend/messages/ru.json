@@ -253,5 +253,16 @@
 	"album_slideshow_download": "Загрузить",
 	"album_slideshow_trash": "Прежние версии ({count})",
 	"album_slideshow_trash_hint": "Перерисованный или удалённый ролик хранится здесь какое-то время, потом удаляется.",
-	"album_slideshow_trash_item": "{size} МБ · сюда {put} · удалится после {leaves}"
+	"album_slideshow_trash_item": "{size} МБ · сюда {put} · удалится после {leaves}",
+	"slideshow_plan_details": "Как отобрано",
+	"slideshow_plan_back": "К альбому",
+	"slideshow_plan_intro": "Как отбирались фото — по дням и сценам. В рамке — показанные. Рядом на общем сером фоне — их почти копии. Бледные — сверх квоты дня. По клику фото открывается крупнее.",
+	"slideshow_plan_redrawing": "Ролик ещё перерисовывается: здесь план, по которому он будет нарисован.",
+	"slideshow_plan_none": "Плана пока нет: он появится после следующей синхронизации.",
+	"slideshow_plan_day": "показано {shown} из {photos}",
+	"slideshow_plan_shown": "показано",
+	"slideshow_plan_copy": "копия",
+	"slideshow_plan_over": "сверх квоты",
+	"slideshow_plan_apart": "Скриншоты, документы и плохие фото ({count})",
+	"slideshow_plan_score": "оценка {score}"
 }

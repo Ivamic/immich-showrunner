@@ -253,5 +253,16 @@
 	"album_slideshow_download": "Herunterladen",
 	"album_slideshow_trash": "Früher erstellt ({count})",
 	"album_slideshow_trash_hint": "Ein neu erstellter oder entfernter Film bleibt eine Weile hier und wird dann gelöscht.",
-	"album_slideshow_trash_item": "{size} MB · hierher verschoben am {put} · gelöscht nach dem {leaves}"
+	"album_slideshow_trash_item": "{size} MB · hierher verschoben am {put} · gelöscht nach dem {leaves}",
+	"slideshow_plan_details": "Wie ausgewählt wurde",
+	"slideshow_plan_back": "Zurück zum Album",
+	"slideshow_plan_intro": "Wie die Fotos ausgewählt wurden, Tag für Tag und Szene für Szene. Mit Rahmen: gezeigt. Daneben auf demselben Grau: fast gleiche. Blass: über dem Anteil des Tages. Ein Klick zeigt ein Foto größer.",
+	"slideshow_plan_redrawing": "Die Diashow wird noch neu erstellt: Dies ist der Plan dafür.",
+	"slideshow_plan_none": "Noch kein Plan: er kommt mit der nächsten Synchronisierung.",
+	"slideshow_plan_day": "{shown} von {photos} gezeigt",
+	"slideshow_plan_shown": "gezeigt",
+	"slideshow_plan_copy": "Kopie",
+	"slideshow_plan_over": "über dem Anteil",
+	"slideshow_plan_apart": "Screenshots, Dokumente und schlechte Fotos ({count})",
+	"slideshow_plan_score": "Bewertung {score}"
 }
