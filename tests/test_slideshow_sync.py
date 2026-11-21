@@ -306,3 +306,114 @@ async def test_a_year_with_too_few_photos_gets_no_slideshow(
     specials = FakeSpecials(tmp_path / "data")
     await one_pass(immich, session, out, specials)
     assert specials.made == [] and specials_in(out) == {}
+
+
+# --- the folder of slideshows (D-102) -------------------------------------------------------
+
+
+async def store_pass(
+    immich: FakeImmich, session: AsyncSession, tmp_path: Path, specials: FakeSpecials
+) -> list[Any]:
+    from showrunner.targets.specials import SlideshowStore
+
+    store, out = tmp_path / "store", tmp_path / "out"
+    store.mkdir(exist_ok=True)
+    out.mkdir(exist_ok=True)
+    media = PurePosixPath("/media/slideshows")
+    roots = [PurePosixPath("/mnt/immich"), media]
+    async with immich.client() as client:
+        return await sync_outputs(
+            immich=client,
+            registry=Registry(session),
+            outputs=[
+                Output(JellyfinLayout(media), Executor(out, roots), notify=True),
+                Output(SlideshowStore(), Executor(store, [])),
+            ],
+            options=OPTIONS,
+            full=False,
+            slideshow=FakeSlideshow(),
+            specials=specials,
+        )
+
+
+@needs_links
+@pytest.mark.anyio
+async def test_slideshows_lie_in_their_folder_and_the_outputs_link_to_them(
+    session: AsyncSession, tmp_path: Path
+) -> None:
+    immich = photo_album(years=(2023,))
+    specials = FakeSpecials(tmp_path / "data")
+    reports = await store_pass(immich, session, tmp_path, specials)
+    assert [r.target for r in reports] == ["slideshows", "jellyfin"], "the folder first"
+    name = "20231231-235900 Photos 2023 [slideshow 2023 0]"
+    stored = tmp_path / "store" / "Holidays [imm-00000001]" / f"{name}.mp4"
+    assert stored.read_bytes().startswith(b"SLIDESHOW")
+    link = tmp_path / "out" / "Holidays [imm-00000001]" / "Specials" / f"{name}.mp4"
+    assert link.is_symlink()
+    assert os.readlink(link) == f"/media/slideshows/Holidays [imm-00000001]/{name}.mp4"
+    assert link.with_suffix(".nfo").exists()
+    assert specials.made == ["2023-0"], "drawn once, for the folder"
+
+
+@needs_links
+@pytest.mark.anyio
+async def test_no_link_to_a_slideshow_not_drawn_yet(session: AsyncSession, tmp_path: Path) -> None:
+    immich = photo_album(years=(2023,))
+    await store_pass(immich, session, tmp_path, FakeSpecials(tmp_path / "data", budget=0))
+    assert not list((tmp_path / "out").rglob("Specials/*"))
+    assert not list((tmp_path / "store").rglob("*.mp4"))
+    await store_pass(immich, session, tmp_path, FakeSpecials(tmp_path / "data"))
+    assert len(list((tmp_path / "out").rglob("Specials/*"))) == 2
+
+
+@needs_links
+@pytest.mark.anyio
+async def test_a_slideshow_drawn_again_tells_the_media_server(
+    session: AsyncSession, tmp_path: Path
+) -> None:
+    immich = photo_album(years=(2023,))
+    await store_pass(immich, session, tmp_path, FakeSpecials(tmp_path / "data"))
+    registry = Registry(session)
+    await registry.clear_pending(await registry.pending("jellyfin"), "jellyfin")
+    await session.commit()
+    album = next(iter(immich.albums))
+    immich.add_photo(album, 98, "2023-07-01T14:00:00", jpeg(scene(seed=98)))
+    immich.touch(album, "2026-02-01T00:00:00.000Z")
+    reports = await store_pass(immich, session, tmp_path, FakeSpecials(tmp_path / "data"))
+    store, jellyfin = reports
+    assert store.replaced == 1
+    assert jellyfin.plan.of_type(ActionType.REPLACE) == (), "the link did not change"
+    assert album in jellyfin.changed_folders
+    assert album in await registry.pending("jellyfin")
+
+
+@needs_links
+def test_a_copy_gives_way_to_a_link_and_back(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    out.mkdir()
+    executor = Executor(out, [PurePosixPath("/media/slideshows")])
+    copy = video_file(tmp_path, b"a copy")
+    executor.apply(Action(ActionType.CREATE, copy.path, copy.kind, copy.album_id, copy))
+    link = DesiredFile(
+        path=copy.path,
+        kind=FileKind.LINK,
+        album_id=copy.album_id,
+        link_target=PurePosixPath("/media/slideshows/Trip/s.mp4"),
+        video=copy.video,
+    )
+    to_link = Action(
+        ActionType.REPLACE, copy.path, FileKind.LINK, copy.album_id, link, entry_of(copy)
+    )
+    assert executor.apply(to_link).result is Result.DONE
+    assert (out / copy.path).is_symlink()
+    back = video_file(tmp_path, b"a copy again", "v2")
+    link_entry = Entry(link.path, FileKind.LINK, link.album_id, link_target=link.link_target)
+    to_file = Action(ActionType.REPLACE, copy.path, FileKind.VIDEO, copy.album_id, back, link_entry)
+    assert executor.apply(to_file).result is Result.DONE
+    assert (out / copy.path).read_bytes() == b"a copy again"
+    # A file somebody else put there is never taken for ours.
+    (out / copy.path).write_bytes(b"by hand")
+    stale = Action(
+        ActionType.REPLACE, copy.path, FileKind.LINK, copy.album_id, link, entry_of(back)
+    )
+    assert executor.apply(stale).result is Result.FOREIGN

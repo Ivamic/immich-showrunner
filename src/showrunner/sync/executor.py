@@ -144,16 +144,44 @@ class Executor:
             os.replace(temp, path)
             return Result.DONE, ""
         if path.exists():
-            return Result.FOREIGN, "a file or folder is at this path, not a link"
+            if not self._ours_as_file(action, path):
+                return Result.FOREIGN, "a file or folder is at this path, not a link"
+            # A file the app wrote (a slideshow copied before there was a folder of slideshows)
+            # gives way to a link, in one step.
+            temp = path.with_name(TEMP_PREFIX + secrets.token_hex(6))
+            os.symlink(str(target), temp)
+            os.replace(temp, path)
+            return Result.DONE, ""
         path.parent.mkdir(parents=True, exist_ok=True)
         os.symlink(str(target), path)
         return Result.DONE, ""
+
+    def _ours_as_file(self, action: Action, path: Path) -> bool:
+        """The file at `path` is one the app wrote and nobody changed since."""
+        entry = action.entry
+        return (
+            entry is not None
+            and entry.kind is not FileKind.LINK
+            and path.is_file()
+            and entry.content_hash is not None
+            and _hash(path) == entry.content_hash
+        )
 
     def _put_file(self, action: Action, path: Path) -> tuple[Result, str]:
         assert action.desired is not None
         drawn = action.desired.drawn
         content = action.desired.content
         assert content is not None or drawn is not None
+        ours_link = (
+            path.is_symlink()
+            and action.entry is not None
+            and action.entry.kind is FileKind.LINK
+            and action.entry.link_target is not None
+            and PurePosixPath(os.readlink(path)) == action.entry.link_target
+        )
+        if ours_link:
+            # A link the app made gives way to a file (no folder of slideshows any more).
+            path.unlink()
         if path.is_symlink() or (path.exists() and not path.is_file()):
             return Result.FOREIGN, "a link or folder is at this path, not a file"
         if path.exists():

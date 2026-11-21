@@ -40,6 +40,11 @@ PICTURE_NAMES = {
 class JellyfinLayout:
     name = "jellyfin"
 
+    def __init__(self, slideshows: PurePosixPath | None = None) -> None:
+        """`slideshows`: the folder of slideshows as Jellyfin sees it; the slideshows are then
+        links into it, copies without it."""
+        self.slideshows = slideshows
+
     def files(
         self, show: Show, folder_name: str, artwork: ShowArtwork | None = None
     ) -> list[DesiredFile]:
@@ -82,5 +87,5 @@ class JellyfinLayout:
                     image=ImageSource(episode.asset_id, episode.picture_version),
                 )
             )
-        files += special_files(show, root, special_file_stem)
+        files += special_files(show, root, special_file_stem, self.slideshows)
         return files

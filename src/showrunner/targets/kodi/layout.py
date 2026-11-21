@@ -51,10 +51,13 @@ FACE_VERSION = "face"
 class KodiLayout:
     name = KODI
 
-    def __init__(self, output_path: str = "") -> None:
+    def __init__(self, output_path: str = "", slideshows: PurePosixPath | None = None) -> None:
         """`output_path` is the output folder as Kodi sees it (`smb://…`), for the paths of the
-        posters of seasons in the NFO of the show; without it the seasons get no posters."""
+        posters of seasons in the NFO of the show; without it the seasons get no posters.
+        `slideshows`: the folder of slideshows as the links lead to it (a path on the server,
+        followed there like the links to Immich)."""
         self.output_path = output_path
+        self.slideshows = slideshows
 
     def files(
         self, show: Show, folder_name: str, artwork: ShowArtwork | None = None
@@ -111,7 +114,7 @@ class KodiLayout:
                     image=ImageSource(person_id, FACE_VERSION, of_person=True),
                 )
             )
-        files += special_files(show, root, kodi_special_file_stem)
+        files += special_files(show, root, kodi_special_file_stem, self.slideshows)
         return files
 
     def _season_posters(self, folder_name: str, artwork: ShowArtwork | None) -> dict[int, str]:

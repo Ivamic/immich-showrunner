@@ -104,6 +104,11 @@ class Settings(BaseSettings):
     # The credits at the end of a slideshow (the music and the line of the app). Off: none; the
     # music is still named in the description of the episode (D-088).
     slideshow_credits: bool = True
+    # The folder of the slideshows the app draws, by album (D-102); the output folders get links
+    # to them. Without it every output folder gets a copy of each slideshow.
+    slideshow_dir: Path | None = None
+    # Where the media servers see that folder, if not at the same path.
+    slideshow_path: str = ""
     # Files of the app itself (models for slideshows); in the image, a volume of its own.
     data_dir: Path | None = None
 
@@ -133,7 +138,9 @@ class Settings(BaseSettings):
             raise ValueError(f"must be at least {MIN_SECRET_KEY_LENGTH} characters long")
         return value
 
-    @field_validator("jellyfin_output_dir", "output_dir", "kodi_output_dir", mode="before")
+    @field_validator(
+        "jellyfin_output_dir", "output_dir", "kodi_output_dir", "slideshow_dir", mode="before"
+    )
     @classmethod
     def _empty_is_none(cls, value: object) -> object:
         return None if isinstance(value, str) and not value.strip() else value
@@ -148,6 +155,13 @@ class Settings(BaseSettings):
     def jellyfin_dir(self) -> Path | None:
         """The output folder for Jellyfin, under its name or the name it had before."""
         return self.jellyfin_output_dir or self.output_dir
+
+    @property
+    def slideshow_media_path(self) -> PurePosixPath | None:
+        """The folder of the slideshows as the media servers see it."""
+        if self.slideshow_dir is None:
+            return None
+        return PurePosixPath(self.slideshow_path or self.slideshow_dir.as_posix())
 
     @property
     def path_mappings(self) -> tuple[PathMapping, ...]:

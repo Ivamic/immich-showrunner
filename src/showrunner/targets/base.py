@@ -16,6 +16,7 @@ from showrunner.model.show import Show, Special
 # Names of the targets, as the registry keeps them.
 JELLYFIN = "jellyfin"
 KODI = "kodi"
+SLIDESHOWS = "slideshows"
 
 
 class FileKind(StrEnum):
@@ -82,8 +83,10 @@ class DesiredFile:
         is_link = self.kind is FileKind.LINK
         is_image = self.kind is FileKind.IMAGE
         is_video = self.kind is FileKind.VIDEO
-        if is_video != (self.video is not None):
-            raise ValueError("a slideshow needs a video source, and only a slideshow has one")
+        if is_video and self.video is None:
+            raise ValueError("a slideshow needs a video source")
+        if self.video is not None and not (is_video or is_link):
+            raise ValueError("only a slideshow or a link to one has a video source")
         if is_link != (self.link_target is not None):
             raise ValueError("a link needs a target, and only a link has one")
         if is_image != (self.image is not None):

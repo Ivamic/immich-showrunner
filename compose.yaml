@@ -26,6 +26,9 @@ services:
       SHOWRUNNER_JELLYFIN_OUTPUT_DIR: "${SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION:+/output/jellyfin}"
       SHOWRUNNER_OUTPUT_DIR: "${SHOWRUNNER_OUTPUT_LOCATION:+/output/jellyfin}"
       SHOWRUNNER_KODI_OUTPUT_DIR: "${SHOWRUNNER_KODI_OUTPUT_LOCATION:+/output/kodi}"
+      # The folder of the slideshows, and where the media servers see it.
+      SHOWRUNNER_SLIDESHOW_DIR: "${SHOWRUNNER_SLIDESHOW_LOCATION:+/output/slideshows}"
+      SHOWRUNNER_SLIDESHOW_PATH: "${SHOWRUNNER_SLIDESHOW_PATH:-${SHOWRUNNER_SLIDESHOW_LOCATION:-}}"
       # Where Jellyfin sees its output folder: the folder on the host, unless Jellyfin runs in a
       # container that mounts it somewhere else.
       SHOWRUNNER_JELLYFIN_OUTPUT_PATH: "${SHOWRUNNER_JELLYFIN_OUTPUT_PATH:-${SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION:-${SHOWRUNNER_OUTPUT_LOCATION:-}}}"
@@ -35,6 +38,7 @@ services:
       # nothing uses.
       - "${SHOWRUNNER_JELLYFIN_OUTPUT_LOCATION:-${SHOWRUNNER_OUTPUT_LOCATION:-unused-jellyfin}}:/output/jellyfin"
       - "${SHOWRUNNER_KODI_OUTPUT_LOCATION:-unused-kodi}:/output/kodi"
+      - "${SHOWRUNNER_SLIDESHOW_LOCATION:-unused-slideshows}:/output/slideshows"
       # Files of the app itself: models it downloads for slideshows.
       - app-data:/data
     depends_on:
@@ -61,3 +65,4 @@ volumes:
   app-data:
   unused-jellyfin:
   unused-kodi:
+  unused-slideshows:

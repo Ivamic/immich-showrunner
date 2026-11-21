@@ -31,6 +31,7 @@ from showrunner.targets.jellyfin.layout import JellyfinLayout
 from showrunner.targets.jellyfin.people import tend_people
 from showrunner.targets.kodi.client import KodiClient, KodiError, tell_kodi
 from showrunner.targets.kodi.layout import KodiLayout
+from showrunner.targets.specials import SlideshowStore
 
 log = logging.getLogger(__name__)
 
@@ -77,11 +78,14 @@ def jellyfin_output_path(settings: Settings) -> PurePosixPath:
 def outputs_from(settings: Settings, *, dry_run: bool) -> list[Output]:
     """The targets that have an output folder. Raises SetupError when none has."""
     roots = [m.target for m in settings.path_mappings]
+    slideshows = settings.slideshow_media_path
+    if slideshows is not None:
+        roots.append(slideshows)  # the output folders link into the folder of slideshows
     outputs: list[Output] = []
     if settings.jellyfin_dir is not None:
         outputs.append(
             Output(
-                JellyfinLayout(),
+                JellyfinLayout(slideshows),
                 None if dry_run else Executor(settings.jellyfin_dir, roots),
                 notify=jellyfin_client(settings) is not None,
             )
@@ -89,10 +93,15 @@ def outputs_from(settings: Settings, *, dry_run: bool) -> list[Output]:
     if settings.kodi_output_dir is not None:
         outputs.append(
             Output(
-                KodiLayout(settings.kodi_output_path),
+                KodiLayout(settings.kodi_output_path, slideshows),
                 None if dry_run else Executor(settings.kodi_output_dir, roots),
                 notify=kodi_client(settings) is not None,
             )
+        )
+    if outputs and settings.slideshow_dir is not None:
+        # The folder of slideshows holds files only (no links): no roots for links.
+        outputs.insert(
+            0, Output(SlideshowStore(), None if dry_run else Executor(settings.slideshow_dir, []))
         )
     if not outputs:
         raise SetupError(

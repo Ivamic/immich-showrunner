@@ -25,7 +25,7 @@ from showrunner.sync.executor import MARKER_NAME, Executor, Outcome, Result, Uns
 from showrunner.sync.plan import Action, ActionType, Plan, make_plan
 from showrunner.sync.slideshow import PhotoReport, SlideshowContext, look_at_photos
 from showrunner.sync.specials import RenderError, SpecialsContext, plan_specials
-from showrunner.targets.base import DesiredFile, FileKind, ImageSource, Target
+from showrunner.targets.base import SLIDESHOWS, DesiredFile, FileKind, ImageSource, Target
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +68,8 @@ class SyncReport:
     slideshows_drawn: int = 0
     slideshows_waiting: int = 0
     slideshows_failed: list[str] = field(default_factory=list)
+    # Albums whose slideshow was drawn again and replaced (in the folder of slideshows).
+    renewed_albums: set[UUID] = field(default_factory=set)
     # People of the albums read in this pass: name as written for the media server -> Immich id.
     people: dict[str, UUID] = field(default_factory=dict)
     # Albums whose files could not all be written; their stamps are not moved on.
@@ -171,6 +173,8 @@ async def apply_output(
     pictures: dict[ImageSource, bytes] | None = None,
     artwork: ArtworkContext | None = None,
     specials: SpecialsContext | None = None,
+    ready_slideshows: frozenset[PurePosixPath] | None = None,
+    renewed: frozenset[UUID] = frozenset(),
 ) -> SyncReport:
     """Bring the output folder of one target in line with `view`. Nothing is committed here.
     `pictures` keeps what was downloaded or drawn for one target, so that another takes it
@@ -189,6 +193,8 @@ async def apply_output(
     desired: list[DesiredFile] = []
     for show, folder in view.shows:
         desired.extend(output.target.files(show, folder, view.artwork.shows.get(show.album_id)))
+    if ready_slideshows is not None:
+        desired = _linked_when_drawn(desired, ready_slideshows, report)
     recorded = await registry.entries(name)
     plan = make_plan(
         desired,
@@ -253,10 +259,16 @@ async def apply_output(
                 report.created += 1
             elif action.type is ActionType.REPLACE:
                 report.replaced += 1
+                if action.kind is FileKind.VIDEO:
+                    report.renewed_albums.add(action.album_id)
             else:
                 report.removed += 1
+    # A slideshow drawn again in the folder of slideshows: the link here did not change, the
+    # show did.
+    others = {a for a in renewed if a in view.folders and a not in plan.changed_albums}
+    report.changed_folders.update({a: view.folders[a] for a in others})
     if output.notify:
-        await registry.mark_pending(plan.changed_albums, name)
+        await registry.mark_pending(plan.changed_albums | others, name)
     return report
 
 
@@ -328,8 +340,13 @@ async def sync_outputs(
     if slideshow is not None and specials is not None and writes:
         view.shows = await plan_specials(view.shows, view.photos, registry, specials)
     pictures: dict[ImageSource, bytes] = {}
-    reports = [
-        await apply_output(
+    # The folder of slideshows first: the output folders link only to slideshows that are there,
+    # and a slideshow replaced there makes its show changed for the media servers (D-102).
+    ready: frozenset[PurePosixPath] | None = None
+    renewed: set[UUID] = set()
+    reports = []
+    for output in sorted(outputs, key=lambda o: o.target.name != SLIDESHOWS):
+        report = await apply_output(
             view,
             output,
             immich=immich,
@@ -338,9 +355,13 @@ async def sync_outputs(
             pictures=pictures,
             artwork=artwork,
             specials=specials,
+            ready_slideshows=ready,
+            renewed=frozenset(renewed),
         )
-        for output in outputs
-    ]
+        reports.append(report)
+        if output.target.name == SLIDESHOWS:
+            ready = frozenset(e.path for e in await registry.entries(SLIDESHOWS))
+            renewed |= report.renewed_albums
     if specials is not None:
         specials.clean()
     if writes:
@@ -415,6 +436,22 @@ async def _with_pictures(
             pictures[desired.image] = content
         result.append(replace(action, desired=replace(desired, content=content)))
     return result
+
+
+def _linked_when_drawn(
+    desired: list[DesiredFile], ready: frozenset[PurePosixPath], report: SyncReport
+) -> list[DesiredFile]:
+    """No link to a slideshow that is not in the folder of slideshows yet (it waits for a later
+    pass), nor its NFO; its album is read again next time."""
+    waiting: set[PurePosixPath] = set()
+    for file in desired:
+        if file.video is None or file.kind is not FileKind.LINK or file.link_target is None:
+            continue
+        if PurePosixPath(*file.link_target.parts[-2:]) not in ready:
+            waiting.add(file.path)
+            report.failed_albums.add(file.album_id)
+    skipped = waiting | {path.with_suffix(".nfo") for path in waiting}
+    return [file for file in desired if file.path not in skipped]
 
 
 async def _with_videos(
