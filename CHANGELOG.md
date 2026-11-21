@@ -7,6 +7,8 @@ between releases.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-21
+
 ### Added
 
 - **Slideshows of the photos** (off until switched on on the new Slideshows page): the photos of an
@@ -29,16 +31,20 @@ between releases.
   looked at once (loudness by EBU R128, tempo, beats, bars, parts, key); the photos change on the
   beats, a scene on the first beat of a bar, and a slideshow ends at the end of a phrase. The mood of
   the music follows what the photos show (calm, bright, upbeat, and cinematic for landscapes and
-  views from above; wistful and solemn by choice). The
-  music is named in the description of every slideshow and in its end credits
+  views from above; wistful and solemn by choice); one piece plays at a time on the page. The music
+  is named in the description of every slideshow and in its end credits
   (`SHOWRUNNER_SLIDESHOW_CREDITS`, or on the page).
 - **On the page of an album**: slideshows off for this album, the mood of its music, "Other music",
   and its slideshows with their state, to watch on the page or download under the name of the show.
   Why photos were left out (near copies, beyond the twenty minutes of the season, screenshots and
   documents, poor quality), in all and day by day. The cards of the albums count their slideshows.
 - **How a slideshow was chosen**, on a page of its own: every photo of its time, day by day and
-  scene by scene: those shown, each group of near copies beside the photo it gave way to, those
-  that did not fit in the twenty minutes of the season, and apart the screenshots and documents.
+  scene by scene: those shown, each group of near copies on a line of its own beside the photo it
+  gave way to, those that did not fit in the twenty minutes of the season, and apart the
+  screenshots and documents; for a photo, its quality out of 100, its faces, how alike it is and
+  how much it looks like a document.
+- **Edits in Immich count**: a photo turned or cropped in Immich is looked at again and its
+  slideshow drawn again, from the edited picture; the pictures on the pages are the edited ones.
 - **The slideshow being drawn** is shown on the page: which one, how far, and how many wait.
 - **A trash for slideshows**: a slideshow drawn again or removed is kept for
   `SHOWRUNNER_SLIDESHOW_TRASH_DAYS` (90) days in `.trash` in the folder of slideshows (in the data
@@ -61,33 +67,15 @@ between releases.
 
 ### Fixed
 
-- **One piece of music at a time** on the Slideshows page (0.4.0-rc.6): the one started pauses the
-  one playing.
-- **A photo turned or cropped in Immich** (0.4.0-rc.5): it is looked at again and its slideshow
-  drawn again, from the edited picture; before, both the look and the drawing kept to the
-  original file, which an edit in Immich leaves as it is. The pictures on the pages are the edited
-  ones too, and the page of a slideshow asks for them anew after an edit (0.4.0-rc.6), so that the
-  browser does not show the one it kept.
-- **Photos of people are no longer taken for screenshots** (0.4.0-rc.3): a photo with a face is
-  never left out as a screenshot or document, the words photos are told by include tourists by
-  a landmark, museums, signs, shops and ruins, and a photo is junk only when those words clearly
-  win.
-- **A step closer is a near copy** (0.4.0-rc.3): within a minute of the first of a series, a
-  milder likeness makes a near copy; the photos chosen in a scene are unlike each other, so a
-  share is not spent on the same view twice.
-- **The page of a slideshow** shows each group of near copies on a line of its own, and for a
-  photo its quality out of 100, its faces, how alike it is and how much it looks like a document.
 - **On a phone** the header wraps and the pages stay reachable; no page is wider than the screen.
 - **Cards of the albums line up**: a tall cover no longer stretches its card.
-- **A walk of alike photos is no longer one series** (0.4.0-rc.1): each photo was compared with the
-  one before it, so a day of slowly changing views became a single photo; now it is compared with
-  the first of the series.
-- **A choice for an album no longer waits for the drawing** (0.4.0-rc.1): saving the mood or "Other
-  music" while slideshows were drawn hung until the end of the sync.
 
 ### Security
 
 - No new dependency: slideshows are drawn with OpenCV, NumPy, Pillow and PyAV, already in the image.
+- Known vulnerabilities, checked for 0.4.0: none in the Python packages and none in what the web
+  page ships; one moderate in the tools that check the code of the page (minimatch under eslint),
+  which does not reach the image.
 - The dependencies that ship were checked for known vulnerabilities before the release: none found
   (a moderate one in `minimatch` is only in the tools that build the page, not in the image).
 
