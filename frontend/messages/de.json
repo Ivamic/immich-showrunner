@@ -234,5 +234,6 @@
 	"status_slideshows": "{drawn} bei der letzten Synchronisierung erstellt, {waiting} warten",
 	"albums_view_label": "Bilder der Alben",
 	"albums_view_drawn": "Bild der Serie",
-	"albums_view_immich": "Immich-Cover"
+	"albums_view_immich": "Immich-Cover",
+	"shows_slideshows": "Diashows: {count}"
 }

@@ -85,6 +85,9 @@
 						{/if}
 						<span class="meta">
 							{m.shows_episodes({ count: String(show.episodes) })}
+							{#if show.slideshows}
+								<span>{m.shows_slideshows({ count: String(show.slideshows) })}</span>
+							{/if}
 							{#if show.hidden}<StatusBadge tone="warning">{m.shows_hidden()}</StatusBadge>{/if}
 							{#if show.season_mode === 'single'}
 								<StatusBadge tone="neutral">{m.shows_one_season()}</StatusBadge>

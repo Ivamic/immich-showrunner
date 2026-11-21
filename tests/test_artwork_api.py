@@ -234,3 +234,34 @@ def test_the_list_of_albums_names_the_landscape_picture_drawn(
 
     database(empty_database, drawn)
     assert listed()["landscape_version"] == "art-jellyfin"
+
+
+def test_the_list_of_albums_counts_slideshows_once(
+    client: TestClient, world: World, empty_database: str
+) -> None:
+    import hashlib
+    from datetime import date
+    from pathlib import PurePosixPath
+
+    from showrunner.model.show import Special
+    from showrunner.targets.base import KODI, SLIDESHOWS, DesiredFile, FileKind, VideoSource
+
+    def video(path: str, year: int) -> DesiredFile:
+        special = Special(year, 0, 1, 1, f"Photos {year}", "", date(year, 12, 31), None, "v", None)
+        return DesiredFile(
+            path=PurePosixPath(path),
+            kind=FileKind.VIDEO,
+            album_id=world.album,
+            video=VideoSource(world.album, special),
+            drawn_hash=hashlib.sha256(b"x").hexdigest(),
+        )
+
+    async def drawn(registry: Registry) -> None:
+        await registry.add_show(world.album, "Family")
+        for year in (2023, 2024):
+            await registry.record(video(f"Family/{year}.mp4", year), SLIDESHOWS)
+            await registry.record(video(f"Family/Specials/{year}k.mp4", year), KODI)
+
+    database(empty_database, drawn)
+    listed = next(s for s in client.get("/api/shows").json() if s["album_id"] == str(world.album))
+    assert listed["slideshows"] == 2

@@ -234,5 +234,6 @@
 	"status_slideshows": "{drawn} create nell’ultima sincronizzazione, {waiting} in attesa",
 	"albums_view_label": "Immagini degli album",
 	"albums_view_drawn": "Immagine della serie",
-	"albums_view_immich": "Copertina di Immich"
+	"albums_view_immich": "Copertina di Immich",
+	"shows_slideshows": "presentazioni: {count}"
 }

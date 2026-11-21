@@ -107,6 +107,8 @@ export interface ShowSummary {
 	cover_asset_id: string | null;
 	/** The landscape picture the app drew, if any: its version. */
 	landscape_version: string | null;
+	/** Slideshows drawn so far. */
+	slideshows: number;
 }
 
 export interface Episode {

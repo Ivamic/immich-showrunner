@@ -43,6 +43,8 @@ class ShowOut(BaseModel):
     season_mode: SeasonMode
     episodes: int
     cover_asset_id: UUID | None
+    slideshows: int = 0
+    """Slideshows of the show drawn so far (Season 0)."""
     landscape_version: str | None = None
     """The version of the landscape picture the app drew for the show, if it has one: the page
     shows it from /shows/{id}/artwork/file?path=landscape.jpg."""
@@ -185,13 +187,29 @@ async def list_shows(user: CurrentUser, db: DbDep, albums: AlbumsDep) -> list[Sh
     rows = await Registry(db).shows()
     counts = await episode_counts(db)
     drawn = await drawn_landscapes(db)
+    slideshows = await slideshow_counts(db)
     shows = [
         show_out(a, rows.get(a.id), counts.get(a.id, 0)).model_copy(
-            update={"landscape_version": drawn.get(a.id)}
+            update={"landscape_version": drawn.get(a.id), "slideshows": slideshows.get(a.id, 0)}
         )
         for a in albums.values()
     ]
     return sorted(shows, key=lambda s: s.title.casefold())
+
+
+async def slideshow_counts(db: DbDep) -> dict[UUID, int]:
+    """Slideshows drawn per album: each counted once, though the folder of slideshows or every
+    output folder holds it (under another name for Kodi)."""
+    rows = await db.execute(
+        select(FileRow.album_id, FileRow.target, FileRow.path).where(
+            FileRow.kind == FileKind.VIDEO.value
+        )
+    )
+    by_target: dict[UUID, dict[str, int]] = {}
+    for album_id, target, _ in rows:
+        counts = by_target.setdefault(album_id, {})
+        counts[target] = counts.get(target, 0) + 1
+    return {album_id: max(counts.values()) for album_id, counts in by_target.items()}
 
 
 async def drawn_landscapes(db: DbDep) -> dict[UUID, str]:

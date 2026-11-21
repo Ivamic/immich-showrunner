@@ -234,5 +234,6 @@
 	"status_slideshows": "{drawn} drawn in the last sync, {waiting} waiting",
 	"albums_view_label": "Pictures of the albums",
 	"albums_view_drawn": "Picture of the show",
-	"albums_view_immich": "Immich cover"
+	"albums_view_immich": "Immich cover",
+	"shows_slideshows": "slideshows: {count}"
 }

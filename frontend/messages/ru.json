@@ -234,5 +234,6 @@
 	"status_slideshows": "нарисовано за последнюю синхронизацию: {drawn}, ждут: {waiting}",
 	"albums_view_label": "Картинки альбомов",
 	"albums_view_drawn": "Картинка сериала",
-	"albums_view_immich": "Обложка Immich"
+	"albums_view_immich": "Обложка Immich",
+	"shows_slideshows": "роликов: {count}"
 }
