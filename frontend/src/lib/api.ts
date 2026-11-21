@@ -280,6 +280,26 @@ export interface Slideshow {
 	music: string[];
 	/** Drawn as planned; an older one shown while this one waits; none yet. */
 	state: 'drawn' | 'older' | 'waiting';
+	report: SlideshowReport;
+}
+
+export interface SlideshowDay {
+	date: string;
+	photos: number;
+	shown?: number;
+	junk?: number;
+	series?: number;
+	poor?: number;
+	scene?: number;
+}
+
+/** Why photos were left out of a slideshow. */
+export interface SlideshowReport {
+	reasons?: { junk?: number; series?: number; poor?: number; scene?: number };
+	scenes?: number;
+	days?: SlideshowDay[];
+	/** Photos of the year not looked at yet: they come in later syncs. */
+	not_looked?: number;
 }
 
 export interface AlbumSlideshow {

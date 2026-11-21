@@ -308,3 +308,48 @@ def test_a_cut_list_comes_back_from_its_data() -> None:
     assert again.to_dict() == clip.to_dict()
     assert again.version == clip.version
     assert clip.caption == "Trip · 2024"
+
+
+def test_the_report_says_why_each_photo_was_left_out_day_by_day() -> None:
+    words = prompts()
+    screenshot = words.vectors[words.texts.index("a screenshot of a phone screen")]
+    same = vector(200)
+    photos = [
+        photo(1, 0, embedding=same, score=0.9),
+        photo(2, 0.1, embedding=same, score=0.5),  # a near copy of 1
+        photo(3, 1, embedding=screenshot),  # junk
+        *[photo(10 + i, 2 + i * 5, score=0.3 + i / 100) for i in range(14)],  # 2 over the limit
+        *[photo(40 + i, 24 * 60 + i * 20) for i in range(6)],  # the next day
+    ]
+    (clip,) = plan_album(ALBUM, "Trip", photos)
+    report = clip.report
+    assert report["reasons"] == {"series": 1, "junk": 1, "scene": 3}
+    assert sum(report["reasons"].values()) == clip.left_out
+    first, second = report["days"]
+    assert first["date"] == "2024-07-01" and first["photos"] == 17
+    assert first["shown"] + first["series"] + first["junk"] + first["scene"] == 17
+    assert second == {"date": "2024-07-02", "photos": 6, "shown": 6}
+    assert "report" not in clip.to_dict(), "not part of the cut list: nothing is drawn again"
+
+
+def test_a_walk_of_photos_each_like_the_one_before_is_not_one_series() -> None:
+    from showrunner.slideshow.plan import series
+
+    # Each photo drifts a little from the one before: alike to its neighbour, not to the first.
+    rng = np.random.default_rng(5)
+    v = vector(300)
+    walk = []
+    for i in range(12):
+        walk.append(photo(500 + i, i * 1.0, embedding=v.copy()))
+        step = rng.standard_normal(512).astype(np.float32)
+        v = v + 0.3 * step / float(np.linalg.norm(step))
+        v = v / float(np.linalg.norm(v))
+    runs = series(walk)
+    assert len(runs) > 3, [len(r) for r in runs]
+    # A burst within seconds is still one series.
+    same = vector(301)
+    burst = [photo(600 + i, i * 0.05, embedding=same) for i in range(5)]
+    assert [len(r) for r in series(burst)] == [5]
+    # Two minutes apart is no burst.
+    apart = [photo(700, 0, embedding=same), photo(701, 3, embedding=same)]
+    assert [len(r) for r in series(apart)] == [1, 1]

@@ -235,5 +235,15 @@
 	"albums_view_label": "Картинки альбомов",
 	"albums_view_drawn": "Картинка сериала",
 	"albums_view_immich": "Обложка Immich",
-	"shows_slideshows": "роликов: {count}"
+	"shows_slideshows": "роликов: {count}",
+	"album_slideshow_left_out": "Отброшено: {reasons}",
+	"album_slideshow_reason_series": "почти копии",
+	"album_slideshow_reason_scene": "сверх лимита сцены",
+	"album_slideshow_reason_junk": "скриншоты и документы",
+	"album_slideshow_reason_poor": "плохое качество",
+	"album_slideshow_not_looked": "ещё не разобрано фото: {count} (будут в следующих синхронизациях)",
+	"album_slideshow_days": "По дням",
+	"album_slideshow_day": "День",
+	"album_slideshow_col_photos": "Фото",
+	"album_slideshow_col_shown": "Показано"
 }

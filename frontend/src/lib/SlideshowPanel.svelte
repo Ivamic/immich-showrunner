@@ -80,6 +80,24 @@
 	const duration = (seconds: number) =>
 		`${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, '0')}`;
 	const on = $derived(album?.enabled !== false);
+
+	/** "left out: near copies 840, over the limit of a scene 346, …; 20 photos not looked at yet" */
+	function reasons(s: Slideshow): string {
+		const r = s.report.reasons ?? {};
+		const parts = [
+			[r.series, m.album_slideshow_reason_series()],
+			[r.scene, m.album_slideshow_reason_scene()],
+			[r.junk, m.album_slideshow_reason_junk()],
+			[r.poor, m.album_slideshow_reason_poor()]
+		]
+			.filter(([count]) => count)
+			.map(([count, label]) => `${label} ${count}`);
+		const text = parts.length ? m.album_slideshow_left_out({ reasons: parts.join(', ') }) : '';
+		const waiting = s.report.not_looked
+			? m.album_slideshow_not_looked({ count: String(s.report.not_looked) })
+			: '';
+		return [text, waiting].filter(Boolean).join('; ');
+	}
 </script>
 
 <section class="slideshows">
@@ -157,6 +175,40 @@
 										left_out: String(slideshow.left_out)
 									})}
 								</div>
+								{#if slideshow.left_out || slideshow.report.not_looked}
+									<div class="meta">{reasons(slideshow)}</div>
+								{/if}
+								{#if slideshow.report.days?.length}
+									<details>
+										<summary>{m.album_slideshow_days()}</summary>
+										<table>
+											<thead>
+												<tr>
+													<th>{m.album_slideshow_day()}</th>
+													<th>{m.album_slideshow_col_photos()}</th>
+													<th>{m.album_slideshow_col_shown()}</th>
+													<th>{m.album_slideshow_reason_series()}</th>
+													<th>{m.album_slideshow_reason_scene()}</th>
+													<th>{m.album_slideshow_reason_junk()}</th>
+													<th>{m.album_slideshow_reason_poor()}</th>
+												</tr>
+											</thead>
+											<tbody>
+												{#each slideshow.report.days as day (day.date)}
+													<tr>
+														<td>{day.date}</td>
+														<td>{day.photos}</td>
+														<td>{day.shown ?? 0}</td>
+														<td>{day.series ?? 0}</td>
+														<td>{day.scene ?? 0}</td>
+														<td>{day.junk ?? 0}</td>
+														<td>{day.poor ?? 0}</td>
+													</tr>
+												{/each}
+											</tbody>
+										</table>
+									</details>
+								{/if}
 								{#if slideshow.music.length}
 									<div class="meta">
 										{m.album_slideshow_music({ music: slideshow.music.join('; ') })}
@@ -239,6 +291,28 @@
 	.meta {
 		color: var(--color-text-muted);
 		font-size: var(--text-sm);
+	}
+	details {
+		margin-top: var(--space-1);
+		font-size: var(--text-sm);
+	}
+	summary {
+		cursor: pointer;
+		color: var(--color-text-muted);
+	}
+	table {
+		border-collapse: collapse;
+		margin-top: var(--space-2);
+	}
+	th,
+	td {
+		padding: 2px var(--space-2);
+		text-align: right;
+		border-bottom: 1px solid var(--color-border);
+	}
+	th:first-child,
+	td:first-child {
+		text-align: left;
 	}
 	video {
 		display: block;

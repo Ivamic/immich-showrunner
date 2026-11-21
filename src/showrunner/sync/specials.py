@@ -186,17 +186,27 @@ async def plan_specials(
         )
         clips = [fit_to_music(clip, pieces) for clip in clips]
         specials = specials_of(show, clips, style)
+        looked = {p.asset_id for p in inputs}
+        waiting: dict[int, int] = {}
+        for asset in assets:
+            if asset.id not in looked:
+                year = asset.local_date_time.year
+                waiting[year] = waiting.get(year, 0) + 1
         await registry.save_album_slideshow(
-            show.album_id, auto_mood=auto, planned=[summary(s) for s in specials]
+            show.album_id,
+            auto_mood=auto,
+            planned=[summary(s, waiting.get(s.year, 0)) for s in specials],
         )
         result.append((replace(show, specials=specials), folder))
     return result
 
 
-def summary(special: Special) -> dict[str, object]:
-    """What the page shows of a slideshow planned in this pass."""
+def summary(special: Special, not_looked: int = 0) -> dict[str, object]:
+    """What the page shows of a slideshow planned in this pass, with why photos were left out;
+    `not_looked`: photos of its year not looked at yet (they wait for later passes)."""
     clip: Clip = special.clip
     return {
+        "report": {**clip.report, "not_looked": not_looked},
         "year": special.year,
         "part": special.part,
         "title": special.title,

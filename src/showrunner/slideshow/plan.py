@@ -34,15 +34,18 @@ from showrunner.slideshow.content import is_junk
 from showrunner.slideshow.embed import similarity
 from showrunner.slideshow.photos import PhotoLook, distance
 
-PLAN_VERSION = 1
-"""Raised when the rules change, so that every slideshow is made again."""
+PLAN_VERSION = 2
+"""Raised when the rules change, so that every slideshow is made again (2: a series is measured
+against its first photo, not the one before)."""
 ASPECT = 16 / 9
 
 SCENE_GAP = timedelta(hours=2)
 SCENE_DISTANCE_KM = 20.0
 SERIES_WINDOW = timedelta(minutes=15)
+SERIES_GAP = timedelta(minutes=2)
 SERIES_SIMILARITY = 0.92
-"""Embeddings this alike, taken within SERIES_WINDOW, are one series: only the best stays."""
+"""A photo this alike to the first of a series, taken at most SERIES_GAP after the one before and
+within SERIES_WINDOW of the first, belongs to it: only the best of a series stays."""
 SERIES_HASH_BITS = 10
 SERIES_LIKENESS = 0.9
 """Without embeddings: hashes this close and colours this alike make a series."""
@@ -193,6 +196,8 @@ class Clip:
     music: tuple[AudioPart, ...] = ()
     music_credits: tuple[str, ...] = ()
     """Who made the music and under which licence, a line a piece."""
+    report: dict[str, Any] = field(default_factory=dict, compare=False, repr=False)
+    """Why photos were left out (`_report`): for the page only, not in the cut list."""
 
     @property
     def seconds(self) -> float:
@@ -268,7 +273,9 @@ def plan_album(
     for photo in sorted(photos, key=lambda p: (p.taken, str(p.asset_id))):
         by_year.setdefault(photo.taken.year, []).append(photo)
     for year, every in sorted(by_year.items()):
-        chosen = [_choose(scene) for scene in scenes(every)]
+        fates: dict[UUID, str] = {}
+        cut = scenes(every)
+        chosen = [_choose(scene, fates) for scene in cut]
         chosen = [scene for scene in chosen if scene]
         count = sum(len(scene) for scene in chosen)
         if count < MIN_PHOTOS:
@@ -296,9 +303,31 @@ def plan_album(
                     left_out=sum(1 for p in span if p.asset_id not in shown),
                     title=title,
                     credits=credits,
+                    report=_report(span, shown, fates, sum(1 for s in cut if s[0] in span)),
                 )
             )
     return clips
+
+
+def _report(
+    span: Sequence[PlanPhoto], shown: set[UUID], fates: dict[UUID, str], scene_count: int
+) -> dict[str, Any]:
+    """Why the photos of a slideshow were left out, in all and day by day (for the page; not
+    part of the cut list, so it draws nothing again)."""
+    reasons: dict[str, int] = {}
+    days: dict[str, dict[str, int]] = {}
+    for p in span:
+        fate = "shown" if p.asset_id in shown else fates.get(p.asset_id, "other")
+        day = days.setdefault(f"{p.taken:%Y-%m-%d}", {"photos": 0})
+        day["photos"] += 1
+        day[fate] = day.get(fate, 0) + 1
+        if fate != "shown":
+            reasons[fate] = reasons.get(fate, 0) + 1
+    return {
+        "reasons": reasons,
+        "scenes": scene_count,
+        "days": [{"date": d, **counts} for d, counts in sorted(days.items())],
+    }
 
 
 def scenes(photos: Sequence[PlanPhoto]) -> list[list[PlanPhoto]]:
@@ -330,28 +359,53 @@ def _km(a: PlanPhoto, b: PlanPhoto) -> float | None:
     return 2 * 6371.0 * math.asin(math.sqrt(h))
 
 
-def _choose(scene: Sequence[PlanPhoto]) -> list[PlanPhoto]:
-    """The photos of a scene that go into the slideshow, in the order of taking."""
-    kept = [p for p in scene if p.embedding is None or not is_junk(p.embedding)]
-    kept = [max(run, key=_score) for run in series(kept)]
+def _choose(scene: Sequence[PlanPhoto], fates: dict[UUID, str] | None = None) -> list[PlanPhoto]:
+    """The photos of a scene that go into the slideshow, in the order of taking. `fates` learns
+    why each photo left out was left out: "junk", "series", "poor" or "scene"."""
+    fate = fates if fates is not None else {}
+    kept = []
+    for p in scene:
+        if p.embedding is not None and is_junk(p.embedding):
+            fate[p.asset_id] = "junk"
+        else:
+            kept.append(p)
+    runs = series(kept)
+    kept = [max(run, key=_score) for run in runs]
+    for run, kept_one in zip(runs, kept, strict=True):
+        for p in run:
+            if p is not kept_one:
+                fate[p.asset_id] = "series"
     good = [p for p in kept if p.look.score >= POOR]
     if len(good) >= 3:
+        for p in kept:
+            if p.look.score < POOR:
+                fate[p.asset_id] = "poor"
         kept = good
     if len(kept) > MAX_PER_SCENE:
         best = sorted(kept, key=lambda p: (-_score(p), str(p.asset_id)))[:MAX_PER_SCENE]
         keep = {p.asset_id for p in best}
+        for p in kept:
+            if p.asset_id not in keep:
+                fate[p.asset_id] = "scene"
         kept = [p for p in kept if p.asset_id in keep]
     return kept
 
 
 def series(photos: Sequence[PlanPhoto]) -> list[list[PlanPhoto]]:
-    """Runs of near copies taken one after another."""
+    """Runs of near copies taken one after another. Each photo is measured against the first of
+    its run: compared with the one before, a walk where every photo looks like the last would
+    become one run, and a whole day one photo."""
     result: list[list[PlanPhoto]] = []
     for photo in photos:
         if result:
-            last = result[-1][-1]
-            if photo.taken - last.taken <= SERIES_WINDOW and _near_copies(last, photo):
-                result[-1].append(photo)
+            run = result[-1]
+            first, last = run[0], run[-1]
+            if (
+                photo.taken - last.taken <= SERIES_GAP
+                and photo.taken - first.taken <= SERIES_WINDOW
+                and _near_copies(first, photo)
+            ):
+                run.append(photo)
                 continue
         result.append([photo])
     return result

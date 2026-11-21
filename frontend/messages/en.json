@@ -235,5 +235,15 @@
 	"albums_view_label": "Pictures of the albums",
 	"albums_view_drawn": "Picture of the show",
 	"albums_view_immich": "Immich cover",
-	"shows_slideshows": "slideshows: {count}"
+	"shows_slideshows": "slideshows: {count}",
+	"album_slideshow_left_out": "Left out: {reasons}",
+	"album_slideshow_reason_series": "near copies",
+	"album_slideshow_reason_scene": "over the limit of a scene",
+	"album_slideshow_reason_junk": "screenshots and documents",
+	"album_slideshow_reason_poor": "poor quality",
+	"album_slideshow_not_looked": "{count} photos not looked at yet (they come in the next syncs)",
+	"album_slideshow_days": "Day by day",
+	"album_slideshow_day": "Day",
+	"album_slideshow_col_photos": "Photos",
+	"album_slideshow_col_shown": "Shown"
 }

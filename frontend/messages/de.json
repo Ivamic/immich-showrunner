@@ -235,5 +235,15 @@
 	"albums_view_label": "Bilder der Alben",
 	"albums_view_drawn": "Bild der Serie",
 	"albums_view_immich": "Immich-Cover",
-	"shows_slideshows": "Diashows: {count}"
+	"shows_slideshows": "Diashows: {count}",
+	"album_slideshow_left_out": "Ausgelassen: {reasons}",
+	"album_slideshow_reason_series": "fast gleiche",
+	"album_slideshow_reason_scene": "über der Grenze einer Szene",
+	"album_slideshow_reason_junk": "Screenshots und Dokumente",
+	"album_slideshow_reason_poor": "schlechte Qualität",
+	"album_slideshow_not_looked": "{count} Fotos noch nicht geprüft (sie kommen bei den nächsten Synchronisierungen)",
+	"album_slideshow_days": "Tag für Tag",
+	"album_slideshow_day": "Tag",
+	"album_slideshow_col_photos": "Fotos",
+	"album_slideshow_col_shown": "Gezeigt"
 }

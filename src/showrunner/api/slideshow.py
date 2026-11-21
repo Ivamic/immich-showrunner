@@ -9,7 +9,7 @@ its data folder."""
 import os
 import secrets
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 import yaml
@@ -106,6 +106,9 @@ class SlideshowOut(BaseModel):
     music: list[str]
     state: Literal["drawn", "older", "waiting"]
     """Drawn as planned; an older one shown while this one waits; none yet."""
+    report: dict[str, Any] = {}
+    """Why photos were left out: `reasons` (junk, series, poor, scene), `scenes`, `days` (each
+    with its photos, shown and reasons), `not_looked` (photos of the year not looked at yet)."""
 
 
 class AlbumSlideshowOut(BaseModel):
@@ -165,6 +168,7 @@ async def album_slideshow(
                 left_out=planned["left_out"],
                 music=planned["music"],
                 state=state,
+                report=planned.get("report", {}),
             )
         )
     return AlbumSlideshowOut(

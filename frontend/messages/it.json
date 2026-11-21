@@ -235,5 +235,15 @@
 	"albums_view_label": "Immagini degli album",
 	"albums_view_drawn": "Immagine della serie",
 	"albums_view_immich": "Copertina di Immich",
-	"shows_slideshows": "presentazioni: {count}"
+	"shows_slideshows": "presentazioni: {count}",
+	"album_slideshow_left_out": "Escluse: {reasons}",
+	"album_slideshow_reason_series": "quasi-doppioni",
+	"album_slideshow_reason_scene": "oltre il limite di una scena",
+	"album_slideshow_reason_junk": "screenshot e documenti",
+	"album_slideshow_reason_poor": "qualità scarsa",
+	"album_slideshow_not_looked": "{count} foto non ancora esaminate (arrivano nelle prossime sincronizzazioni)",
+	"album_slideshow_days": "Giorno per giorno",
+	"album_slideshow_day": "Giorno",
+	"album_slideshow_col_photos": "Foto",
+	"album_slideshow_col_shown": "Mostrate"
 }
