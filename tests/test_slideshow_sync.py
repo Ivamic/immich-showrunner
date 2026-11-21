@@ -19,7 +19,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from test_slideshow_photos import FakeSlideshow, jpeg, scene
 
-from fake_immich import FakeImmich, album_id
+from fake_immich import FakeImmich, album_id, asset_id
 from showrunner.config import parse_path_map
 from showrunner.immich.client import ImmichClient
 from showrunner.model.naming import WHOLE_ALBUM, special_file_stem
@@ -240,7 +240,7 @@ def photo_album(immich: FakeImmich | None = None, years: tuple[int, ...] = (2023
 
 
 async def one_pass(
-    immich: FakeImmich, session: AsyncSession, out: Path, specials: FakeSpecials, **kw: Any
+    immich: FakeImmich, session: AsyncSession, out: Path, specials: SpecialsContext, **kw: Any
 ) -> Any:
     async with immich.client() as client:
         (report,) = await sync_outputs(
@@ -353,6 +353,58 @@ async def test_a_new_photo_draws_its_year_again_under_the_same_name(
     assert after.keys() == before.keys()
     name = "20241231-235900 Photos 2024 [slideshow 2024 0].mp4"
     assert after[name] != before[name]
+
+
+class RecordingWorker:
+    """Draws nothing: keeps the pictures a slideshow was to be drawn from."""
+
+    def __init__(self) -> None:
+        self.pictures: list[dict[str, bytes]] = []
+
+    async def run(self, task: Any, clip: Any, photos: dict[str, str], *rest: Any) -> None:
+        self.pictures.append({k: Path(v).read_bytes() for k, v in photos.items()})
+        Path(rest[1]).write_bytes(b"SLIDESHOW")
+
+
+class DrawingSpecials(SpecialsContext):
+    """The real drawing, but by RecordingWorker and without music."""
+
+    def __init__(self, data_dir: Path, worker: RecordingWorker) -> None:
+        super().__init__(
+            data_dir=data_dir,
+            full=True,
+            styles=["film"],
+            worker=worker,  # type: ignore[arg-type]
+            clock=lambda: 0.0,
+        )
+
+    async def music(self) -> list[Track]:
+        return []
+
+
+@pytest.mark.anyio
+async def test_a_photo_edited_in_immich_draws_its_slideshow_again_as_edited(
+    session: AsyncSession, tmp_path: Path
+) -> None:
+    immich = photo_album(years=(2023,))
+    out, data = tmp_path / "out", tmp_path / "data"
+    out.mkdir()
+    worker = RecordingWorker()
+    await one_pass(immich, session, out, DrawingSpecials(data, worker))
+    (first,) = worker.pictures
+    key = str(asset_id(10))
+    assert first[key] == immich.photo_files[key]
+
+    # Turned in Immich: drawn again, from the edited picture.
+    album = next(iter(immich.albums))
+    turned = jpeg(scene(seed=10).rotate(180))
+    immich.edit_photo(album, 10, turned, thumbhash="turned")
+    immich.touch(album, "2026-02-01T00:00:00.000Z")
+    await one_pass(immich, session, out, DrawingSpecials(data, worker))
+    assert len(worker.pictures) == 2, "drawn again"
+    assert worker.pictures[1][key] == turned, "from the edited photo"
+    other = str(asset_id(11))
+    assert worker.pictures[1][other] == immich.photo_files[other], "the others as they were"
 
 
 @pytest.mark.anyio

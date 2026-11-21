@@ -44,6 +44,10 @@ class FakeImmich:
     photos: dict[UUID, list[dict[str, Any]]] = field(default_factory=dict)
     # The pictures of the photos, by asset: what `fullsize` gives; `preview` gives a smaller copy.
     photo_files: dict[str, bytes] = field(default_factory=dict)
+    # The pictures of photos edited in Immich (turned, cropped): given only with `edited=true`.
+    edited_files: dict[str, bytes] = field(default_factory=dict)
+    # Every request in full, its query too.
+    urls: list[str] = field(default_factory=list)
 
     def add_album(self, n: int, name: str, *, stamp: str = "2026-01-01T00:00:00.000Z") -> UUID:
         key = album_id(n)
@@ -111,6 +115,18 @@ class FakeImmich:
         )
         return key
 
+    def edit_photo(self, album: UUID, n: int, content: bytes | None, thumbhash: str = "") -> None:
+        """Turn or crop a photo in Immich: the file stays, the edit is kept apart. `None`: the
+        edit undone."""
+        key = str(asset_id(n))
+        (item,) = (p for p in self.photos[album] if p["id"] == key)
+        item["isEdited"] = content is not None
+        item["thumbhash"] = thumbhash or ("edit" if content is not None else "hash1")
+        if content is None:
+            self.edited_files.pop(key, None)
+        else:
+            self.edited_files[key] = content
+
     def touch(self, album: UUID, stamp: str) -> None:
         self.albums[album]["updatedAt"] = stamp
         self.albums[album]["lastModifiedAssetTimestamp"] = stamp
@@ -118,6 +134,7 @@ class FakeImmich:
     def handler(self, request: httpx2.Request) -> httpx2.Response:
         path = request.url.path
         self.requests.append(f"{request.method} {path}")
+        self.urls.append(str(request.url))
         for start, status in self.broken.items():
             if path.startswith(start):
                 return httpx2.Response(status, json={"message": "broken"})
@@ -133,6 +150,10 @@ class FakeImmich:
                 return httpx2.Response(200, content=content, headers={"content-type": "image/jpeg"})
         if path.startswith("/api/assets/") and path.endswith("/thumbnail"):
             asset = path.split("/")[3]
+            if asset in self.edited_files and request.url.params.get("edited") == "true":
+                return httpx2.Response(
+                    200, content=self.edited_files[asset], headers={"content-type": "image/jpeg"}
+                )
             if asset in self.photo_files:
                 return self._photo(asset, request.url.params.get("size", "thumbnail"))
             version = next(

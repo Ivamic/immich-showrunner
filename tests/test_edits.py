@@ -255,11 +255,12 @@ def test_move_an_episode(client: TestClient, world: World) -> None:
     assert client.post(f"{base}/{asset_id(1)}/move", json={}).status_code == 400
 
 
-def test_thumbnail_proxy(client: TestClient) -> None:
+def test_thumbnail_proxy(client: TestClient, world: World) -> None:
     response = client.get(f"/api/thumbnails/{asset_id(1)}")
     assert response.status_code == 200
     assert response.content.startswith(b"JPEG")
     assert "private" in response.headers["cache-control"]
+    assert "edited=true" in world.library.urls[-1], "a photo edited in Immich as edited"
 
 
 # --- a whole sync -----------------------------------------------------------------------------

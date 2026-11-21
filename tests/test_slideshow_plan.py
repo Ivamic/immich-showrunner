@@ -4,6 +4,7 @@ five minutes, a timeline without gaps, and a camera that keeps the faces in view
 
 import itertools
 import random
+from dataclasses import replace
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -208,6 +209,18 @@ def test_the_photos_chosen_in_a_scene_are_unlike_each_other() -> None:
     rest = [photo(10 + i, 10 + i * 0.5, embedding=unit(i), score=0.3) for i in range(400)]
     (first, *_) = plan_album(ALBUM, "Trip", twins + rest)
     assert asset_id(1) in first.photos and asset_id(2) not in first.photos
+
+
+def test_an_edit_in_immich_is_in_the_cut_list_and_makes_it_again() -> None:
+    photos = [photo(i, i * 5, score=0.3 + i / 100) for i in range(1, 11)]
+    (before,) = plan_album(ALBUM, "Trip", photos)
+    assert all("edit" not in s.to_dict() for s in before.shots), "unedited lists stay as they were"
+    edited = [replace(p, edit="turned") if p.asset_id == asset_id(3) else p for p in photos]
+    (after,) = plan_album(ALBUM, "Trip", edited)
+    (shot,) = (s for s in after.shots if s.asset_id == asset_id(3))
+    assert shot.edit == "turned"
+    assert after.version != before.version, "drawn again"
+    assert Clip.from_dict(after.to_dict()).to_dict() == after.to_dict()
 
 
 def test_a_year_with_too_few_photos_gets_no_slideshow() -> None:

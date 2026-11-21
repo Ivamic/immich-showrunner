@@ -201,6 +201,37 @@ async def test_a_replaced_photo_is_looked_at_again(session: AsyncSession, tmp_pa
 
 
 @pytest.mark.anyio
+async def test_a_photo_edited_in_immich_is_looked_at_again_as_edited(
+    session: AsyncSession, tmp_path: Path
+) -> None:
+    immich, album = album_of_photos()
+    await one_pass(immich, session, tmp_path, FakeSlideshow())
+    assert not any("edited=" in url for url in immich.urls if "/thumbnail" in url)
+
+    # Turned in Immich: the file and its checksum stay, the edit is new.
+    turned = jpeg(scene(seed=5))
+    immich.edit_photo(album, 11, turned, thumbhash="turned1")
+    immich.touch(album, "2026-02-01T00:00:00.000Z")
+    immich.urls.clear()
+    again = FakeSlideshow()
+    await one_pass(immich, session, tmp_path, again)
+    assert again.looked == [asset_id(11)], "only the edited one"
+    assert any(f"{asset_id(11)}/thumbnail" in url and "edited=true" in url for url in immich.urls)
+
+    immich.touch(album, "2026-03-01T00:00:00.000Z")
+    same = FakeSlideshow()
+    await one_pass(immich, session, tmp_path, same)
+    assert same.looked == [], "the same edit: not again"
+
+    for n, (content, thumbhash) in enumerate([(turned, "turned2"), (None, "")], start=4):
+        immich.edit_photo(album, 11, content, thumbhash=thumbhash)
+        immich.touch(album, f"2026-0{n}-01T00:00:00.000Z")
+        later = FakeSlideshow()
+        await one_pass(immich, session, tmp_path, later)
+        assert later.looked == [asset_id(11)], "another edit, and the edit undone"
+
+
+@pytest.mark.anyio
 async def test_an_album_waits_for_its_photos(session: AsyncSession, tmp_path: Path) -> None:
     immich, _ = album_of_photos()
     waiting = FakeSlideshow(budget=0)

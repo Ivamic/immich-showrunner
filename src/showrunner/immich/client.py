@@ -215,11 +215,12 @@ class ImmichClient:
         await self._request("POST", f"/cluster-groups/requests/{request_id}/accept")
 
     async def thumbnail(self, asset_id: UUID, size: str = "thumbnail") -> tuple[bytes, str]:
-        """A picture of an asset for the page, in whatever format Immich makes it."""
+        """A picture of an asset for the page, in whatever format Immich makes it; of a photo
+        edited in Immich, the edited one (Immich gives the same picture for the others)."""
         response = await self._request(
             "GET",
             f"/assets/{asset_id}/thumbnail",
-            params={"size": size},
+            params={"size": size, "edited": "true"},
             headers={"Accept": "image/*"},
         )
         return response.content, response.headers.get("content-type", "image/jpeg")
@@ -242,15 +243,20 @@ class ImmichClient:
         async for asset in self._album_assets(album_id, "IMAGE"):
             yield asset
 
-    async def photo(self, asset_id: UUID, *, full: bool) -> tuple[bytes, str]:
+    async def photo(self, asset_id: UUID, *, full: bool, edited: bool = False) -> tuple[bytes, str]:
         """A photo to look at or to show: in full size (needs asset.download; the original
         file itself for JPEG, a picture Immich made from it for HEIC and RAW when Immich makes
         full-size pictures, its preview otherwise), or the preview of Immich. In whatever
-        format Immich gives it, with its media type."""
+        format Immich gives it, with its media type. `edited`: the photo as edited in Immich
+        (turned, cropped), asked for only then: for the others Immich would not give the
+        original file."""
+        params = {"size": "fullsize" if full else "preview"}
+        if edited:
+            params["edited"] = "true"
         response = await self._request(
             "GET",
             f"/assets/{asset_id}/thumbnail",
-            params={"size": "fullsize" if full else "preview"},
+            params=params,
             headers={"Accept": "image/*"},
             # For a photo that is a picture already, Immich sends the full size on to the
             # original file.

@@ -128,6 +128,9 @@ class PlanPhoto:
     latitude: float | None = None
     longitude: float | None = None
     embedding: np.ndarray | None = field(default=None, compare=False, repr=False)
+    edit: str = ""
+    """The edit of the photo in Immich (turned, cropped), when it has one: the edited picture is
+    shown, and another edit makes the slideshow again."""
 
     @property
     def aspect(self) -> float:
@@ -148,9 +151,13 @@ class Shot:
     move: tuple[Rect, Rect] | None = None
     """Where the camera looks at the start and at the end."""
     scene: int = 0
+    edit: str = ""
+    """The edit of the photo in Immich, when it has one (`PlanPhoto.edit`)."""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
+        if not self.edit:
+            del data["edit"]  # so that the lists of photos never edited stay as they were
         data["asset_id"] = str(self.asset_id) if self.asset_id else None
         data["start"] = round(self.start, 3)
         data["seconds"] = round(self.seconds, 3)
@@ -172,6 +179,7 @@ class Shot:
             layout=Layout(data["layout"]) if data.get("layout") else None,
             move=(_rect(move[0]), _rect(move[1])) if move else None,
             scene=int(data.get("scene", 0)),
+            edit=str(data.get("edit", "")),
         )
 
 
@@ -765,6 +773,7 @@ def _shots(part: Timed, title: str, seed: int, credits: bool) -> tuple[Shot, ...
                     layout=layout,
                     move=move,
                     scene=scene_number,
+                    edit=photo.edit,
                 )
             )
             end = start + seconds + overlap

@@ -60,6 +60,10 @@ between releases.
 
 ### Fixed
 
+- **A photo turned or cropped in Immich** (0.4.0-rc.5): it is looked at again and its slideshow
+  drawn again, from the edited picture; before, both the look and the drawing kept to the
+  original file, which an edit in Immich leaves as it is. The pictures on the pages are the edited
+  ones too.
 - **Photos of people are no longer taken for screenshots** (0.4.0-rc.3): a photo with a face is
   never left out as a screenshot or document, the words photos are told by include tourists by
   a landmark, museums, signs, shops and ruins, and a photo is junk only when those words clearly

@@ -131,6 +131,9 @@ class Asset(ImmichModel):
     thumbhash: str | None = None
     # A hash of the file itself (base64 SHA-1): it changes only when the video is replaced.
     checksum: str | None = None
+    # A photo turned, cropped or mirrored in Immich (3.x): the file stays as it was, the edit is
+    # kept apart and `thumbhash` changes with it; the edited picture comes only with `edited`.
+    is_edited: bool = False
     # Size of a photo as it is shown, that is after turning it as its EXIF says.
     width: int | None = None
     height: int | None = None

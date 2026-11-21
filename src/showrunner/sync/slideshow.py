@@ -123,7 +123,7 @@ async def look_at_photos(
     for album in albums:
         for photo in photos[album.id]:
             row = rows.get(photo.id)
-            checksum = photo.checksum or ""
+            checksum = photo_key(photo)
             if photo.id in done:
                 continue
             fresh = _fresh(row, checksum, version)
@@ -138,7 +138,7 @@ async def look_at_photos(
                 continue
             path = await model.get()
             try:
-                content, _ = await immich.photo(photo.id, full=context.full)
+                content, _ = await immich.photo(photo.id, full=context.full, edited=photo.is_edited)
                 found, embedding = await context.look(photo.id, content, path)
             except ImmichError as exc:
                 if _transient(exc):
@@ -183,7 +183,7 @@ def plan_inputs(photos: Sequence[Asset], rows: Mapping[UUID, PhotoLookRow]) -> l
     result: list[PlanPhoto] = []
     for photo in photos:
         row = rows.get(photo.id)
-        if row is None or row.failed or not _fresh(row, photo.checksum or "", version):
+        if row is None or row.failed or not _fresh(row, photo_key(photo), version):
             continue
         look = PhotoLook.from_dict(row.look)
         if look is None:
@@ -202,9 +202,17 @@ def plan_inputs(photos: Sequence[Asset], rows: Mapping[UUID, PhotoLookRow]) -> l
                 latitude=exif.latitude if exif else None,
                 longitude=exif.longitude if exif else None,
                 embedding=embedding,
+                edit=(photo.thumbhash or "edited") if photo.is_edited else "",
             )
         )
     return result
+
+
+def photo_key(photo: Asset) -> str:
+    """What the look of a photo is kept for: its file, and its edit in Immich when it has one
+    (the thumbhash changes with each edit and comes back when the edit is undone)."""
+    checksum = photo.checksum or ""
+    return f"{checksum}/{photo.thumbhash or ''}" if photo.is_edited else checksum
 
 
 def _fresh(row: PhotoLookRow | None, checksum: str, version: int) -> bool:

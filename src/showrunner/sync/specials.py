@@ -141,8 +141,11 @@ class SpecialsContext:
         folder.mkdir(parents=True, exist_ok=True)
         try:
             photos = {}
-            for asset_id in clip.photos:
-                content, _ = await immich.photo(asset_id, full=self.full)
+            for shot in clip.shots:
+                asset_id = shot.asset_id
+                if asset_id is None or str(asset_id) in photos:
+                    continue
+                content, _ = await immich.photo(asset_id, full=self.full, edited=bool(shot.edit))
                 path = folder / f"{asset_id}.photo"
                 path.write_bytes(content)
                 photos[str(asset_id)] = str(path)
