@@ -66,6 +66,13 @@ def print_report(report: SyncReport) -> None:
             "which looks like a wrong API key or user. Nothing was changed. If it is right, run "
             "the sync again with --force."
         )
+    if report.slideshows_drawn or report.slideshows_waiting:
+        print(
+            f"  slideshows: {report.slideshows_drawn} drawn, "
+            f"{report.slideshows_waiting} left for the next sync"
+        )
+    for failed in report.slideshows_failed:
+        print(f"  slideshow not drawn: {failed}")
     for failed in report.pictures_failed:
         print(f"  picture not taken: {failed}")
     for outcome in report.foreign:
