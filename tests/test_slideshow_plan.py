@@ -21,8 +21,9 @@ from showrunner.slideshow.plan import (
     ASPECT,
     CLIP_MAX_SECONDS,
     CREDITS_SECONDS,
+    SEASON_SECONDS,
     TITLE_SECONDS,
-    YEAR_MAX_SECONDS,
+    Clip,
     Layout,
     PlanPhoto,
     Transition,
@@ -192,6 +193,11 @@ def test_a_step_closer_within_a_minute_is_a_copy_later_it_is_not() -> None:
     assert [len(r) for r in series(later)] == [1, 1], "after a minute only a close copy"
 
 
+def unit(seed: int) -> np.ndarray:
+    """A photo unlike any other, still a photo (near the words of photos, never junk)."""
+    return alike(vector(seed), 0.7, seed)
+
+
 def test_the_photos_chosen_in_a_scene_are_unlike_each_other() -> None:
     base = vector(500)
     # The two best are nearly the same view, three minutes apart (no series): one is enough.
@@ -199,41 +205,42 @@ def test_the_photos_chosen_in_a_scene_are_unlike_each_other() -> None:
         photo(1, 0, embedding=base, score=0.95),
         photo(2, 3, embedding=alike(base, 0.95, 2), score=0.94),
     ]
-    rest = [photo(10 + i, 10 + i * 5, score=0.5 + i / 100) for i in range(18)]
-    (clip,) = plan_album(ALBUM, "Trip", twins + rest)
-    assert asset_id(1) in clip.photos and asset_id(2) not in clip.photos
+    rest = [photo(10 + i, 10 + i * 0.5, embedding=unit(i), score=0.3) for i in range(400)]
+    (first, *_) = plan_album(ALBUM, "Trip", twins + rest)
+    assert asset_id(1) in first.photos and asset_id(2) not in first.photos
 
 
 def test_a_year_with_too_few_photos_gets_no_slideshow() -> None:
     assert plan_album(ALBUM, "Trip", day(1, 5)) == []
 
 
-def test_a_day_gives_about_twice_the_square_root_of_its_photos_the_best_ones() -> None:
+def test_all_the_photos_left_are_shown_when_twenty_minutes_hold_them() -> None:
     photos = [photo(i, i * 5, score=0.3 + i / 100) for i in range(1, 21)]
     (clip,) = plan_album(ALBUM, "Trip", photos)
-    assert len(clip.photos) == 9, "2 x sqrt(20)"
-    assert clip.photos == [asset_id(i) for i in range(12, 21)], "the best, in the order of taking"
+    assert clip.photos == [asset_id(i) for i in range(1, 21)], "all, in the order of taking"
 
 
-def test_a_busy_day_gives_more_but_not_all_of_its_photos() -> None:
-    busy = [photo(i, i * 5, score=0.5 + (i % 7) / 100) for i in range(1, 101)]
-    quiet = [photo(200 + i, 24 * 60 + i * 20) for i in range(8)]
-    (clip,) = plan_album(ALBUM, "Trip", busy + quiet)
-    shown = set(clip.photos)
-    assert len(shown & {p.asset_id for p in busy}) == 20
-    assert len(shown & {p.asset_id for p in quiet}) == 8, "a few are all shown"
-    assert clip.report["days"][0]["scene"] == 80
+def shown_in(clips: list[Clip], photos: list[PlanPhoto]) -> int:
+    ids = {a for c in clips for a in c.photos}
+    return sum(1 for p in photos if p.asset_id in ids)
+
+
+def test_a_full_season_shares_twenty_minutes_a_busy_day_more_but_not_all() -> None:
+    busy = [photo(i, i * 0.5, embedding=unit(i)) for i in range(1, 601)]
+    quiet = [photo(2000 + i, 24 * 60 + i * 20) for i in range(8)]
+    clips = plan_album(ALBUM, "Party", busy + quiet)
+    assert shown_in(clips, quiet) == 8, "a day of a few gives them all"
+    assert shown_in(clips, busy) == 292, "the rest of 300 photos, twenty minutes"
+    assert sum(c.report["days"][0].get("scene", 0) for c in clips) == 308
 
 
 def test_the_share_of_a_day_goes_to_each_of_its_scenes_by_their_size() -> None:
-    morning = [photo(i, i * 5) for i in range(1, 31)]
-    evening = [photo(100 + i, 10 * 60 + i * 5) for i in range(10)]  # after a long pause
-    (clip,) = plan_album(ALBUM, "Trip", morning + evening)
-    shown = set(clip.photos)
-    from_morning = len(shown & {p.asset_id for p in morning})
-    from_evening = len(shown & {p.asset_id for p in evening})
-    assert from_morning + from_evening == 13, "2 x sqrt(40)"
-    assert from_evening >= 2 and from_morning > from_evening
+    morning = [photo(i, i, embedding=unit(i)) for i in range(1, 401)]
+    evening = [photo(1000 + i, 10 * 60 + i, embedding=unit(1000 + i)) for i in range(50)]
+    clips = plan_album(ALBUM, "Day", morning + evening)
+    from_morning, from_evening = shown_in(clips, morning), shown_in(clips, evening)
+    assert from_morning + from_evening == 300
+    assert 25 <= from_evening <= 40 and from_morning > from_evening
 
 
 # --- the year in parts ------------------------------------------------------------------------
@@ -253,28 +260,41 @@ def test_a_long_year_is_cut_into_parts_of_at_most_five_minutes() -> None:
     assert clips[0].last < clips[1].first, "parts follow each other in time"
 
 
-def test_a_day_is_never_cut_between_parts() -> None:
+def test_parts_are_cut_between_days_where_they_can_be() -> None:
     photos: list[PlanPhoto] = []
-    for d, count in enumerate([254, 206, 616, 639, 595, 117]):  # a trip of six days
-        photos += [photo(10000 * (d + 1) + i, d * 24 * 60 + i * 1.3) for i in range(count)]
+    for d in range(8):  # eight days of a trip, about two minutes each
+        photos += [photo(10000 * (d + 1) + i, d * 24 * 60 + i * 5) for i in range(40)]
     clips = plan_album(ALBUM, "Trip", photos)
-    assert len(clips) >= 2
+    assert len(clips) >= 4
     days_of = [{p.taken.date() for p in photos if p.asset_id in set(c.photos)} for c in clips]
     for a, b in itertools.pairwise(days_of):
         assert not a & b, "a day in one part only"
     for clip in clips:
         assert clip.seconds <= CLIP_MAX_SECONDS + 5, clip.seconds
-    longest, shortest = max(c.seconds for c in clips), min(c.seconds for c in clips)
-    assert longest - shortest < 120, [c.seconds for c in clips]
 
 
-def test_a_year_is_at_most_half_an_hour() -> None:
+def test_a_busy_day_is_cut_at_its_longest_pause() -> None:
+    # A wedding: the ceremony, an hour's pause, the dinner; no pause long enough for a scene.
+    ceremony = [photo(i, i * 0.6, embedding=unit(i)) for i in range(150)]
+    dinner = [
+        photo(1000 + i, 150 * 0.6 + 60 + i * 0.6, embedding=unit(1000 + i)) for i in range(250)
+    ]
+    clips = plan_album(ALBUM, "Wedding", ceremony + dinner)
+    assert len(clips) >= 4
+    for clip in clips:
+        assert clip.seconds <= CLIP_MAX_SECONDS + 5, clip.seconds
+    ends = [c.photos[-1] for c in clips]
+    shown = [p.asset_id for p in ceremony if p.asset_id in {a for c in clips for a in c.photos}]
+    assert shown[-1] in ends, "a part ends where the ceremony ends"
+
+
+def test_a_season_is_at_most_twenty_minutes_every_day_keeps_its_place() -> None:
     photos: list[PlanPhoto] = []
     for d in range(100):  # a hundred busy days
         photos += [photo(100000 + d * 100 + i, d * 24 * 60 + i * 5) for i in range(60)]
     clips = plan_album(ALBUM, "Year", photos)
     extra = TITLE_SECONDS + CREDITS_SECONDS
-    assert sum(c.seconds - extra for c in clips) <= YEAR_MAX_SECONDS + 30
+    assert sum(c.seconds - extra for c in clips) <= SEASON_SECONDS + 60
     days_shown = {
         p.taken.date() for p in photos if p.asset_id in {a for c in clips for a in c.photos}
     }
@@ -426,16 +446,16 @@ def test_the_report_says_why_each_photo_was_left_out_day_by_day() -> None:
         photo(1, 0, embedding=same, score=0.9),
         photo(2, 0.1, embedding=same, score=0.5),  # a near copy of 1
         photo(3, 1, embedding=screenshot),  # junk
-        *[photo(10 + i, 2 + i * 5, score=0.3 + i / 100) for i in range(14)],  # 7 over the share
+        *[photo(10 + i, 2 + i * 5, score=0.3 + i / 100) for i in range(14)],  # all shown
         *[photo(40 + i, 24 * 60 + i * 20) for i in range(6)],  # the next day
     ]
     (clip,) = plan_album(ALBUM, "Trip", photos)
     report = clip.report
-    assert report["reasons"] == {"series": 1, "junk": 1, "scene": 7}
+    assert report["reasons"] == {"series": 1, "junk": 1}
     assert sum(report["reasons"].values()) == clip.left_out
     first, second = report["days"]
     assert first["date"] == "2024-07-01" and first["photos"] == 17
-    assert first["shown"] + first["series"] + first["junk"] + first["scene"] == 17
+    assert first["shown"] + first["series"] + first["junk"] == 17
     assert second == {"date": "2024-07-02", "photos": 6, "shown": 6}
     assert "report" not in clip.to_dict(), "not part of the cut list: nothing is drawn again"
 

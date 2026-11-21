@@ -10,13 +10,15 @@ between releases.
 ### Added
 
 - **Slideshows of the photos** (off until switched on on the new Slideshows page): the photos of an
-  album become videos with music, one for each year ("Photos 2024", parts of 3 to 5 minutes of whole
-  days for a long year, at most half an hour a year; for an album of one season, all its years
-  together, "Photos 2019–2024"), among the specials (Season 0) of its show, placed after the episodes of their year in
-  Jellyfin and Kodi. An album of photos only becomes a show of slideshows only.
+  album become videos with music, one for each year ("Photos 2024"; for an album of one season,
+  all its years together, "Photos 2019–2024"), among the specials (Season 0) of its show, placed
+  after the episodes of their year in Jellyfin and Kodi. A year is watched at one sitting: at most
+  twenty minutes, in parts of 3 to 5 minutes cut between days where they can be, else at the
+  longest pauses and moves of a busy day. An album of photos only becomes a show of slideshows only.
 - **A cut list made with care**: the photos in the order they were taken, cut into scenes by pauses
-  and moves; near copies become their best photo; a day gives all of a few photos, else about twice
-  the square root of them (a busy day more, but not all), shared among its scenes; screenshots, documents and receipts are left out
+  and moves; near copies become their best photo; all the photos left are shown while twenty
+  minutes hold them, else each day gives a share by the square root of its photos (a day of a few
+  gives them all), spread over its whole time; screenshots, documents and receipts are left out
   by a CLIP image model (OpenCLIP ViT-B/32, MIT, downloaded on first use, run by OpenCV on the CPU).
   The camera moves slowly towards the faces (or what draws the eye), a standing photo is shown
   whole over a blurred copy of itself, a panorama is travelled along; dissolves within a scene,
