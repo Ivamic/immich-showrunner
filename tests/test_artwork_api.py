@@ -198,3 +198,39 @@ def test_a_switched_off_style_is_not_offered(
         client.post(url, json={"change": "style"}).json()["choice"]["style_id"] for _ in range(6)
     }
     assert offered <= {"polaroid", "editorial"}
+
+
+def test_the_list_of_albums_names_the_landscape_picture_drawn(
+    client: TestClient, world: World, empty_database: str
+) -> None:
+    from pathlib import PurePosixPath
+
+    from showrunner.targets.base import KODI, DesiredFile, FileKind, ImageSource
+
+    def picture(path: str, version: str) -> DesiredFile:
+        return DesiredFile(
+            path=PurePosixPath(path),
+            kind=FileKind.IMAGE,
+            album_id=world.album,
+            image=ImageSource(world.album, version),
+            content=b"x",
+        )
+
+    def listed() -> Any:
+        return next(s for s in client.get("/api/shows").json() if s["album_id"] == str(world.album))
+
+    assert listed()["landscape_version"] is None
+
+    async def cover_only(registry: Registry) -> None:
+        await registry.add_show(world.album, "Family")
+        await registry.record(picture("Family/landscape.jpg", "cover-1"))
+
+    database(empty_database, cover_only)
+    assert listed()["landscape_version"] is None, "a picture from Immich is not drawn"
+
+    async def drawn(registry: Registry) -> None:
+        await registry.record(picture("Family/landscape.jpg", "art-kodi"), KODI)
+        await registry.record(picture("Family/landscape.jpg", "art-jellyfin"))
+
+    database(empty_database, drawn)
+    assert listed()["landscape_version"] == "art-jellyfin"

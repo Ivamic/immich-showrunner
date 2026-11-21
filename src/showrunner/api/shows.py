@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 
 from showrunner.api.auth import CurrentUser, DbDep, ImmichFactoryDep, SettingsDep
 from showrunner.api.errors import ApiError
+from showrunner.artwork.style import OutputKind
 from showrunner.config import Settings
 from showrunner.immich.client import ImmichError, ImmichUnreachableError
 from showrunner.immich.models import Album
@@ -21,7 +22,11 @@ from showrunner.runner import options_from
 from showrunner.scheduler import State
 from showrunner.store.models import FileRow, ShowRow
 from showrunner.store.registry import Registry
-from showrunner.targets.base import FileKind
+from showrunner.targets.base import JELLYFIN, FileKind
+from showrunner.targets.jellyfin.layout import PICTURE_NAMES
+
+LANDSCAPE_NAME = PICTURE_NAMES[OutputKind.LANDSCAPE]
+"""The same name for Kodi."""
 
 router = APIRouter(prefix="/shows")
 
@@ -38,6 +43,9 @@ class ShowOut(BaseModel):
     season_mode: SeasonMode
     episodes: int
     cover_asset_id: UUID | None
+    landscape_version: str | None = None
+    """The version of the landscape picture the app drew for the show, if it has one: the page
+    shows it from /shows/{id}/artwork/file?path=landscape.jpg."""
 
 
 class EpisodeOut(BaseModel):
@@ -176,8 +184,31 @@ def detail(album: Album, row: ShowRow, show: Show) -> ShowDetail:
 async def list_shows(user: CurrentUser, db: DbDep, albums: AlbumsDep) -> list[ShowOut]:
     rows = await Registry(db).shows()
     counts = await episode_counts(db)
-    shows = [show_out(a, rows.get(a.id), counts.get(a.id, 0)) for a in albums.values()]
+    drawn = await drawn_landscapes(db)
+    shows = [
+        show_out(a, rows.get(a.id), counts.get(a.id, 0)).model_copy(
+            update={"landscape_version": drawn.get(a.id)}
+        )
+        for a in albums.values()
+    ]
     return sorted(shows, key=lambda s: s.title.casefold())
+
+
+async def drawn_landscapes(db: DbDep) -> dict[UUID, str]:
+    """The landscape picture each show has, drawn by the app (not a picture from Immich), by
+    its version; Jellyfin's when both targets have one."""
+    rows = await db.execute(
+        select(FileRow.album_id, FileRow.target, FileRow.source_version).where(
+            FileRow.kind == FileKind.IMAGE.value,
+            FileRow.path.like(f"%/{LANDSCAPE_NAME}"),
+            FileRow.source_version.like("art-%"),
+        )
+    )
+    result: dict[UUID, str] = {}
+    for album_id, target, version in rows:
+        if version and (album_id not in result or target == JELLYFIN):
+            result[album_id] = version
+    return result
 
 
 @router.get("/{album_id}")

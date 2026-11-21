@@ -231,5 +231,8 @@
 	"error_music_too_large": "Файл больше {megabytes} МБ.",
 	"error_music_not_usable": "Это не подходит для слайдшоу: {reason}",
 	"status_slideshows_label": "Слайдшоу",
-	"status_slideshows": "нарисовано за последнюю синхронизацию: {drawn}, ждут: {waiting}"
+	"status_slideshows": "нарисовано за последнюю синхронизацию: {drawn}, ждут: {waiting}",
+	"albums_view_label": "Картинки альбомов",
+	"albums_view_drawn": "Картинка сериала",
+	"albums_view_immich": "Обложка Immich"
 }

@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- The albums shared with the user of the app, as shows. -->
 <script lang="ts">
-	import { getShows, thumbnailUrl, type ShowSummary } from '#lib/api.js';
+	import { getShows, landscapeUrl, thumbnailUrl, type ShowSummary } from '#lib/api.js';
 	import { errorMessage } from '#lib/errors.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import EmptyState from '#lib/ui/EmptyState.svelte';
@@ -12,6 +12,32 @@
 	let shows = $state<ShowSummary[] | null>(null);
 	let error = $state<string | null>(null);
 
+	type View = 'drawn' | 'immich';
+	const VIEW_KEY = 'showrunner-albums-view';
+	function storedView(): View {
+		try {
+			return localStorage.getItem(VIEW_KEY) === 'immich' ? 'immich' : 'drawn';
+		} catch {
+			return 'drawn';
+		}
+	}
+	let view = $state<View>(storedView());
+	function choose(value: View) {
+		view = value;
+		try {
+			localStorage.setItem(VIEW_KEY, value);
+		} catch {
+			// not kept: the choice holds for this visit
+		}
+	}
+
+	/** The picture of a card: the one the app drew, or the cover of the album in Immich. */
+	function picture(show: ShowSummary): string | null {
+		if (view === 'drawn' && show.landscape_version)
+			return landscapeUrl(show.album_id, show.landscape_version);
+		return show.cover_asset_id ? thumbnailUrl(show.cover_asset_id) : null;
+	}
+
 	$effect(() => {
 		getShows()
 			.then((list) => (shows = list))
@@ -21,6 +47,18 @@
 
 <h1>{m.albums_heading()}</h1>
 <p class="hint">{m.shows_hint()}</p>
+<div class="view st-seg" role="radiogroup" aria-label={m.albums_view_label()}>
+	{#each [['drawn', m.albums_view_drawn()], ['immich', m.albums_view_immich()]] as [value, label] (value)}
+		<button
+			type="button"
+			role="radio"
+			aria-checked={view === value}
+			onclick={() => choose(value as View)}
+		>
+			{label}
+		</button>
+	{/each}
+</div>
 
 {#if error}
 	<div class="st-banner st-banner--danger" role="alert">
@@ -36,8 +74,8 @@
 			<li class:hidden={show.hidden}>
 				<a href={resolve('/albums/[id]', { id: show.album_id })}>
 					<div class="cover">
-						{#if show.cover_asset_id}
-							<img src={thumbnailUrl(show.cover_asset_id)} alt="" loading="lazy" />
+						{#if picture(show)}
+							<img src={picture(show)} alt="" loading="lazy" />
 						{/if}
 					</div>
 					<div class="text">
@@ -92,11 +130,19 @@
 	.hidden a {
 		opacity: 0.6;
 	}
+	.view {
+		margin-top: var(--space-4);
+	}
+	/* Every card has the same picture frame: a tall cover is cut to it, not the frame stretched. */
 	.cover {
+		position: relative;
 		aspect-ratio: 16 / 9;
+		overflow: hidden;
 		background: var(--color-surface-sunken);
 	}
 	img {
+		position: absolute;
+		inset: 0;
 		width: 100%;
 		height: 100%;
 		object-fit: cover;

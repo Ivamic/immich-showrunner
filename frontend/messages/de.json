@@ -231,5 +231,8 @@
 	"error_music_too_large": "Die Datei ist größer als {megabytes} MB.",
 	"error_music_not_usable": "Das ist keine Musik für Diashows: {reason}",
 	"status_slideshows_label": "Diashows",
-	"status_slideshows": "{drawn} bei der letzten Synchronisierung erstellt, {waiting} warten"
+	"status_slideshows": "{drawn} bei der letzten Synchronisierung erstellt, {waiting} warten",
+	"albums_view_label": "Bilder der Alben",
+	"albums_view_drawn": "Bild der Serie",
+	"albums_view_immich": "Immich-Cover"
 }

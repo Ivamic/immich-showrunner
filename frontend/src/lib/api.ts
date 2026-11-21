@@ -105,6 +105,8 @@ export interface ShowSummary {
 	season_mode: SeasonMode;
 	episodes: number;
 	cover_asset_id: string | null;
+	/** The landscape picture the app drew, if any: its version. */
+	landscape_version: string | null;
 }
 
 export interface Episode {
@@ -146,6 +148,9 @@ export const moveEpisode = (
 	place: { after?: string; before?: string }
 ) => request<void>('POST', `/shows/${show}/episodes/${episode}/move`, place);
 export const thumbnailUrl = (assetId: string) => `/api/thumbnails/${assetId}`;
+/** The landscape picture the app drew for a show; the version keeps a cached old one away. */
+export const landscapeUrl = (show: string, version: string) =>
+	`/api/shows/${show}/artwork/file?path=landscape.jpg&v=${encodeURIComponent(version)}`;
 
 export interface Person {
 	id: string;

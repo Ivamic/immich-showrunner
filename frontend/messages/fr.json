@@ -231,5 +231,8 @@
 	"error_music_too_large": "Le fichier dépasse {megabytes} Mo.",
 	"error_music_not_usable": "Ce n’est pas une musique pour les diaporamas : {reason}",
 	"status_slideshows_label": "Diaporamas",
-	"status_slideshows": "{drawn} créés lors de la dernière synchronisation, {waiting} en attente"
+	"status_slideshows": "{drawn} créés lors de la dernière synchronisation, {waiting} en attente",
+	"albums_view_label": "Images des albums",
+	"albums_view_drawn": "Image de la série",
+	"albums_view_immich": "Couverture Immich"
 }
