@@ -37,8 +37,11 @@ log = logging.getLogger(__name__)
 
 SET_MANIFEST = Path(__file__).parent / "music_set.json"
 AUDIO = (".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".flac", ".wav")
-MOODS = ("calm", "bright", "upbeat", "solemn")
-SET_LICENCES = ("CC0 1.0", "Public Domain Mark 1.0", "CC BY 3.0", "CC BY 4.0")
+MOODS = ("calm", "wistful", "bright", "upbeat", "solemn")
+"""D-100: by energy and colour; wistful (slow and sad) is never chosen for an album on its own."""
+ENERGIES = ("low", "medium", "high")
+COLOURS = ("sad", "neutral", "bright", "grand")
+SET_LICENCES = ("CC0 1.0", "Public Domain Mark 1.0", "CC BY 3.0", "CC BY 3.0 US", "CC BY 4.0")
 
 
 @dataclass(frozen=True)
@@ -82,6 +85,11 @@ def set_manifest() -> dict[str, Any]:
             raise ValueError(f"the set may not hold {entry['license']} ({entry['id']})")
         if entry["mood"] not in MOODS:
             raise ValueError(f"unknown mood {entry['mood']!r} ({entry['id']})")
+        if (
+            entry.get("energy", "low") not in ENERGIES
+            or entry.get("colour", "neutral") not in COLOURS
+        ):
+            raise ValueError(f"unknown energy or colour ({entry['id']})")
     return data
 
 
@@ -102,7 +110,8 @@ def set_pieces(data_dir: Path) -> list[Piece]:
                 title=entry["title"],
                 author=entry["author"],
                 licence=entry["license"],
-                link=entry.get("link", ""),
+                # CC BY asks for a link to the licence; the source is in THIRD_PARTY_NOTICES.md.
+                link=entry.get("license_url", "") if entry["license"].startswith("CC BY") else "",
                 mood=entry["mood"],
                 # Public domain and CC0 ask for nothing; the line is kept as a courtesy.
                 changed=entry["license"].startswith("CC BY"),

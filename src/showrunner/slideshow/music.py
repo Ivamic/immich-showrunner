@@ -21,7 +21,7 @@ import av
 import av.filter
 import numpy as np
 
-ANALYSIS_VERSION = 1
+ANALYSIS_VERSION = 2
 """Raised when music is looked at differently, so kept analyses are made again."""
 MIN_SECONDS, MAX_SECONDS = 30.0, 15 * 60.0
 MAX_BYTES = 50 * 1024 * 1024
@@ -69,7 +69,7 @@ class MusicAnalysis:
     mode: str
     """"major" or "minor"."""
     mood: str
-    """"calm", "bright", "upbeat" or "solemn"."""
+    """"calm", "wistful", "bright" or "upbeat" (D-100); "solemn" is only ever given by hand."""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -423,12 +423,13 @@ def estimate_key(spectrum: np.ndarray) -> tuple[str, str]:
 
 
 def mood_of(tempo: float, dynamics: float, mode: str) -> str:
-    """A plain rule: slow and quiet is calm, fast is upbeat, slow in minor is solemn, the rest
-    bright. `dynamics` is how much louder than its loudness the music is on average (dB)."""
+    """A plain rule: fast is upbeat, slow in minor is wistful, slow is calm, the rest bright.
+    `dynamics` is how much louder than its loudness the music is on average (dB). Rough: a slow
+    piece is often read at twice its tempo; the music set has its moods given by hand."""
     if tempo >= 120 and dynamics > -6:
         return "upbeat"
     if tempo < 90 and mode == "minor":
-        return "solemn"
+        return "wistful"
     if tempo < 100:
         return "calm"
     return "bright"

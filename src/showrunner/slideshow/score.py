@@ -61,8 +61,10 @@ class _Mark:
 def choose_tracks(tracks: Sequence[Track], mood: str, key: str) -> list[Track]:
     """The pieces of a mood in the order a slideshow uses them: a different order for each `key`
     (an album and its seed), the same every time for the same key. Without a piece of that mood,
-    any piece."""
-    fitting = [t for t in tracks if t.mood == mood] or list(tracks)
+    piece but a wistful one (sad music is never chosen for an album on its own, D-100)."""
+    fitting = [t for t in tracks if t.mood == mood]
+    if not fitting:
+        fitting = [t for t in tracks if t.mood != "wistful"] or list(tracks)
 
     def rank(track: Track) -> str:
         return hashlib.sha256(f"{key}/{track.id}".encode()).hexdigest()

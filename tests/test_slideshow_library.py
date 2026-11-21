@@ -174,3 +174,24 @@ def test_the_mood_of_an_album_follows_its_photos() -> None:
     party = [word("a group photo at a party")] * 3 + [word("a family photo")] * 4
     assert album_mood(party) == "upbeat"
     assert album_mood([]) == "calm"
+
+
+def test_the_set_credits_cc_by_with_the_licence_and_names_every_piece() -> None:
+    manifest = library.set_manifest()
+    assert len(manifest["tracks"]) >= 10
+    assert manifest["archive"]["url"].startswith("https://github.com/")
+    notices = (Path(__file__).parents[1] / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+    for entry in manifest["tracks"]:
+        assert entry["title"] in notices, entry["id"]
+        piece = Piece(
+            entry["id"],
+            Path(entry["file"]),
+            entry["sha256"],
+            entry["title"],
+            entry["author"],
+            entry["license"],
+            entry["license_url"] if entry["license"].startswith("CC BY") else "",
+        )
+        if entry["license"].startswith("CC BY"):
+            assert entry["license_url"] in piece.credit and "trimmed and faded" in piece.credit
+    assert {e["mood"] for e in manifest["tracks"]} >= {"calm", "wistful", "bright", "upbeat"}

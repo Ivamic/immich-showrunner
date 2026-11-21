@@ -140,3 +140,38 @@ attribution is required.
 - [Portret van Pyotr Ilyich Tchaikovsky, RP-F-F00667-AE.jpg](https://commons.wikimedia.org/wiki/File:Portret_van_Pyotr_Ilyich_Tchaikovsky,_RP-F-F00667-AE.jpg) — CC0
 - [Tchaikovsky, head-and-shoulders portrait.jpg](https://commons.wikimedia.org/wiki/File:Tchaikovsky,_head-and-shoulders_portrait.jpg) — Public domain
 - [Peter Ilich Tchaikovsky, head-and-shoulders portrait, facing slightly left LCCN99615569.jpg](https://commons.wikimedia.org/wiki/File:Peter_Ilich_Tchaikovsky,_head-and-shoulders_portrait,_facing_slightly_left_LCCN99615569.jpg) — Public domain
+
+## Music set for slideshows
+
+Downloaded on first use from the project's own mirror (a release of this repository), not part of
+the image. Pieces under CC BY are trimmed and faded in slideshows; the credit is given in the
+description of each slideshow episode and, unless turned off, in its end credits.
+
+- “Water Lily” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400035>
+- “Reawakening” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400017>
+- “Windswept” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100757>
+- “Clear Air” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100626>
+- “Chopin: Nocturne Op. 15 No. 1” — Frédéric Chopin, recorded for Musopen, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), <https://archive.org/details/musopen-chopin>
+- “Touching Moments Two - Higher” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100037>
+- “Prelude in C (BWV 846)” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100689>
+- “Stoic Morning” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100061>
+- “Chopin: Nocturne Op. 9 No. 2” — Frédéric Chopin, recorded for Musopen, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), <https://archive.org/details/musopen-chopin>
+- “Chopin: Prelude Op. 28 No. 15 (Raindrop)” — Frédéric Chopin, recorded for Musopen, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), <https://archive.org/details/musopen-chopin>
+- “Simple Duet” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100074>
+- “Winter Chimes” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100009>
+- “Life of Riley” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400054>
+- “Easy Lemon” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1200076>
+- “Valse Gymnopedie” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN2100012>
+- “Rumination” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100354>
+- “Chopin: Waltz Op. 69 No. 1” — Frédéric Chopin, recorded for Musopen, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), <https://archive.org/details/musopen-chopin>
+- “Carefree” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400037>
+- “Heartwarming” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100207>
+- “Acoustic Blues” — Jason Shaw (audionautix.com), [CC BY 3.0 US](https://creativecommons.org/licenses/by/3.0/us/), <https://freemusicarchive.org/music/Jason_Shaw/Audionautix_Acoustic/ACOUSTIC_BLUES____2-32/>
+- “Sunshine” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100517>
+- “Rainbows” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600063>
+- “On My Way” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600062>
+- “Chopin: Waltz Op. 64 No. 1” — Frédéric Chopin, recorded for Musopen, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), <https://archive.org/details/musopen-chopin>
+- “Chopin: Waltz Op. 70 No. 1” — Frédéric Chopin, recorded for Musopen, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), <https://archive.org/details/musopen-chopin>
+- “Jesu, Joy of Man's Desiring” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100189>
+- “Court of the Queen” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100728>
+- “Chopin: Waltz Op. 64 No. 2” — Frédéric Chopin, recorded for Musopen, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), <https://archive.org/details/musopen-chopin>

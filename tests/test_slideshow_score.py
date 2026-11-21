@@ -172,3 +172,9 @@ def test_the_music_is_kept_with_the_cut_list() -> None:
     again = Clip.from_dict(made.to_dict())
     assert again.to_dict() == made.to_dict()
     assert again.version != clip().version
+
+
+def test_a_wistful_piece_is_never_chosen_for_another_mood() -> None:
+    pieces = [Track("sad", analysis(), "", "wistful"), Track("calm", analysis(), "", "calm")]
+    assert [t.id for t in choose_tracks(pieces, "upbeat", "album")] == ["calm"]
+    assert [t.id for t in choose_tracks(pieces, "wistful", "album")] == ["sad"]
