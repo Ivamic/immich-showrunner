@@ -78,6 +78,10 @@ Kodi.
   poster for every season are drawn from frames of the album's videos, with the faces kept in view,
   in one of nine styles. No AI image generation: it all runs on the CPU of your server. On the page,
   try another style or other frames, for all the pictures or just one, and pin the ones you like.
+- **Slideshows of the photos** (switched on on the page): one video a year from the photos of an
+  album, among the specials of its show, with music from a free set or your own, the photos changing
+  on the beats and the camera moving slowly towards the faces. Screenshots, documents and near copies
+  are left out. It all runs on the CPU of your server; your photos never leave it.
 - **People from Immich**, under names of their own for the media server ("Mum" can stay "Mum"
   in your library), marked with a short prefix so that they never mix with the actors of your
   film library.

@@ -81,6 +81,11 @@ oder Kodi.
   einem von neun Stilen. Ohne KI-Bildgenerierung: alles läuft auf der CPU Ihres Servers. Auf der
   Seite probieren Sie einen anderen Stil oder andere Einzelbilder, für alle Bilder oder nur eines,
   und heften die an, die Ihnen gefallen.
+- **Diashows aus den Fotos** (auf der Webseite einzuschalten): ein Video pro Jahr aus den Fotos
+  eines Albums, unter den Specials seiner Serie, mit Musik aus einer freien Auswahl oder eigener
+  Musik; die Fotos wechseln im Takt, die Kamera fährt langsam auf die Gesichter zu. Screenshots,
+  Dokumente und fast gleiche Fotos bleiben weg. Alles läuft auf der CPU Ihres Servers; Ihre Fotos
+  verlassen ihn nicht.
 - **Personen aus Immich**, unter eigenen Namen für den Medienserver („Mama“ darf bei Ihnen „Mama“
   bleiben), mit einem kurzen Präfix markiert, damit sie sich nie mit den Schauspielern Ihrer
   Filmbibliothek vermischen.

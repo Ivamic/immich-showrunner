@@ -7,6 +7,55 @@ between releases.
 
 ## [Unreleased]
 
+### Added
+
+- **Slideshows of the photos** (off until switched on on the new Slideshows page): the photos of an
+  album become videos with music, one for each year ("Photos 2024", parts of 3 to 5 minutes for a
+  long year), among the specials (Season 0) of its show, placed after the episodes of their year in
+  Jellyfin and Kodi. An album of photos only becomes a show of slideshows only.
+- **A cut list made with care**: the photos in the order they were taken, cut into scenes by pauses
+  and moves; near copies become their best photo; screenshots, documents and receipts are left out
+  by a CLIP image model (OpenCLIP ViT-B/32, MIT, downloaded on first use, run by OpenCV on the CPU).
+  The camera moves slowly towards the faces (or what draws the eye), a standing photo is shown
+  whole over a blurred copy of itself, a panorama is travelled along; dissolves within a scene,
+  fades through black between scenes; the title and the credits in the style of the album.
+- **Music**: a set of 28 free pieces (Kevin MacLeod, CC BY 4.0; Chopin recorded for Musopen, CC0;
+  Jason Shaw, CC BY 3.0 US), downloaded on first use from a release of this project, and your own
+  pieces, added on the page with an optional title, author, licence, link and mood. Every piece is
+  looked at once (loudness by EBU R128, tempo, beats, bars, parts, key); the photos change on the
+  beats, a scene on the first beat of a bar, and a slideshow ends at the end of a phrase. The mood of
+  the music follows what the photos show (calm, bright, upbeat; wistful and solemn by choice). The
+  music is named in the description of every slideshow and in its end credits
+  (`SHOWRUNNER_SLIDESHOW_CREDITS`, or on the page).
+- **On the page of an album**: slideshows off for this album, the mood of its music, "Other music",
+  and its slideshows with their state, to watch on the page. The cards of the albums count their
+  slideshows.
+- **A folder for the slideshows** (`SHOWRUNNER_SLIDESHOW_LOCATION`, optional): the output folders then
+  get links to them, one file for Jellyfin and Kodi alike; without it each output folder gets a copy.
+- **Drawn in the background**: photos are looked at within `SHOWRUNNER_SLIDESHOW_BUDGET_SECONDS`
+  (240) per sync and slideshows drawn within `SHOWRUNNER_SLIDESHOW_RENDER_BUDGET_SECONDS` (600), the
+  newest years first, on `SHOWRUNNER_SLIDESHOW_THREADS` (2) threads, in a process of their own. A
+  slideshow keeps its file name and is drawn again only when its photos, music or style change; the
+  one drawn before stays in the library meanwhile, with its watched mark.
+- **The albums page** shows the picture the app drew for each show, or its cover in Immich.
+
+### Changed
+
+- **A volume for the app's own data** (`/data`, `app-data` in `compose.yaml`): the downloaded model and
+  music, your music, and the work of drawing.
+- **The database changes** (migrations 0013–0015): what was learned about the photos, the choices for
+  the slideshows and the music switched off.
+
+### Fixed
+
+- **Cards of the albums line up**: a tall cover no longer stretches its card.
+
+### Security
+
+- No new dependency: slideshows are drawn with OpenCV, NumPy, Pillow and PyAV, already in the image.
+- The dependencies that ship were checked for known vulnerabilities before the release: none found
+  (a moderate one in `minimatch` is only in the tools that build the page, not in the image).
+
 ## [0.3.0] - 2026-11-18
 
 ### Added

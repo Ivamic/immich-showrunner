@@ -81,6 +81,11 @@ Jellyfin ou Kodi.
   les visages en vue, dans l’un de neuf styles. Sans génération d’images par IA : tout tourne sur
   le processeur de votre serveur. Sur la page, essayez un autre style ou d’autres images, pour
   toutes les illustrations ou une seule, et épinglez celles qui vous plaisent.
+- **Des diaporamas des photos** (à activer sur la page web) : une vidéo par année à partir des
+  photos d’un album, parmi les épisodes spéciaux de sa série, sur une musique libre fournie ou la
+  vôtre ; les photos changent en rythme et la caméra s’approche lentement des visages. Captures
+  d’écran, documents et quasi-doublons sont écartés. Tout tourne sur le processeur de votre serveur ;
+  vos photos ne le quittent pas.
 - **Les personnes d’Immich**, sous des noms à elles pour le serveur multimédia (« Maman » peut
   rester « Maman » chez vous), marquées d’un court préfixe pour ne jamais se mêler aux acteurs de
   votre filmothèque.

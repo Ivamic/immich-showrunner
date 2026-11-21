@@ -29,6 +29,10 @@ folders may be on other disks than the Immich library; links work across disks. 
 output folder is not mounted, the app finds the empty folder under it without its hidden file
 `.showrunner`, writes nothing there and says so on the Status page.
 
+For [slideshows](#9-slideshows) you may also create a folder for the videos the app draws, for example
+`/srv/showrunner/slideshows`: the output folders then get links to them, one file for Jellyfin and
+Kodi alike. Without it, each output folder gets a copy of every slideshow.
+
 ## 3. Settings
 
 ```sh
@@ -106,6 +110,12 @@ Status page.
 | `SHOWRUNNER_SYNC_INTERVAL_SECONDS` | `300` | Seconds between syncs; a full pass runs once an hour |
 | `SHOWRUNNER_ARTWORK` | `true` | Pictures drawn from the frames of the videos: the poster, landscape picture, backdrop and logo of a show and the poster of each season, in one of several styles. `false`: the poster is the cover of the album |
 | `SHOWRUNNER_ARTWORK_BUDGET_SECONDS` | `240` | Time a sync may spend looking at new videos for the pictures (about a second a video). A large library is looked at over several syncs; until then a show keeps the cover of its album |
+| `SHOWRUNNER_SLIDESHOW_LOCATION` | — | The folder of the slideshows on the server (see [Slideshows](#9-slideshows)); without it each output folder gets a copy |
+| `SHOWRUNNER_SLIDESHOW_PATH` | the location | Where the media servers see that folder, if not at the same path (Jellyfin in a container) |
+| `SHOWRUNNER_SLIDESHOW_THREADS` | `2` | Threads a slideshow is drawn with: few, so that Immich and the media server keep theirs |
+| `SHOWRUNNER_SLIDESHOW_RENDER_BUDGET_SECONDS` | `600` | Time a sync may spend drawing slideshows (a minute or two each); the rest are drawn in later syncs, the newest years first |
+| `SHOWRUNNER_SLIDESHOW_BUDGET_SECONDS` | `240` | Time a sync may spend looking at new photos (about a second a photo) |
+| `SHOWRUNNER_SLIDESHOW_CREDITS` | `true` | The credits at the end of a slideshow, until changed on the page |
 | `SHOWRUNNER_VERSION` | `0` | The version of the image; see [Updating](#updating) |
 
 After changing a setting: `docker compose up -d`, then `docker compose run --rm app sync`, so that
@@ -224,6 +234,9 @@ On the page:
   Every change reaches Jellyfin and Kodi within a minute, and can be reset to what Immich says.
 - **People**: the people shared with the user of the app (see below), their names for the media
   server and their descriptions.
+- **Slideshows**: slideshows on or off, the end credits, your own music and the music set (see
+  below). On the page of an album: slideshows off for this album, the mood of its music, other
+  music, and its slideshows to watch.
 - **Status**: the last sync, what it could not do, and a button to sync now.
 
 If Immich signs in only through OAuth, sign in with an API key of the user of the app instead.
@@ -251,6 +264,35 @@ nothing up. The descriptions of people reach Jellyfin only.
 > lost for the media server; in our tests they did not come back by joining again. All owners whose people
 > should be in the media server have to be in the same group. The page accepts an invitation only while the
 > user of the app is alone in its group.
+
+## 9. Slideshows
+
+Off until you switch them on, on the Slideshows page. Then the photos of every album become videos
+with music, one for each year: "Photos 2024" among the specials (Season 0) of its show, placed after
+the episodes of that year in Jellyfin and Kodi. A year needs at least six photos; a long year is cut
+into parts of three to five minutes. An album of photos only becomes a show of slideshows only.
+
+- **What goes in**: the photos in the order they were taken, cut into scenes by pauses and by moves
+  of the camera. Near copies become their best photo; screenshots, documents and receipts are left
+  out. The camera moves slowly towards the faces; a standing photo is shown whole over a blurred
+  copy of itself. The title and the credits are drawn in the style of the album.
+- **Music**: a set of 28 free pieces (CC BY and public domain, listed in
+  [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)) and your own, added on the page. The music of
+  an album follows what its photos show (calm, bright, upbeat; wistful and solemn only when you choose
+  them for an album); the photos change on the beats. The music is named in the description of every
+  slideshow and, unless you switch it off, in its end credits. The rights to music you add are yours.
+- **Downloads on first use**: an image model (CLIP, 351 MB, MIT) from Hugging Face, to tell what a
+  photo shows, and the music set (153 MB) from a release of this project, both into the data
+  volume of the app and checked by SHA-256. Without a network, slideshows are made without them. Your
+  photos never leave the server.
+- **Time**: drawing takes a minute or two for a few minutes of video, on two threads. The first
+  time, a large library takes hours: slideshows appear one by one, the newest years first. A slideshow
+  is drawn again when its photos, its music or the style of the album change; the one drawn before
+  stays in the library meanwhile, with its watched mark.
+- **The folder of slideshows** (`SHOWRUNNER_SLIDESHOW_LOCATION`, optional): Jellyfin must be able to
+  read it, as it reads the Immich library; Kodi reaches it through the links in its share, as it
+  reaches the videos of Immich. With full-size photos (`asset.download` on the key, and "Full-size
+  image" on in the image settings of Immich for HEIC and RAW) the camera has more to move over.
 
 ## Updating
 
@@ -286,6 +328,8 @@ the sync with `--force`.
 - It never opens, changes, moves or removes a file of the Immich library; the library is not even
   mounted into its container.
 - When Immich does not answer, nothing is removed.
+- With slideshows on, it downloads an image model from Hugging Face and the music set from this
+  project's releases, once. It sends nothing about your library anywhere.
 - The folder of a show keeps its name when the album is renamed; the title changes in the media
   server.
   Watched marks survive renaming, new videos in the middle of an album, episodes moved on the

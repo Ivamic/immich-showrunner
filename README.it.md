@@ -81,6 +81,10 @@ Kodi.
   volti, in uno di nove stili. Senza generazione di immagini con l’IA: tutto gira sulla CPU del tuo
   server. Sulla pagina prova un altro stile o altri fotogrammi, per tutte le immagini o per una sola,
   e fissa quelle che ti piacciono.
+- **Presentazioni delle foto** (da attivare nella pagina web): un video all’anno dalle foto di un
+  album, tra gli speciali della sua serie, con musica libera inclusa o tua; le foto cambiano a tempo
+  e la camera si avvicina lentamente ai volti. Screenshot, documenti e quasi-doppioni restano fuori.
+  Tutto gira sulla CPU del tuo server; le tue foto non lo lasciano.
 - **Le persone di Immich**, con nomi propri per il media server («Mamma» può restare «Mamma» da
   te), segnate da un breve prefisso perché non si mescolino mai con gli attori della tua
   cineteca.

@@ -94,6 +94,16 @@ The model that finds faces in video frames for artwork, in `src/showrunner/artwo
 Copyright (c) 2020 Shiqi Yu. Licensed under the MIT License: see
 [`src/showrunner/artwork/models/LICENSE`](src/showrunner/artwork/models/LICENSE).
 
+## CLIP image model for slideshows
+
+Not part of the image: downloaded on first use from a fixed revision of
+[`immich-app/ViT-B-32__laion2b-s34b-b79k`](https://huggingface.co/immich-app/ViT-B-32__laion2b-s34b-b79k)
+(an ONNX export by Immich) into the data volume of the app, and checked by SHA-256. The model is
+OpenCLIP ViT-B/32 trained on LAION-2B
+([`laion/CLIP-ViT-B-32-laion2B-s34B-b79K`](https://huggingface.co/laion/CLIP-ViT-B-32-laion2B-s34B-b79K)),
+licensed under the MIT License. `src/showrunner/slideshow/prompts.json` holds embeddings of a few
+English phrases made once with the text half of the same model (see `tools/clip_prompts.py`).
+
 ## Portrait in the tests
 
 `tests/data/portrait.jpg` is a reduced copy of
