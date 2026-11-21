@@ -21,6 +21,13 @@
 	import Icon from '#lib/ui/Icon.svelte';
 	import SlideshowProgress from '#lib/SlideshowProgress.svelte';
 
+	/** One piece at a time: the one started pauses the one playing. */
+	function playAlone(event: Event): void {
+		for (const other of document.querySelectorAll('audio')) {
+			if (other !== event.currentTarget && !other.paused) other.pause();
+		}
+	}
+
 	let settings = $state<SlideshowSettings | null>(null);
 	let music = $state<Track[] | null>(null);
 	let error = $state<string | null>(null);
@@ -262,7 +269,7 @@
 			{/if}
 		</div>
 		{#if track.present}
-			<audio controls preload="none" src={trackUrl(track.id)}></audio>
+			<audio controls preload="none" src={trackUrl(track.id)} onplay={playAlone}></audio>
 		{/if}
 		{#if track.kind === 'own'}
 			<div class="actions">

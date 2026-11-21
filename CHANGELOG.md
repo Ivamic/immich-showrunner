@@ -60,6 +60,8 @@ between releases.
 
 ### Fixed
 
+- **One piece of music at a time** on the Slideshows page (0.4.0-rc.6): the one started pauses the
+  one playing.
 - **A photo turned or cropped in Immich** (0.4.0-rc.5): it is looked at again and its slideshow
   drawn again, from the edited picture; before, both the look and the drawing kept to the
   original file, which an edit in Immich leaves as it is. The pictures on the pages are the edited
