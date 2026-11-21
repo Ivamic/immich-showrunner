@@ -155,12 +155,20 @@ async def plan_specials(
     rows = await registry.photo_looks(
         [asset.id for album in album_ids for asset in photos.photos[album]]
     )
-    music = await context.music()
+    off = await registry.disabled_music()
+    music = [t for t in await context.music() if t.id not in off]
     chosen = await registry.artworks()
+    choices = await registry.album_slideshows()
     result = []
     for show, folder in shows:
         assets = photos.photos.get(show.album_id)
         if assets is None:
+            result.append((show, folder))
+            continue
+        choice = choices.get(show.album_id)
+        if choice is not None and choice.enabled is False:
+            # Switched off for this album on the page: its slideshows go.
+            await registry.save_album_slideshow(show.album_id, planned=[])
             result.append((show, folder))
             continue
         inputs = plan_inputs(assets, rows)
@@ -168,14 +176,36 @@ async def plan_specials(
         seed = art.seed if art is not None else 0
         style = art.style_id if art is not None and art.style_id in context.styles else None
         style = style or choose_style(show.album_id, list(context.styles))
-        mood = album_mood([p.embedding for p in inputs if p.embedding is not None])
-        pieces = choose_tracks(music, mood, f"{show.album_id}/{seed}") if music else []
+        auto = album_mood([p.embedding for p in inputs if p.embedding is not None])
+        mood = choice.mood if choice is not None and choice.mood else auto
+        music_seed = choice.music_seed if choice is not None else 0
+        key = f"{show.album_id}/{seed}" + (f"/{music_seed}" if music_seed else "")
+        pieces = choose_tracks(music, mood, key) if music else []
         clips = plan_album(
             show.album_id, show.sort_title, inputs, seed=seed, credits=context.credits
         )
         clips = [fit_to_music(clip, pieces) for clip in clips]
-        result.append((replace(show, specials=specials_of(show, clips, style)), folder))
+        specials = specials_of(show, clips, style)
+        await registry.save_album_slideshow(
+            show.album_id, auto_mood=auto, planned=[summary(s) for s in specials]
+        )
+        result.append((replace(show, specials=specials), folder))
     return result
+
+
+def summary(special: Special) -> dict[str, object]:
+    """What the page shows of a slideshow planned in this pass."""
+    clip: Clip = special.clip
+    return {
+        "year": special.year,
+        "part": special.part,
+        "title": special.title,
+        "seconds": round(clip.seconds, 1),
+        "photos": len(clip.photos),
+        "left_out": clip.left_out,
+        "music": list(clip.music_credits),
+        "version": special.version,
+    }
 
 
 def specials_of(show: Show, clips: Sequence[Clip], style_id: str) -> tuple[Special, ...]:

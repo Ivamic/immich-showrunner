@@ -179,7 +179,12 @@ async def sync_once(
                 notes.append(warning)
         slideshow = None
         specials = None
-        if settings.slideshow and not dry_run:
+        # Slideshows are switched on and off on the page (D-103); SHOWRUNNER_SLIDESHOW turns
+        # them on whatever the page says, for development.
+        setting = await Registry(session).slideshow_setting()
+        enabled = settings.slideshow or (setting is not None and setting.enabled)
+        credits = setting.credits if setting is not None else settings.slideshow_credits
+        if enabled and not dry_run:
             full_size = can_download(await immich.api_key_info())
             if not full_size:
                 notes.append(
@@ -201,7 +206,7 @@ async def sync_once(
                     data_dir=settings.data_dir,
                     full=full_size,
                     styles=sorted(styles()),
-                    credits=settings.slideshow_credits,
+                    credits=credits,
                     threads=settings.slideshow_threads,
                     budget_seconds=settings.slideshow_render_budget_seconds,
                 )

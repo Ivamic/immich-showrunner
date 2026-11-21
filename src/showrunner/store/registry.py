@@ -14,15 +14,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from showrunner.model.naming import show_folder_name
 from showrunner.model.show import EpisodeEdit, ShowEdit
 from showrunner.store.models import (
+    AlbumSlideshowRow,
     ArtworkRow,
     EpisodeEditRow,
     FileRow,
     FrameLookRow,
+    MusicSettingRow,
     PendingRow,
     PersonDescriptionRow,
     PersonRow,
     PhotoLookRow,
     ShowRow,
+    SlideshowSettingRow,
     StyleSettingRow,
 )
 from showrunner.sync.plan import Entry
@@ -270,6 +273,49 @@ class Registry:
             statement.on_conflict_do_update(
                 index_elements=[ArtworkRow.album_id],
                 set_={"style_id": style_id, **values},
+            )
+        )
+
+    # --- slideshows (D-103) ----------------------------------------------------------------
+
+    async def slideshow_setting(self) -> SlideshowSettingRow | None:
+        return await self._session.scalar(
+            select(SlideshowSettingRow).execution_options(populate_existing=True)
+        )
+
+    async def save_slideshow_setting(self, **values: bool) -> None:
+        statement = insert(SlideshowSettingRow).values(id=1, **values)
+        await self._session.execute(
+            statement.on_conflict_do_update(index_elements=[SlideshowSettingRow.id], set_=values)
+        )
+
+    async def album_slideshows(self) -> dict[UUID, AlbumSlideshowRow]:
+        rows = await self._session.scalars(
+            select(AlbumSlideshowRow).execution_options(populate_existing=True)
+        )
+        return {row.album_id: row for row in rows}
+
+    async def save_album_slideshow(self, album_id: UUID, **values: Any) -> None:
+        """Set fields of the slideshows of an album (`enabled`, `mood`, `music_seed`,
+        `auto_mood`, `planned`), creating its row if there is none."""
+        statement = insert(AlbumSlideshowRow).values(album_id=album_id, **values)
+        await self._session.execute(
+            statement.on_conflict_do_update(
+                index_elements=[AlbumSlideshowRow.album_id], set_=values
+            )
+        )
+
+    async def disabled_music(self) -> set[str]:
+        rows = await self._session.scalars(
+            select(MusicSettingRow.track_id).where(MusicSettingRow.enabled.is_(False))
+        )
+        return set(rows)
+
+    async def set_music_enabled(self, track_id: str, enabled: bool) -> None:
+        statement = insert(MusicSettingRow).values(track_id=track_id, enabled=enabled)
+        await self._session.execute(
+            statement.on_conflict_do_update(
+                index_elements=[MusicSettingRow.track_id], set_={"enabled": enabled}
             )
         )
 

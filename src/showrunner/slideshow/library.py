@@ -240,7 +240,7 @@ def _tags(path: Path) -> dict[str, str]:
 
 def pending(pieces: Iterable[Piece], cache: Path) -> list[Piece]:
     """The pieces not looked at yet by this version."""
-    return [p for p in pieces if _kept(p, cache) is None]
+    return [p for p in pieces if kept(p, cache) is None]
 
 
 def remember(piece: Piece, cache: Path, found: MusicAnalysis | MusicError) -> None:
@@ -259,13 +259,13 @@ def tracks(pieces: Iterable[Piece], cache: Path) -> list[Track]:
     """The pieces looked at and fit for slideshows, as the music of slideshows."""
     result = []
     for piece in pieces:
-        found = _kept(piece, cache)
+        found = kept(piece, cache)
         if isinstance(found, MusicAnalysis):
             result.append(Track(piece.id, found, piece.credit, piece.mood or found.mood))
     return result
 
 
-def _kept(piece: Piece, cache: Path) -> MusicAnalysis | str | None:
+def kept(piece: Piece, cache: Path) -> MusicAnalysis | str | None:
     """The kept analysis of a piece, the reason it is left out, or None when it is to be
     looked at (again)."""
     path = cache / f"{piece.sha256}.json"

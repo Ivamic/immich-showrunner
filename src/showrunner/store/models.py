@@ -200,6 +200,42 @@ class ArtworkRow(Base):
     pinned_jobs: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
 
 
+class SlideshowSettingRow(Base):
+    """The settings of slideshows made on the page (D-103): one row."""
+
+    __tablename__ = "slideshow_setting"
+
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
+    enabled: Mapped[bool] = mapped_column(default=False, server_default=false())
+    credits: Mapped[bool] = mapped_column(default=True, server_default=true())
+
+
+class AlbumSlideshowRow(Base):
+    """The slideshows of an album as the user chose them, and what the last pass planned."""
+
+    __tablename__ = "album_slideshow"
+
+    album_id: Mapped[UUID] = mapped_column(ForeignKey("show.album_id"), primary_key=True)
+    # False: no slideshows for this album; True or None: as the settings say.
+    enabled: Mapped[bool | None] = mapped_column(default=None)
+    # A mood chosen on the page (D-100); None: the one its photos suggest.
+    mood: Mapped[str | None] = mapped_column(String(16), default=None)
+    # "Other music": another order of the pieces of the mood.
+    music_seed: Mapped[int] = mapped_column(default=0, server_default="0")
+    # The mood its photos suggest and the slideshows of the last pass (for the page).
+    auto_mood: Mapped[str | None] = mapped_column(String(16), default=None)
+    planned: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, server_default="[]")
+
+
+class MusicSettingRow(Base):
+    """A piece of music switched off on the page: no slideshow takes it."""
+
+    __tablename__ = "music_setting"
+
+    track_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    enabled: Mapped[bool] = mapped_column(default=True, server_default=true())
+
+
 class StyleSettingRow(Base):
     """A style switched off on the page: no album gets it any more (pinned pictures keep it)."""
 
