@@ -241,3 +241,111 @@ export const pinArtwork = (show: string, slots: string[] | null, pinned: boolean
 export const getStatus = () => request<Status>('GET', '/status');
 /** A full pass right away; `force` carries out a mass removal that the last pass held. */
 export const syncNow = (force = false) => request<void>('POST', '/sync', { force });
+
+// --- slideshows (D-103) -----------------------------------------------------------------------
+
+export type Mood = 'calm' | 'wistful' | 'bright' | 'upbeat' | 'solemn';
+export const MOODS: Mood[] = ['calm', 'wistful', 'bright', 'upbeat', 'solemn'];
+
+export interface SlideshowSettings {
+	enabled: boolean;
+	credits: boolean;
+	/** A folder of slideshows is set: the output folders link to it. */
+	folder: boolean;
+	/** The data folder is there: without it nothing can be drawn. */
+	data: boolean;
+}
+
+export const getSlideshowSettings = () => request<SlideshowSettings>('GET', '/slideshow/settings');
+export const putSlideshowSettings = (
+	change: Partial<Pick<SlideshowSettings, 'enabled' | 'credits'>>
+) => request<SlideshowSettings>('PUT', '/slideshow/settings', change);
+
+export interface Slideshow {
+	year: number;
+	part: number;
+	title: string;
+	seconds: number;
+	photos: number;
+	left_out: number;
+	music: string[];
+	/** Drawn as planned; an older one shown while this one waits; none yet. */
+	state: 'drawn' | 'older' | 'waiting';
+}
+
+export interface AlbumSlideshow {
+	/** False: off for this album; null: as the settings say. */
+	enabled: boolean | null;
+	mood: Mood | null;
+	auto_mood: Mood | null;
+	slideshows: Slideshow[];
+}
+
+export const getAlbumSlideshow = (show: string) =>
+	request<AlbumSlideshow>('GET', `/shows/${show}/slideshow`);
+export const putAlbumSlideshow = (
+	show: string,
+	change: { enabled?: boolean | null; mood?: Mood | null; other_music?: boolean }
+) => request<AlbumSlideshow>('PUT', `/shows/${show}/slideshow`, change);
+export const slideshowVideoUrl = (show: string, s: Slideshow) =>
+	`/api/shows/${show}/slideshow/video?year=${s.year}&part=${s.part}`;
+
+export interface Track {
+	id: string;
+	kind: 'set' | 'own';
+	title: string;
+	author: string;
+	license: string;
+	link: string;
+	mood: string;
+	mood_given: boolean;
+	sound_mood: string;
+	seconds: number | null;
+	enabled: boolean;
+	present: boolean;
+	error: string | null;
+	file_name: string;
+}
+
+export interface TrackChange {
+	enabled?: boolean;
+	mood?: Mood | null;
+	title?: string;
+	author?: string;
+	license?: string;
+	link?: string;
+}
+
+export const getMusic = () => request<Track[]>('GET', '/music');
+export const changeTrack = (id: string, change: TrackChange) =>
+	request<Track>('PATCH', `/music/${encodeURI(id)}`, change);
+export const removeTrack = (id: string) =>
+	request<{ removed: boolean }>('DELETE', `/music/${encodeURI(id)}`);
+export const trackUrl = (id: string) => `/api/music/file/${encodeURI(id)}`;
+
+/** The file itself is the body of the request: no form encoding. */
+export async function uploadTrack(file: File): Promise<Track> {
+	let response: Response;
+	try {
+		response = await fetch(`/api/music/own/${encodeURIComponent(file.name)}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/octet-stream' },
+			body: file
+		});
+	} catch {
+		throw new ApiError(0, 'app_unreachable');
+	}
+	if (!response.ok) {
+		let code = 'unexpected';
+		let params: Record<string, unknown> = {};
+		try {
+			const data = await response.json();
+			if (typeof data?.code === 'string') code = data.code;
+			if (data?.params && typeof data.params === 'object') params = data.params;
+		} catch {
+			// not JSON
+		}
+		throw new ApiError(response.status, code, params);
+	}
+	return (await response.json()) as Track;
+}

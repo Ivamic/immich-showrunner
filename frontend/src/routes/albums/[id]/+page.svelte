@@ -12,6 +12,7 @@
 		type ShowDetail
 	} from '#lib/api.js';
 	import ArtworkPanel from '#lib/ArtworkPanel.svelte';
+	import SlideshowPanel from '#lib/SlideshowPanel.svelte';
 	import { errorMessage } from '#lib/errors.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
@@ -189,6 +190,7 @@
 	{/if}
 
 	<ArtworkPanel show={id} cover={show.cover_asset_id} />
+	<SlideshowPanel show={id} />
 
 	{#each seasons as [season, list] (season)}
 		<section>

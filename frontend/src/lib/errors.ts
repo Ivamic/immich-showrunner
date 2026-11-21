@@ -44,6 +44,22 @@ export function errorMessage(error: unknown): string {
 			return m.error_artwork_failed();
 		case 'artwork_slot':
 			return m.error_artwork_slot();
+		case 'slideshow_not_found':
+			return m.error_slideshow_not_found();
+		case 'no_data_dir':
+			return m.error_no_data_dir();
+		case 'music_not_found':
+			return m.error_music_not_found();
+		case 'music_set_fixed':
+			return m.error_music_set_fixed();
+		case 'music_file_type':
+			return m.error_music_file_type();
+		case 'music_exists':
+			return m.error_music_exists();
+		case 'music_too_large':
+			return m.error_music_too_large({ megabytes: String(error.params.megabytes ?? '50') });
+		case 'music_not_usable':
+			return m.error_music_not_usable({ reason: String(error.params.reason ?? '') });
 		default:
 			return m.error_unexpected();
 	}

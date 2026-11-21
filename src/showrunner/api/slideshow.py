@@ -237,6 +237,8 @@ class TrackOut(BaseModel):
     mood: str
     """The mood given (by the set or the user), or the one its sound suggests."""
     mood_given: bool
+    sound_mood: str
+    """The mood its sound suggests (empty until it is looked at)."""
     seconds: float | None
     enabled: bool
     present: bool
@@ -282,6 +284,7 @@ def _track(piece: Piece, kind: Literal["set", "own"], data: Path, off: set[str])
         link=piece.link,
         mood=piece.mood or (analysis.mood if analysis is not None else ""),
         mood_given=bool(piece.mood),
+        sound_mood=analysis.mood if analysis is not None else "",
         seconds=round(analysis.end - analysis.start, 1) if analysis is not None else None,
         enabled=piece.id not in off,
         present=piece.path.is_file(),
