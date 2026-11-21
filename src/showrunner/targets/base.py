@@ -6,12 +6,12 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from enum import StrEnum
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Protocol
 from uuid import UUID
 
 from showrunner.artwork.jobs import ArtworkJob, ShowArtwork
-from showrunner.model.show import Show
+from showrunner.model.show import Show, Special
 
 # Names of the targets, as the registry keeps them.
 JELLYFIN = "jellyfin"
@@ -24,6 +24,8 @@ class FileKind(StrEnum):
     EPISODE_NFO = "episode_nfo"
     # A picture taken from Immich: downloaded only when it is new or changed there.
     IMAGE = "image"
+    # A slideshow the app draws: drawn again only when its cut list changes.
+    VIDEO = "video"
 
 
 @dataclass(frozen=True)
@@ -44,11 +46,24 @@ class ImageSource:
 
 
 @dataclass(frozen=True)
+class VideoSource:
+    """Which slideshow a file holds, and its version (that of its cut list)."""
+
+    album_id: UUID
+    special: Special
+
+    @property
+    def version(self) -> str:
+        return self.special.version
+
+
+@dataclass(frozen=True)
 class DesiredFile:
     """A file that should exist. `path` is relative to the output folder.
 
     A link has a `link_target`. A picture has an `image` source; its `content` is filled in only
-    when it has to be downloaded. Any other file has `content`."""
+    when it has to be downloaded. A slideshow has a `video` source; the file drawn (`drawn`) and
+    its hash are filled in only when it has to be written. Any other file has `content`."""
 
     path: PurePosixPath
     kind: FileKind
@@ -57,29 +72,41 @@ class DesiredFile:
     link_target: PurePosixPath | None = None
     content: bytes | None = None
     image: ImageSource | None = None
+    video: VideoSource | None = None
+    drawn: Path | None = None
+    drawn_hash: str | None = None
 
     def __post_init__(self) -> None:
         if self.path.is_absolute() or ".." in self.path.parts or not self.path.parts:
             raise ValueError(f"not a path inside the output folder: {str(self.path)!r}")
         is_link = self.kind is FileKind.LINK
         is_image = self.kind is FileKind.IMAGE
+        is_video = self.kind is FileKind.VIDEO
+        if is_video != (self.video is not None):
+            raise ValueError("a slideshow needs a video source, and only a slideshow has one")
         if is_link != (self.link_target is not None):
             raise ValueError("a link needs a target, and only a link has one")
         if is_image != (self.image is not None):
             raise ValueError("a picture needs an image source, and only a picture has one")
         if is_link and self.content is not None:
             raise ValueError("a link has no content")
-        if not is_link and not is_image and self.content is None:
+        if is_video and self.content is not None:
+            raise ValueError("a slideshow is written from the file drawn, not from content")
+        if not is_link and not is_image and not is_video and self.content is None:
             raise ValueError("a file that is not a link or a picture needs content")
         if self.link_target is not None and not self.link_target.is_absolute():
             raise ValueError("the target of a link must be an absolute path")
 
     @property
     def content_hash(self) -> str | None:
+        if self.kind is FileKind.VIDEO:
+            return self.drawn_hash
         return None if self.content is None else hashlib.sha256(self.content).hexdigest()
 
     @property
     def source_version(self) -> str | None:
+        if self.video is not None:
+            return self.video.version
         return self.image.version if self.image is not None else None
 
 

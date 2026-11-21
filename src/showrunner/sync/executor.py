@@ -14,6 +14,7 @@ The rules it keeps, whatever the plan says:
 import hashlib
 import os
 import secrets
+import shutil
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
@@ -149,8 +150,10 @@ class Executor:
         return Result.DONE, ""
 
     def _put_file(self, action: Action, path: Path) -> tuple[Result, str]:
-        assert action.desired is not None and action.desired.content is not None
+        assert action.desired is not None
+        drawn = action.desired.drawn
         content = action.desired.content
+        assert content is not None or drawn is not None
         if path.is_symlink() or (path.exists() and not path.is_file()):
             return Result.FOREIGN, "a link or folder is at this path, not a file"
         if path.exists():
@@ -163,7 +166,13 @@ class Executor:
         path.parent.mkdir(parents=True, exist_ok=True)
         temp = path.with_name(TEMP_PREFIX + secrets.token_hex(6))
         try:
-            temp.write_bytes(content)
+            if drawn is not None:
+                # A slideshow, drawn outside the output folder: copied (another output folder may
+                # take it too), then swapped in at once.
+                shutil.copyfile(drawn, temp)
+            else:
+                assert content is not None
+                temp.write_bytes(content)
             os.replace(temp, path)
         finally:
             temp.unlink(missing_ok=True)
@@ -205,4 +214,9 @@ class Executor:
 
 
 def _hash(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    """SHA-256 of a file, read a piece at a time (a slideshow is a hundred megabytes)."""
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()

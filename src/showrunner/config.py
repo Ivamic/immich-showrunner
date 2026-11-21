@@ -99,6 +99,11 @@ class Settings(BaseSettings):
     slideshow_budget_seconds: int = Field(default=240, ge=10)
     # Threads a slideshow is drawn with: few, so that Immich and the media server keep theirs.
     slideshow_threads: int = Field(default=2, ge=1, le=64)
+    # Time a pass may spend drawing slideshows; the rest are drawn in later passes.
+    slideshow_render_budget_seconds: int = Field(default=600, ge=30)
+    # The credits at the end of a slideshow (the music and the line of the app). Off: none; the
+    # music is still named in the description of the episode (D-088).
+    slideshow_credits: bool = True
     # Files of the app itself (models for slideshows); in the image, a volume of its own.
     data_dir: Path | None = None
 

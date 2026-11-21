@@ -7,6 +7,7 @@ could not be read must never look like an album without videos."""
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
+from pathlib import PurePosixPath
 from uuid import UUID
 
 from showrunner.immich.client import (
@@ -23,7 +24,8 @@ from showrunner.sync.artwork import ArtworkContext, ArtworkError, ArtworkPlan, p
 from showrunner.sync.executor import MARKER_NAME, Executor, Outcome, Result, UnsafePathError
 from showrunner.sync.plan import Action, ActionType, Plan, make_plan
 from showrunner.sync.slideshow import PhotoReport, SlideshowContext, look_at_photos
-from showrunner.targets.base import DesiredFile, ImageSource, Target
+from showrunner.sync.specials import RenderError, SpecialsContext, plan_specials
+from showrunner.targets.base import DesiredFile, FileKind, ImageSource, Target
 
 log = logging.getLogger(__name__)
 
@@ -61,6 +63,11 @@ class SyncReport:
     pictures_failed: list[str] = field(default_factory=list)
     # Videos still to look at for the pictures, per album.
     artwork_waiting: dict[UUID, int] = field(default_factory=dict)
+    # Slideshows drawn in this pass, and those left for the next one (the time ran out or they
+    # could not be drawn).
+    slideshows_drawn: int = 0
+    slideshows_waiting: int = 0
+    slideshows_failed: list[str] = field(default_factory=list)
     # People of the albums read in this pass: name as written for the media server -> Immich id.
     people: dict[str, UUID] = field(default_factory=dict)
     # Albums whose files could not all be written; their stamps are not moved on.
@@ -163,6 +170,7 @@ async def apply_output(
     force: bool = False,
     pictures: dict[ImageSource, bytes] | None = None,
     artwork: ArtworkContext | None = None,
+    specials: SpecialsContext | None = None,
 ) -> SyncReport:
     """Bring the output folder of one target in line with `view`. Nothing is committed here.
     `pictures` keeps what was downloaded or drawn for one target, so that another takes it
@@ -223,6 +231,7 @@ async def apply_output(
 
     cache = {} if pictures is None else pictures
     actions = await _with_pictures(immich, plan.actions, report, cache, artwork)
+    actions = await _with_videos(immich, actions, report, specials)
     executor.ensure_marker()
     for action in actions:
         try:
@@ -279,6 +288,7 @@ async def sync_outputs(
     force: bool = False,
     artwork: ArtworkContext | None = None,
     slideshow: SlideshowContext | None = None,
+    specials: SpecialsContext | None = None,
 ) -> list[SyncReport]:
     """One pass for every output. A dry run (no output has an executor) writes nothing, neither
     to the disks nor to the database. With `artwork`, the shows get pictures drawn from the
@@ -315,6 +325,8 @@ async def sync_outputs(
                 "full-size images in the image settings of Immich for HEIC and RAW photos",
                 view.photos.previews,
             )
+    if slideshow is not None and specials is not None and writes:
+        view.shows = await plan_specials(view.shows, view.photos, registry, specials)
     pictures: dict[ImageSource, bytes] = {}
     reports = [
         await apply_output(
@@ -325,9 +337,12 @@ async def sync_outputs(
             force=force,
             pictures=pictures,
             artwork=artwork,
+            specials=specials,
         )
         for output in outputs
     ]
+    if specials is not None:
+        specials.clean()
     if writes:
         await finish_pass(view, registry, reports)
     return reports
@@ -400,6 +415,57 @@ async def _with_pictures(
             pictures[desired.image] = content
         result.append(replace(action, desired=replace(desired, content=content)))
     return result
+
+
+async def _with_videos(
+    immich: ImmichClient,
+    actions: list[Action],
+    report: SyncReport,
+    specials: SpecialsContext | None,
+) -> list[Action]:
+    """Draw the slideshows that have to be written, the newest years first, as long as the time
+    of the pass allows. One that is not drawn is left for the next pass with its NFO, and its
+    album is not stamped; the slideshow drawn before stays in the output folder meanwhile."""
+    wanted = [
+        a
+        for a in actions
+        if a.kind is FileKind.VIDEO and a.type is not ActionType.REMOVE and a.desired is not None
+    ]
+    if not wanted:
+        return actions
+    drawn: dict[PurePosixPath, Action] = {}
+    left: set[PurePosixPath] = set()
+    for action in sorted(wanted, key=lambda a: -_year_of(a)):
+        assert action.desired is not None and action.desired.video is not None
+        special = action.desired.video.special
+        if specials is None or not (specials.drawn(special.version) or specials.budget_left()):
+            left.add(action.path)
+            continue
+        try:
+            path, digest = await specials.draw(immich, special)
+        except (RenderError, ImmichError, OSError) as exc:
+            report.slideshows_failed.append(f"{action.path}: {exc}")
+            log.warning("slideshow %s not drawn: %s", action.path, exc)
+            left.add(action.path)
+            continue
+        drawn[action.path] = replace(
+            action, desired=replace(action.desired, drawn=path, drawn_hash=digest)
+        )
+    report.slideshows_drawn += len(drawn)
+    report.slideshows_waiting += len(left)
+    skipped = left | {path.with_suffix(".nfo") for path in left}
+    result = []
+    for action in actions:
+        if action.path in skipped and action.type is not ActionType.REMOVE:
+            report.failed_albums.add(action.album_id)
+            continue
+        result.append(drawn.get(action.path, action))
+    return result
+
+
+def _year_of(action: Action) -> int:
+    video = action.desired.video if action.desired is not None else None
+    return video.special.year if video is not None else 0
 
 
 def _unchanged(album: Album, updated_at: object, assets_modified_at: object) -> bool:

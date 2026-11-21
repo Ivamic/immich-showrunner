@@ -78,6 +78,19 @@ def kodi_episode_file_stem(filmed_at: datetime, asset_id: UUID) -> str:
     return f"{filmed_at:%Y-%m-%d %H%M%S} [{int(short_id(asset_id), 16)}]"
 
 
+def special_file_stem(year: int, part: int) -> str:
+    """`20241231-235900 Photos 2024 [slideshow 2024 0]`: the same for the same year and part
+    whatever the slideshow holds, so that a slideshow drawn again keeps its watched marks; a
+    minute of its own per part, so that Jellyfin never takes two parts for versions of one."""
+    return f"{year}1231-2359{part:02d} Photos {year} [slideshow {year} {part}]"
+
+
+def kodi_special_file_stem(year: int, part: int) -> str:
+    """`2024-12-31 235900 [202400]`: a date for Kodi to recognise an episode by, a number
+    without `e` (see `kodi_episode_file_stem`)."""
+    return f"{year}-12-31 2359{part:02d} [{year}{part:02d}]"
+
+
 def kodi_actor_file_name(name: str) -> str:
     """The picture of a person for Kodi: its name with `_` for every space, as Kodi looks it up
     in the `.actors` folder of the show."""

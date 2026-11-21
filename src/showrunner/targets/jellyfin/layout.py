@@ -8,17 +8,20 @@
 <show folder>/Season 2024/<stem>.mp4          a link
 <show folder>/Season 2024/<stem>.nfo
 <show folder>/Season 2024/<stem>-thumb.jpg    the preview of the video
+<show folder>/Specials/<stem>.mp4             a slideshow, drawn
+<show folder>/Specials/<stem>.nfo
 """
 
 from pathlib import PurePosixPath
 
 from showrunner.artwork.jobs import ShowArtwork
 from showrunner.artwork.style import OutputKind
-from showrunner.model.naming import season_folder_name
+from showrunner.model.naming import season_folder_name, special_file_stem
 from showrunner.model.show import Show
 from showrunner.targets.artwork import picture_files
 from showrunner.targets.base import DesiredFile, FileKind, ImageSource
 from showrunner.targets.nfo import episode_nfo, show_nfo
+from showrunner.targets.specials import special_files
 
 SHOW_NFO_NAME = "tvshow.nfo"
 THUMB_SUFFIX = "-thumb.jpg"
@@ -79,4 +82,5 @@ class JellyfinLayout:
                     image=ImageSource(episode.asset_id, episode.picture_version),
                 )
             )
+        files += special_files(show, root, special_file_stem)
         return files

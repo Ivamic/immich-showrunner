@@ -3,9 +3,10 @@
 
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 from pathlib import PurePosixPath
+from typing import Any
 from uuid import UUID
 
 from showrunner.config import PathMapping
@@ -99,6 +100,33 @@ class Skipped:
 
 
 @dataclass(frozen=True)
+class Special:
+    """A slideshow of the photos of a year (or of a part of it), an episode of Season 0."""
+
+    year: int
+    part: int
+    """1, 2… within the year; 0 when the year has one slideshow."""
+    parts: int
+    number: int
+    """Its number in Season 0: the slideshows of the album in the order of their years."""
+    title: str
+    plot: str
+    aired: date
+    after_season: int | None
+    """The season it is shown after (the year), when the show has it."""
+    version: str
+    """Of its cut list: the slideshow is drawn again when it changes."""
+    clip: Any = field(compare=False, repr=False)
+    """The cut list (`showrunner.slideshow.plan.Clip`), to draw it from."""
+    style_id: str = ""
+    """The style of the album: its title and credits are drawn in it."""
+
+    @property
+    def key(self) -> str:
+        return f"{self.year}-{self.part}"
+
+
+@dataclass(frozen=True)
 class Show:
     album_id: UUID
     title: str  # with the prefix
@@ -111,6 +139,8 @@ class Show:
     album_name: str = ""
     # Videos the user hid on the page.
     hidden: tuple[Episode, ...] = ()
+    # Slideshows of the photos, in Season 0.
+    specials: tuple[Special, ...] = ()
 
     @property
     def seasons(self) -> tuple[int, ...]:

@@ -9,6 +9,8 @@
 <show folder>/Season 2024/<date time [id]>.mp4        a link
 <show folder>/Season 2024/<date time [id]>.nfo
 <show folder>/Season 2024/<date time [id]>-thumb.jpg  the preview of the video
+<show folder>/Specials/<date time [id]>.mp4           a slideshow, drawn
+<show folder>/Specials/<date time [id]>.nfo
 
 The file name holds the date of filming, by which Kodi recognises an episode, and never the
 episode number: Kodi ties its watched marks to the path, and the numbers move when a video is
@@ -23,6 +25,7 @@ from showrunner.artwork.style import OutputKind
 from showrunner.model.naming import (
     kodi_actor_file_name,
     kodi_episode_file_stem,
+    kodi_special_file_stem,
     season_folder_name,
 )
 from showrunner.model.show import Show
@@ -30,6 +33,7 @@ from showrunner.targets.artwork import POSTER_NAME, SEASON_POSTER_NAME, picture_
 from showrunner.targets.base import KODI, DesiredFile, FileKind, ImageSource
 from showrunner.targets.kodi.client import kodi_file_path
 from showrunner.targets.nfo import episode_nfo, show_nfo
+from showrunner.targets.specials import special_files
 
 SHOW_NFO_NAME = "tvshow.nfo"
 PICTURE_NAMES = {
@@ -107,6 +111,7 @@ class KodiLayout:
                     image=ImageSource(person_id, FACE_VERSION, of_person=True),
                 )
             )
+        files += special_files(show, root, kodi_special_file_stem)
         return files
 
     def _season_posters(self, folder_name: str, artwork: ShowArtwork | None) -> dict[int, str]:

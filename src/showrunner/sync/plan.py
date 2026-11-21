@@ -173,7 +173,8 @@ def _same(want: DesiredFile, entry: Entry) -> bool:
         entry.asset_id,
     ):
         return False
-    if want.kind is FileKind.IMAGE:
-        # The picture is not downloaded to compare it: its version in Immich tells.
+    if want.kind in (FileKind.IMAGE, FileKind.VIDEO):
+        # The picture is not downloaded (the slideshow not drawn) to compare it: its version
+        # tells.
         return want.source_version == entry.source_version
     return want.link_target == entry.link_target and want.content_hash == entry.content_hash

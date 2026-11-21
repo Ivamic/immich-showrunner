@@ -24,6 +24,7 @@ from showrunner.sync.artwork import ArtworkContext
 from showrunner.sync.executor import Executor
 from showrunner.sync.service import Output, SyncReport, sync_outputs
 from showrunner.sync.slideshow import SlideshowContext
+from showrunner.sync.specials import SpecialsContext
 from showrunner.targets.base import JELLYFIN, KODI
 from showrunner.targets.jellyfin.client import JellyfinClient, JellyfinError, tell_jellyfin
 from showrunner.targets.jellyfin.layout import JellyfinLayout
@@ -168,6 +169,7 @@ async def sync_once(
             if warning:
                 notes.append(warning)
         slideshow = None
+        specials = None
         if settings.slideshow and not dry_run:
             full_size = can_download(await immich.api_key_info())
             if not full_size:
@@ -182,7 +184,17 @@ async def sync_once(
             )
             if settings.data_dir is None:
                 notes.append(
-                    "SHOWRUNNER_DATA_DIR is not set: photos for slideshows get no embeddings"
+                    "SHOWRUNNER_DATA_DIR is not set: no slideshows are drawn, and photos get no "
+                    "embeddings"
+                )
+            else:
+                specials = SpecialsContext(
+                    data_dir=settings.data_dir,
+                    full=full_size,
+                    styles=sorted(styles()),
+                    credits=settings.slideshow_credits,
+                    threads=settings.slideshow_threads,
+                    budget_seconds=settings.slideshow_render_budget_seconds,
                 )
         reports = await sync_outputs(
             immich=immich,
@@ -193,6 +205,7 @@ async def sync_once(
             force=force,
             artwork=artwork,
             slideshow=slideshow,
+            specials=specials,
         )
         if dry_run:
             await session.rollback()

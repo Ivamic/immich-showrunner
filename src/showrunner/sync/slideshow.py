@@ -77,6 +77,8 @@ class PhotoReport:
     without_embedding: int = 0
     # Albums with photos still to look at, and how many.
     waiting: dict[UUID, int] = field(default_factory=dict)
+    # The photos of each album read, as Immich gave them.
+    photos: dict[UUID, list[Asset]] = field(default_factory=dict)
 
     @property
     def incomplete(self) -> set[UUID]:
@@ -108,7 +110,7 @@ async def look_at_photos(
     embedding of the current model while it is there. Raises ImmichError when an album can not be
     listed (the pass stops, as for videos)."""
     report = PhotoReport()
-    photos: dict[UUID, list[Asset]] = {}
+    photos = report.photos
     for album in albums:
         photos[album.id] = [photo async for photo in immich.album_photos(album.id)]
     ids = {photo.id for every in photos.values() for photo in every}
