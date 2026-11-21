@@ -103,6 +103,36 @@
 		return result;
 	});
 
+	/** The lines of a scene: each group of near copies a line of its own, the photos between
+	 * them together, in the order of taking. */
+	function lines(scene: Scene): { key: string; group: boolean; photos: TracedPhoto[] }[] {
+		const result: { key: string; group: boolean; photos: TracedPhoto[] }[] = [];
+		for (const run of scene.runs) {
+			const last = result.at(-1);
+			if (run.photos.length > 1) result.push({ key: run.key, group: true, photos: run.photos });
+			else if (last && !last.group) last.photos.push(run.photos[0]);
+			else result.push({ key: run.key, group: false, photos: [...run.photos] });
+		}
+		return result;
+	}
+
+	/** "quality 78 · faces: 1 · alike to the chosen one 0.91 · like a screenshot 0.12" */
+	function details(photo: TracedPhoto): string {
+		const parts = [fateName(photo.fate)];
+		if (photo.quality != null)
+			parts.push(m.slideshow_plan_quality({ value: String(Math.round(photo.quality * 100)) }));
+		if (photo.faces) parts.push(m.slideshow_plan_faces({ count: String(photo.faces) }));
+		if (photo.like != null)
+			parts.push(
+				(photo.group && photo.group !== photo.id
+					? m.slideshow_plan_like_group
+					: m.slideshow_plan_like_previous)({ value: photo.like.toFixed(2) })
+			);
+		if (photo.junk != null && (photo.junk >= 0.3 || photo.fate === 'junk'))
+			parts.push(m.slideshow_plan_junk({ value: photo.junk.toFixed(2) }));
+		return parts.join(' · ');
+	}
+
 	const counts = $derived.by(() => {
 		const result: Record<string, number> = {};
 		for (const photo of plan?.photos ?? []) result[photo.fate] = (result[photo.fate] ?? 0) + 1;
@@ -182,10 +212,15 @@
 							scene.runs.at(-1)?.photos.at(-1)?.taken ?? scene.runs[0].photos[0].taken
 						)}
 					</div>
-					<div class="runs">
-						{#each scene.runs as run (run.key)}
-							<div class="run" class:group={run.photos.length > 1}>
-								{#each run.photos as photo (photo.id)}
+					<div class="lines">
+						{#each lines(scene) as line (line.key)}
+							<div class="runs" class:group={line.group}>
+								{#if line.group}
+									<span class="count"
+										>{m.slideshow_plan_group({ count: String(line.photos.length) })}</span
+									>
+								{/if}
+								{#each line.photos as photo (photo.id)}
 									<button
 										type="button"
 										class="tile {photo.fate}"
@@ -236,9 +271,7 @@
 		onclose={() => (looking = null)}
 	>
 		<img class="large" src={previewUrl(looking.id)} alt="" />
-		<p class="meta">
-			{fateName(looking.fate)} · {m.slideshow_plan_score({ score: looking.score.toFixed(2) })}
-		</p>
+		<p class="meta">{details(looking)}</p>
 	</Dialog>
 {/if}
 
@@ -324,20 +357,29 @@
 		font-variant-numeric: tabular-nums;
 		padding-top: var(--space-1);
 	}
-	.runs {
+	.lines {
 		display: flex;
-		flex-wrap: wrap;
+		flex-direction: column;
 		gap: var(--space-2);
 		min-width: 0;
 	}
-	.run {
+	.runs {
 		display: flex;
-		gap: 2px;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-2);
+		min-width: 0;
 	}
-	.run.group {
-		padding: 3px;
+	.runs.group {
+		gap: 3px;
+		padding: 4px;
 		border-radius: var(--radius-sm, 6px);
 		background: var(--color-surface-sunken);
+	}
+	.count {
+		flex-basis: 100%;
+		font-size: var(--text-sm);
+		color: var(--color-text-muted);
 	}
 	.tile {
 		position: relative;

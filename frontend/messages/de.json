@@ -264,5 +264,10 @@
 	"slideshow_plan_copy": "Kopie",
 	"slideshow_plan_over": "über dem Anteil",
 	"slideshow_plan_apart": "Screenshots, Dokumente und schlechte Fotos ({count})",
-	"slideshow_plan_score": "Bewertung {score}"
+	"slideshow_plan_group": "Ähnlich: {count}",
+	"slideshow_plan_quality": "Qualität {value} von 100",
+	"slideshow_plan_faces": "Gesichter: {count}",
+	"slideshow_plan_like_group": "ähnlich zum gewählten {value}",
+	"slideshow_plan_like_previous": "ähnlich zum vorigen {value}",
+	"slideshow_plan_junk": "wie Screenshot oder Dokument {value}"
 }

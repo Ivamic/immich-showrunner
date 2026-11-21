@@ -52,6 +52,24 @@
 	gap: var(--space-1);
 	margin-inline-start: auto;
 }
+/* A phone: the header wraps, the pages on a line of their own (scrolled sideways), so that
+   nothing makes the page wider than the screen. */
+@media (max-width: 40rem) {
+	.st-header {
+		flex-wrap: wrap;
+		height: auto;
+		row-gap: var(--space-1);
+		padding-block: var(--space-1-5, 0.375rem);
+	}
+	.st-header__end {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+	.st-header__nav {
+		order: 3;
+		flex-basis: 100%;
+	}
+}
 .st-header__user {
 	display: inline-flex;
 	align-items: center;
@@ -101,14 +119,6 @@
 @media (max-width: 26rem) {
 	.st-header:not(.st-header--menu) .st-header__about {
 		display: none;
-	}
-}
-@media (max-width: 40rem) {
-	.st-header--menu .st-header__nav {
-		display: none;
-	}
-	.st-headmenu__pages {
-		display: flex;
 	}
 }
 .st-brand {

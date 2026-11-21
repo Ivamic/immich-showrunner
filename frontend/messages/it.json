@@ -264,5 +264,10 @@
 	"slideshow_plan_copy": "copia",
 	"slideshow_plan_over": "oltre la quota",
 	"slideshow_plan_apart": "Screenshot, documenti e foto scadenti ({count})",
-	"slideshow_plan_score": "punteggio {score}"
+	"slideshow_plan_group": "Simili: {count}",
+	"slideshow_plan_quality": "qualità {value} su 100",
+	"slideshow_plan_faces": "volti: {count}",
+	"slideshow_plan_like_group": "simile alla scelta {value}",
+	"slideshow_plan_like_previous": "simile alla precedente {value}",
+	"slideshow_plan_junk": "come screenshot o documento {value}"
 }

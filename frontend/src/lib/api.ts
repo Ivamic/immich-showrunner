@@ -328,6 +328,13 @@ export interface TracedPhoto {
 	group: string | null;
 	fate: 'shown' | 'series' | 'scene' | 'junk' | 'poor' | 'other';
 	score: number;
+	/** How good the photo is, 0..1 (the score adds a bonus for faces). */
+	quality?: number | null;
+	faces?: number | null;
+	/** How alike it is to the photo of its group, or else to the photo before it. */
+	like?: number | null;
+	/** The share of the words of screenshots and documents. */
+	junk?: number | null;
 }
 
 export interface SlideshowPlan {

@@ -264,5 +264,10 @@
 	"slideshow_plan_copy": "copy",
 	"slideshow_plan_over": "over the share",
 	"slideshow_plan_apart": "Screenshots, documents and poor photos ({count})",
-	"slideshow_plan_score": "score {score}"
+	"slideshow_plan_group": "Alike: {count}",
+	"slideshow_plan_quality": "quality {value} of 100",
+	"slideshow_plan_faces": "faces: {count}",
+	"slideshow_plan_like_group": "alike to the chosen one {value}",
+	"slideshow_plan_like_previous": "alike to the one before {value}",
+	"slideshow_plan_junk": "like a screenshot or document {value}"
 }

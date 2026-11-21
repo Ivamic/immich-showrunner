@@ -198,6 +198,13 @@ class TracedPhoto(BaseModel):
     """The photo its group of near copies gave way to; null when it is in none."""
     fate: Literal["shown", "series", "scene", "junk", "poor", "other"]
     score: float
+    quality: float | None = None
+    """How good the photo is, 0..1 (the score adds a bonus for faces)."""
+    faces: int | None = None
+    like: float | None = None
+    """How alike it is to the photo of its group, or else to the photo before it (CLIP)."""
+    junk: float | None = None
+    """The share of the words of screenshots and documents (junk above 0.7, without a face)."""
 
 
 class SlideshowPlanOut(BaseModel):

@@ -21,7 +21,7 @@ from showrunner.slideshow.models import CLIP
 
 PROMPTS = Path(__file__).parent / "prompts.json"
 LOGIT_SCALE = 100.0
-JUNK_SHARE = 0.6
+JUNK_SHARE = 0.7
 """A photo is junk when the words of junk take more than this share."""
 
 
@@ -93,6 +93,12 @@ WORD_MOODS: dict[str, str] = {
     "a photo of flowers and plants": "calm",
     "a photo of snow in winter": "calm",
     "a photo taken at night": "calm",
+    "a tourist posing in front of a landmark": "bright",
+    "a person standing next to a sign": "bright",
+    "a photo in a museum": "calm",
+    "a photo of a person in a shop": "bright",
+    "a street with shop signs": "bright",
+    "a photo of ancient ruins": "calm",
 }
 """What the music of a slideshow should feel like, by what its photos show."""
 

@@ -264,5 +264,10 @@
 	"slideshow_plan_copy": "copie",
 	"slideshow_plan_over": "au-delà",
 	"slideshow_plan_apart": "Captures, documents et photos médiocres ({count})",
-	"slideshow_plan_score": "note {score}"
+	"slideshow_plan_group": "Semblables : {count}",
+	"slideshow_plan_quality": "qualité {value} sur 100",
+	"slideshow_plan_faces": "visages : {count}",
+	"slideshow_plan_like_group": "proche de la choisie {value}",
+	"slideshow_plan_like_previous": "proche de la précédente {value}",
+	"slideshow_plan_junk": "comme une capture ou un document {value}"
 }

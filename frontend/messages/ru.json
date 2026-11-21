@@ -264,5 +264,10 @@
 	"slideshow_plan_copy": "копия",
 	"slideshow_plan_over": "сверх квоты",
 	"slideshow_plan_apart": "Скриншоты, документы и плохие фото ({count})",
-	"slideshow_plan_score": "оценка {score}"
+	"slideshow_plan_group": "Похожие: {count}",
+	"slideshow_plan_quality": "качество {value} из 100",
+	"slideshow_plan_faces": "лиц: {count}",
+	"slideshow_plan_like_group": "сходство с выбранным {value}",
+	"slideshow_plan_like_previous": "сходство с предыдущим {value}",
+	"slideshow_plan_junk": "похоже на скриншот или документ {value}"
 }

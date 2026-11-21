@@ -157,6 +157,53 @@ def test_screenshots_and_documents_are_left_out() -> None:
     assert len(clip.photos) == 6
 
 
+def alike(base: np.ndarray, likeness: float, seed: int) -> np.ndarray:
+    """A vector with the given cosine similarity to `base`."""
+    rng = np.random.default_rng(seed)
+    noise = np.asarray(rng.standard_normal(base.shape[0]), dtype=np.float32)
+    noise -= float(noise @ base) * base
+    noise /= float(np.linalg.norm(noise))
+    v: np.ndarray = likeness * base + (1 - likeness**2) ** 0.5 * noise
+    return v
+
+
+def test_a_photo_with_a_face_is_never_junk() -> None:
+    words = prompts()
+    screenshot = words.vectors[words.texts.index("a screenshot of a phone screen")]
+    face = Face((0.4, 0.2, 0.1, 0.1), 0.9)
+    photos = [
+        photo(1, 0, embedding=screenshot),
+        photo(2, 30, embedding=screenshot, faces=(face,)),
+        *day(10, 6, start_minutes=60),
+    ]
+    (clip,) = plan_album(ALBUM, "Trip", photos)
+    assert asset_id(1) not in clip.photos, "a screenshot"
+    assert asset_id(2) in clip.photos, "someone posing by a sign"
+
+
+def test_a_step_closer_within_a_minute_is_a_copy_later_it_is_not() -> None:
+    from showrunner.slideshow.plan import series
+
+    base = vector(400)
+    closer = alike(base, 0.88, 1)  # a step closer: alike, not as much as a copy
+    within = [photo(800, 0, embedding=base), photo(801, 0.5, embedding=closer)]
+    assert [len(r) for r in series(within)] == [2]
+    later = [photo(810, 0, embedding=base), photo(811, 1.5, embedding=closer)]
+    assert [len(r) for r in series(later)] == [1, 1], "after a minute only a close copy"
+
+
+def test_the_photos_chosen_in_a_scene_are_unlike_each_other() -> None:
+    base = vector(500)
+    # The two best are nearly the same view, three minutes apart (no series): one is enough.
+    twins = [
+        photo(1, 0, embedding=base, score=0.95),
+        photo(2, 3, embedding=alike(base, 0.95, 2), score=0.94),
+    ]
+    rest = [photo(10 + i, 10 + i * 5, score=0.5 + i / 100) for i in range(18)]
+    (clip,) = plan_album(ALBUM, "Trip", twins + rest)
+    assert asset_id(1) in clip.photos and asset_id(2) not in clip.photos
+
+
 def test_a_year_with_too_few_photos_gets_no_slideshow() -> None:
     assert plan_album(ALBUM, "Trip", day(1, 5)) == []
 

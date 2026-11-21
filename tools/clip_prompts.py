@@ -67,6 +67,12 @@ PROMPTS: dict[str, list[str]] = {
         "a photo of flowers and plants",
         "a photo of snow in winter",
         "a photo taken at night",
+        "a tourist posing in front of a landmark",
+        "a person standing next to a sign",
+        "a photo in a museum",
+        "a photo of a person in a shop",
+        "a street with shop signs",
+        "a photo of ancient ruins",
     ],
 }
 

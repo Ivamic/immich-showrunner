@@ -35,13 +35,14 @@ import numpy as np
 
 from showrunner.artwork.select import likeness
 from showrunner.model.naming import WHOLE_ALBUM
-from showrunner.slideshow.content import is_junk
+from showrunner.slideshow.content import is_junk, shares
 from showrunner.slideshow.embed import similarity
 from showrunner.slideshow.photos import PhotoLook, distance
 
-PLAN_VERSION = 3
+PLAN_VERSION = 4
 """Raised when the rules change, so that every slideshow is made again (2: a series is measured
-against its first photo, not the one before; 3: a share for each day, parts of whole days)."""
+against its first photo, not the one before; 3: a share for each day, parts of whole days; 4: a
+milder likeness within a minute, never junk with a face, photos of a scene unlike each other)."""
 ASPECT = 16 / 9
 
 SCENE_GAP = timedelta(hours=2)
@@ -51,6 +52,12 @@ SERIES_GAP = timedelta(minutes=2)
 SERIES_SIMILARITY = 0.92
 """A photo this alike to the first of a series, taken at most SERIES_GAP after the one before and
 within SERIES_WINDOW of the first, belongs to it: only the best of a series stays."""
+SERIES_CLOSE = timedelta(minutes=1)
+SERIES_CLOSE_SIMILARITY = 0.85
+"""Within SERIES_CLOSE of the first of a series, a milder likeness is enough: a step closer or
+another pose of the same moment (a crop of 65-85 % of a photo stays at 0.85 or above, D-107)."""
+DIVERSE = 0.88
+"""Photos of a scene this alike to one already chosen come only when nothing else is left."""
 SERIES_HASH_BITS = 10
 SERIES_LIKENESS = 0.9
 """Without embeddings: hashes this close and colours this alike make a series."""
@@ -371,17 +378,38 @@ def _trace(
     """Each photo of a slideshow's time, in the order of taking: when it was taken, its scene,
     the photo of its group of near copies, what became of it and its score (for the page)."""
     scene_of = {p.asset_id: index for index, scene in enumerate(cut) for p in scene}
-    return [
-        {
-            "id": str(p.asset_id),
-            "taken": p.taken.isoformat(timespec="seconds"),
-            "scene": scene_of.get(p.asset_id, 0),
-            "group": str(groups[p.asset_id]) if p.asset_id in groups else None,
-            "fate": "shown" if p.asset_id in shown else fates.get(p.asset_id, "other"),
-            "score": round(p.look.score, 3),
-        }
-        for p in span
-    ]
+    by_id = {p.asset_id: p for p in span}
+    result = []
+    previous: PlanPhoto | None = None
+    for p in span:
+        # How alike: to the photo of its group, or else to the photo taken before it.
+        other = by_id.get(groups.get(p.asset_id, p.asset_id)) if p.asset_id in groups else previous
+        like = (
+            round(similarity(p.embedding, other.embedding), 3)
+            if other is not None
+            and other is not p
+            and p.embedding is not None
+            and other.embedding is not None
+            else None
+        )
+        result.append(
+            {
+                "id": str(p.asset_id),
+                "taken": p.taken.isoformat(timespec="seconds"),
+                "scene": scene_of.get(p.asset_id, 0),
+                "group": str(groups[p.asset_id]) if p.asset_id in groups else None,
+                "fate": "shown" if p.asset_id in shown else fates.get(p.asset_id, "other"),
+                "score": round(p.look.score, 3),
+                "quality": round(p.look.frame.quality.score, 3),
+                "faces": len(p.look.frame.faces),
+                "like": like,
+                "junk": round(shares(p.embedding).get("junk", 0.0), 3)
+                if p.embedding is not None
+                else None,
+            }
+        )
+        previous = p
+    return result
 
 
 def scenes(photos: Sequence[PlanPhoto]) -> list[list[PlanPhoto]]:
@@ -460,14 +488,34 @@ def _pick(
         counts[best] += 1
     result = []
     for scene, count in zip(day_scenes, counts, strict=True):
-        best_ones = sorted(scene, key=lambda p: (-_score(p), str(p.asset_id)))[:count]
-        keep = {p.asset_id for p in best_ones}
+        keep = {p.asset_id for p in _unlike(scene, count)}
         for p in scene:
             if p.asset_id not in keep:
                 fates[p.asset_id] = "scene"
         if keep:
             result.append([p for p in scene if p.asset_id in keep])
     return result
+
+
+def _unlike(scene: Sequence[PlanPhoto], count: int) -> list[PlanPhoto]:
+    """The best `count` photos of a scene, each unlike those chosen before it (DIVERSE) while
+    there are such; the rest by their score."""
+    ranked = sorted(scene, key=lambda p: (-_score(p), str(p.asset_id)))
+    chosen: list[PlanPhoto] = []
+    for photo in ranked:
+        if len(chosen) == count:
+            break
+        if photo.embedding is None or all(
+            other.embedding is None or similarity(photo.embedding, other.embedding) < DIVERSE
+            for other in chosen
+        ):
+            chosen.append(photo)
+    for photo in ranked:
+        if len(chosen) == count:
+            break
+        if photo not in chosen:
+            chosen.append(photo)
+    return chosen
 
 
 def _keep(
@@ -483,7 +531,8 @@ def _keep(
     group = groups if groups is not None else {}
     kept = []
     for p in scene:
-        if p.embedding is not None and is_junk(p.embedding):
+        # A face is never junk: people posing by a sign or a shop window are what a trip is.
+        if p.embedding is not None and not p.look.frame.faces and is_junk(p.embedding):
             fate[p.asset_id] = "junk"
         else:
             kept.append(p)
@@ -516,7 +565,7 @@ def series(photos: Sequence[PlanPhoto]) -> list[list[PlanPhoto]]:
             if (
                 photo.taken - last.taken <= SERIES_GAP
                 and photo.taken - first.taken <= SERIES_WINDOW
-                and _near_copies(first, photo)
+                and _near_copies(first, photo, close=photo.taken - first.taken <= SERIES_CLOSE)
             ):
                 run.append(photo)
                 continue
@@ -524,9 +573,10 @@ def series(photos: Sequence[PlanPhoto]) -> list[list[PlanPhoto]]:
     return result
 
 
-def _near_copies(a: PlanPhoto, b: PlanPhoto) -> bool:
+def _near_copies(a: PlanPhoto, b: PlanPhoto, close: bool = False) -> bool:
     if a.embedding is not None and b.embedding is not None:
-        return similarity(a.embedding, b.embedding) >= SERIES_SIMILARITY
+        limit = SERIES_CLOSE_SIMILARITY if close else SERIES_SIMILARITY
+        return similarity(a.embedding, b.embedding) >= limit
     return (
         distance(a.look.phash, b.look.phash) <= SERIES_HASH_BITS
         and likeness(a.look.frame, b.look.frame) >= SERIES_LIKENESS

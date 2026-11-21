@@ -277,7 +277,7 @@ placed after that season. An album of photos only becomes a show of slideshows o
 
 - **What goes in**: the photos in the order they were taken, cut into scenes by pauses and by moves
   of the camera. Near copies become their best photo; screenshots, documents and receipts are left
-  out. A day with a few photos shows them all; a busy day gives about twice the square root of its
+  out (never a photo with a face). A day with a few photos shows them all; a busy day gives about twice the square root of its
   photos (25 of 150, 40 of 400), shared among its scenes. The parts of a year go on with the next
   piece of music. The camera moves slowly towards the faces; a standing photo is shown whole over a blurred
   copy of itself. The title and the credits are drawn in the style of the album. The page of the

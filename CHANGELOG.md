@@ -58,6 +58,16 @@ between releases.
 
 ### Fixed
 
+- **Photos of people are no longer taken for screenshots** (0.4.0-rc.3): a photo with a face is
+  never left out as a screenshot or document, the words photos are told by include tourists by
+  a landmark, museums, signs, shops and ruins, and a photo is junk only when those words clearly
+  win.
+- **A step closer is a near copy** (0.4.0-rc.3): within a minute of the first of a series, a
+  milder likeness makes a near copy; the photos chosen in a scene are unlike each other, so a
+  share is not spent on the same view twice.
+- **The page of a slideshow** shows each group of near copies on a line of its own, and for a
+  photo its quality out of 100, its faces, how alike it is and how much it looks like a document.
+- **On a phone** the header wraps and the pages stay reachable; no page is wider than the screen.
 - **Cards of the albums line up**: a tall cover no longer stretches its card.
 - **A walk of alike photos is no longer one series** (0.4.0-rc.1): each photo was compared with the
   one before it, so a day of slowly changing views became a single photo; now it is compared with
