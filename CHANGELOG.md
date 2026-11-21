@@ -28,8 +28,13 @@ between releases.
   music is named in the description of every slideshow and in its end credits
   (`SHOWRUNNER_SLIDESHOW_CREDITS`, or on the page).
 - **On the page of an album**: slideshows off for this album, the mood of its music, "Other music",
-  and its slideshows with their state, to watch on the page. The cards of the albums count their
-  slideshows.
+  and its slideshows with their state, to watch on the page or download under the name of the show.
+  Why photos were left out (near copies, over the limit of a scene, screenshots and documents, poor
+  quality), in all and day by day. The cards of the albums count their slideshows.
+- **The slideshow being drawn** is shown on the page: which one, how far, and how many wait.
+- **A trash for slideshows**: a slideshow drawn again or removed is kept for
+  `SHOWRUNNER_SLIDESHOW_TRASH_DAYS` (90) days in `.trash` in the folder of slideshows (in the data
+  volume without one), listed on the page of its album to download, then deleted.
 - **A folder for the slideshows** (`SHOWRUNNER_SLIDESHOW_LOCATION`, optional): the output folders then
   get links to them, one file for Jellyfin and Kodi alike; without it each output folder gets a copy.
 - **Drawn in the background**: photos are looked at within `SHOWRUNNER_SLIDESHOW_BUDGET_SECONDS`
@@ -49,6 +54,11 @@ between releases.
 ### Fixed
 
 - **Cards of the albums line up**: a tall cover no longer stretches its card.
+- **A walk of alike photos is no longer one series** (0.4.0-rc.1): each photo was compared with the
+  one before it, so a day of slowly changing views became a single photo; now it is compared with
+  the first of the series.
+- **A choice for an album no longer waits for the drawing** (0.4.0-rc.1): saving the mood or "Other
+  music" while slideshows were drawn hung until the end of the sync.
 
 ### Security
 

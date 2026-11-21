@@ -116,6 +116,7 @@ Status page.
 | `SHOWRUNNER_SLIDESHOW_RENDER_BUDGET_SECONDS` | `600` | Time a sync may spend drawing slideshows (a minute or two each); the rest are drawn in later syncs, the newest years first |
 | `SHOWRUNNER_SLIDESHOW_BUDGET_SECONDS` | `240` | Time a sync may spend looking at new photos (about a second a photo) |
 | `SHOWRUNNER_SLIDESHOW_CREDITS` | `true` | The credits at the end of a slideshow, until changed on the page |
+| `SHOWRUNNER_SLIDESHOW_TRASH_DAYS` | `90` | Days a slideshow drawn again or removed is kept in the trash |
 | `SHOWRUNNER_VERSION` | `0` | The version of the image; see [Updating](#updating) |
 
 After changing a setting: `docker compose up -d`, then `docker compose run --rm app sync`, so that
@@ -275,7 +276,8 @@ into parts of three to five minutes. An album of photos only becomes a show of s
 - **What goes in**: the photos in the order they were taken, cut into scenes by pauses and by moves
   of the camera. Near copies become their best photo; screenshots, documents and receipts are left
   out. The camera moves slowly towards the faces; a standing photo is shown whole over a blurred
-  copy of itself. The title and the credits are drawn in the style of the album.
+  copy of itself. The title and the credits are drawn in the style of the album. The page of the
+  album says why photos were left out, in all and day by day.
 - **Music**: a set of 28 free pieces (CC BY and public domain, listed in
   [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)) and your own, added on the page. The music of
   an album follows what its photos show (calm, bright, upbeat; wistful and solemn only when you choose
@@ -288,7 +290,12 @@ into parts of three to five minutes. An album of photos only becomes a show of s
 - **Time**: drawing takes a minute or two for a few minutes of video, on two threads. The first
   time, a large library takes hours: slideshows appear one by one, the newest years first. A slideshow
   is drawn again when its photos, its music or the style of the album change; the one drawn before
-  stays in the library meanwhile, with its watched mark.
+  stays in the library meanwhile, with its watched mark. The page shows the slideshow being drawn,
+  how far it is and how many wait.
+- **The trash**: a slideshow drawn again or removed is moved to `.trash` in the folder of slideshows
+  (in the data volume without one) and deleted after `SHOWRUNNER_SLIDESHOW_TRASH_DAYS` (90) days. The
+  page of the album lists the versions there, to download; every slideshow can be downloaded there
+  too.
 - **The folder of slideshows** (`SHOWRUNNER_SLIDESHOW_LOCATION`, optional): Jellyfin must be able to
   read it, as it reads the Immich library; Kodi reaches it through the links in its share, as it
   reaches the videos of Immich. With full-size photos (`asset.download` on the key, and "Full-size
@@ -323,8 +330,8 @@ the sync with `--force`.
 
 ## What the app will and will not do
 
-- It writes only to its output folders, and removes there only what it created. A file you put
-  there or changed by hand is left alone.
+- It writes only to its output folders, the folder of slideshows and its data volume, and removes
+  there only what it created. A file you put there or changed by hand is left alone.
 - It never opens, changes, moves or removes a file of the Immich library; the library is not even
   mounted into its container.
 - When Immich does not answer, nothing is removed.
