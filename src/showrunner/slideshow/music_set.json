@@ -1,9 +1,9 @@
 {
- "version": 1,
+ "version": 2,
  "archive": {
-  "url": "https://github.com/Ivamic/immich-showrunner/releases/download/music-set-1/showrunner-music-set-1.zip",
-  "sha256": "00e940c333bc9ece5deaf6c5729311145acd249d7e669cfa8754d1e1e488d7ae",
-  "size": 160640071
+  "url": "https://github.com/Ivamic/immich-showrunner/releases/download/music-set-2/showrunner-music-set-2.zip",
+  "sha256": "7c01055a2a45f27559e32668c91a7ae70269d1042855f79911e3ee2c958250fb",
+  "size": 223330703
  },
  "tracks": [
   {
@@ -145,6 +145,34 @@
    "energy": "low",
    "colour": "neutral",
    "instruments": "piano"
+  },
+  {
+   "id": "incompetech-eternal-hope",
+   "file": "incompetech-eternal-hope.mp3",
+   "sha256": "b410a6e67dfd23868ac3a4f892226ef2d0933b7846d66f8d8472377a1fde36a5",
+   "title": "Eternal Hope",
+   "author": "Kevin MacLeod (incompetech.com)",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "link": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100238",
+   "mood": "calm",
+   "energy": "low",
+   "colour": "bright",
+   "instruments": "piano, strings, helicon, french horn, choir"
+  },
+  {
+   "id": "incompetech-aretes",
+   "file": "incompetech-aretes.mp3",
+   "sha256": "8ef8fefbdde57c96d55baa3c0907f8e16a7457b70f2567ded2fcdc3567e25219",
+   "title": "Aretes",
+   "author": "Kevin MacLeod (incompetech.com)",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "link": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100325",
+   "mood": "calm",
+   "energy": "low",
+   "colour": "bright",
+   "instruments": "piano, synths, choir"
   },
   {
    "id": "incompetech-simple-duet",
@@ -397,6 +425,76 @@
    "energy": "medium",
    "colour": "grand",
    "instruments": "piano"
+  },
+  {
+   "id": "incompetech-americana",
+   "file": "incompetech-americana.mp3",
+   "sha256": "664880bb7368b8b85e362a5dae28338de4e4741205991a0817ceeaabe7366153",
+   "title": "Americana",
+   "author": "Kevin MacLeod (incompetech.com)",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "link": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1200092",
+   "mood": "cinematic",
+   "energy": "medium",
+   "colour": "bright",
+   "instruments": "cellos, clarinets, flutes, english horn, orchestra"
+  },
+  {
+   "id": "incompetech-skye-cuillin",
+   "file": "incompetech-skye-cuillin.mp3",
+   "sha256": "9edd236cfe08d0a339f2e6e096689d2940ae633a05855dd106cc2eba295dd367",
+   "title": "Skye Cuillin",
+   "author": "Kevin MacLeod (incompetech.com)",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "link": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100346",
+   "mood": "cinematic",
+   "energy": "medium",
+   "colour": "bright",
+   "instruments": "harp, whistle, fiddle, synths, strings, choir"
+  },
+  {
+   "id": "incompetech-the-parting",
+   "file": "incompetech-the-parting.mp3",
+   "sha256": "90c533e134fbe9582b3f4d1ebe5e6734f30e2dfba3e96ba4eeab9bd8fbd8000a",
+   "title": "The Parting",
+   "author": "Kevin MacLeod (incompetech.com)",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "link": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100638",
+   "mood": "cinematic",
+   "energy": "low",
+   "colour": "neutral",
+   "instruments": "oboe, flute, strings, trombones, horn, tuba"
+  },
+  {
+   "id": "incompetech-for-originz",
+   "file": "incompetech-for-originz.mp3",
+   "sha256": "63cbff33b01bbc33d6c169e6b3e0128592ecb15851763923f5797b030870c2c2",
+   "title": "For Originz",
+   "author": "Kevin MacLeod (incompetech.com)",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "link": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100700",
+   "mood": "cinematic",
+   "energy": "medium",
+   "colour": "bright",
+   "instruments": "strings, choir, percussion"
+  },
+  {
+   "id": "incompetech-ascending-the-vale",
+   "file": "incompetech-ascending-the-vale.mp3",
+   "sha256": "a0ab3aae9a942d797c381df8d914dfef453e7e455c1c6333d1916d59ba005353",
+   "title": "Ascending the Vale",
+   "author": "Kevin MacLeod (incompetech.com)",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "link": "https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600064",
+   "mood": "cinematic",
+   "energy": "low",
+   "colour": "neutral",
+   "instruments": "harp, choir, flute, percussion"
   }
  ]
 }

@@ -49,7 +49,7 @@ from showrunner.targets.base import JELLYFIN, KODI, SLIDESHOWS, FileKind
 
 router = APIRouter()
 
-Mood = Literal["calm", "wistful", "bright", "upbeat", "solemn"]
+Mood = Literal["calm", "wistful", "bright", "upbeat", "solemn", "cinematic"]
 
 
 # --- settings ---------------------------------------------------------------------------------

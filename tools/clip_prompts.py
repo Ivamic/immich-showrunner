@@ -73,6 +73,8 @@ PROMPTS: dict[str, list[str]] = {
         "a photo of a person in a shop",
         "a street with shop signs",
         "a photo of ancient ruins",
+        "an aerial photo of a landscape from above",
+        "a wide view over a valley",
     ],
 }
 

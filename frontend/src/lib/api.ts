@@ -255,8 +255,8 @@ export const syncNow = (force = false) => request<void>('POST', '/sync', { force
 
 // --- slideshows (D-103) -----------------------------------------------------------------------
 
-export type Mood = 'calm' | 'wistful' | 'bright' | 'upbeat' | 'solemn';
-export const MOODS: Mood[] = ['calm', 'wistful', 'bright', 'upbeat', 'solemn'];
+export type Mood = 'calm' | 'wistful' | 'bright' | 'upbeat' | 'solemn' | 'cinematic';
+export const MOODS: Mood[] = ['calm', 'wistful', 'bright', 'upbeat', 'solemn', 'cinematic'];
 
 export interface SlideshowSettings {
 	enabled: boolean;

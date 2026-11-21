@@ -143,7 +143,8 @@
 			wistful: m.mood_wistful(),
 			bright: m.mood_bright(),
 			upbeat: m.mood_upbeat(),
-			solemn: m.mood_solemn()
+			solemn: m.mood_solemn(),
+			cinematic: m.mood_cinematic()
 		})[mood] ?? mood;
 	const duration = (seconds: number | null) =>
 		seconds === null

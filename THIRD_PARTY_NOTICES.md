@@ -167,6 +167,8 @@ description of each slideshow episode and, unless turned off, in its end credits
 - “Stoic Morning” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100061>
 - “Chopin: Nocturne Op. 9 No. 2” — Frédéric Chopin, recorded for Musopen, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), <https://archive.org/details/musopen-chopin>
 - “Chopin: Prelude Op. 28 No. 15 (Raindrop)” — Frédéric Chopin, recorded for Musopen, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), <https://archive.org/details/musopen-chopin>
+- “Eternal Hope” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100238>
+- “Aretes” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100325>
 - “Simple Duet” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100074>
 - “Winter Chimes” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100009>
 - “Life of Riley” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400054>
@@ -185,3 +187,8 @@ description of each slideshow episode and, unless turned off, in its end credits
 - “Jesu, Joy of Man's Desiring” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100189>
 - “Court of the Queen” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100728>
 - “Chopin: Waltz Op. 64 No. 2” — Frédéric Chopin, recorded for Musopen, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), <https://archive.org/details/musopen-chopin>
+- “Americana” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1200092>
+- “Skye Cuillin” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100346>
+- “The Parting” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100638>
+- “For Originz” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100700>
+- “Ascending the Vale” — Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600064>

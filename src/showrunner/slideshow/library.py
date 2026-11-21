@@ -37,8 +37,9 @@ log = logging.getLogger(__name__)
 
 SET_MANIFEST = Path(__file__).parent / "music_set.json"
 AUDIO = (".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".flac", ".wav")
-MOODS = ("calm", "wistful", "bright", "upbeat", "solemn")
-"""D-100: by energy and colour; wistful (slow and sad) is never chosen for an album on its own."""
+MOODS = ("calm", "wistful", "bright", "upbeat", "solemn", "cinematic")
+"""D-100: by energy and colour; wistful (slow and sad) is never chosen for an album on its own.
+Cinematic (D-110): wide and slow-building, as over a landscape seen from above."""
 ENERGIES = ("low", "medium", "high")
 COLOURS = ("sad", "neutral", "bright", "grand")
 SET_LICENCES = ("CC0 1.0", "Public Domain Mark 1.0", "CC BY 3.0", "CC BY 3.0 US", "CC BY 4.0")

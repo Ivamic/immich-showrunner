@@ -157,7 +157,10 @@ def test_the_set_holds_no_licence_but_cc0_public_domain_and_cc_by(
 
 
 def test_the_set_shipped_is_valid() -> None:
-    assert library.set_manifest()["version"] == 1
+    manifest = library.set_manifest()
+    assert manifest["version"] == 2
+    moods = {t["mood"] for t in manifest["tracks"]}
+    assert moods == set(library.MOODS), "every mood has pieces of the set"
 
 
 def word(text: str) -> np.ndarray:
@@ -168,7 +171,11 @@ def word(text: str) -> np.ndarray:
 
 def test_the_mood_of_an_album_follows_its_photos() -> None:
     mountains = [word("a photo of mountains")] * 5 + [word("a landscape photo")] * 3
-    assert album_mood(mountains) == "calm"
+    assert album_mood(mountains) == "cinematic"
+    from_above = [word("an aerial photo of a landscape from above")] * 3 + [word("a selfie")] * 2
+    assert album_mood(from_above) == "cinematic"
+    winter = [word("a photo of snow in winter")] * 4 + [word("a photo of flowers and plants")]
+    assert album_mood(winter) == "calm"
     family = [word("a family photo")] * 4 + [word("a photo of mountains")]
     assert album_mood(family) == "bright"
     party = [word("a group photo at a party")] * 3 + [word("a family photo")] * 4

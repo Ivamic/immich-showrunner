@@ -23,12 +23,13 @@ between releases.
   The camera moves slowly towards the faces (or what draws the eye), a standing photo is shown
   whole over a blurred copy of itself, a panorama is travelled along; dissolves within a scene,
   fades through black between scenes; the title and the credits in the style of the album.
-- **Music**: a set of 28 free pieces (Kevin MacLeod, CC BY 4.0; Chopin recorded for Musopen, CC0;
+- **Music**: a set of 35 free pieces (Kevin MacLeod, CC BY 4.0; Chopin recorded for Musopen, CC0;
   Jason Shaw, CC BY 3.0 US), downloaded on first use from a release of this project, and your own
   pieces, added on the page with an optional title, author, licence, link and mood. Every piece is
   looked at once (loudness by EBU R128, tempo, beats, bars, parts, key); the photos change on the
   beats, a scene on the first beat of a bar, and a slideshow ends at the end of a phrase. The mood of
-  the music follows what the photos show (calm, bright, upbeat; wistful and solemn by choice). The
+  the music follows what the photos show (calm, bright, upbeat, and cinematic for landscapes and
+  views from above; wistful and solemn by choice). The
   music is named in the description of every slideshow and in its end credits
   (`SHOWRUNNER_SLIDESHOW_CREDITS`, or on the page).
 - **On the page of an album**: slideshows off for this album, the mood of its music, "Other music",

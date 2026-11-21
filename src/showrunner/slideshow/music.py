@@ -69,7 +69,8 @@ class MusicAnalysis:
     mode: str
     """"major" or "minor"."""
     mood: str
-    """"calm", "wistful", "bright" or "upbeat" (D-100); "solemn" is only ever given by hand."""
+    """"calm", "wistful", "bright" or "upbeat" (D-100); "solemn" and "cinematic" are only ever
+    given by hand."""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)

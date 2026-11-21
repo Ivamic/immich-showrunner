@@ -206,6 +206,7 @@
 	"mood_bright": "bright",
 	"mood_upbeat": "upbeat",
 	"mood_solemn": "solemn",
+	"mood_cinematic": "cinematic",
 	"album_slideshow_heading": "Slideshows",
 	"album_slideshow_off_global": "Slideshows are switched off. Switch them on on the Slideshows page.",
 	"album_slideshow_enabled": "Slideshows for this album",

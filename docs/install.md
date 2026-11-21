@@ -289,10 +289,10 @@ placed after that season. An album of photos only becomes a show of slideshows o
   photo of a slideshow, scene by scene: those shown, each group of near copies beside the photo it
   gave way to, those that did not fit in the twenty minutes of the season, and apart the
   screenshots and documents.
-- **Music**: a set of 28 free pieces (CC BY and public domain, listed in
+- **Music**: a set of 35 free pieces (CC BY and public domain, listed in
   [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)) and your own, added on the page. The music of
-  an album follows what its photos show (calm, bright, upbeat; wistful and solemn only when you choose
-  them for an album); the photos change on the beats. The music is named in the description of every
+  an album follows what its photos show (calm, bright, upbeat, cinematic for landscapes and views
+  from above; wistful and solemn only when you choose them for an album); the photos change on the beats. The music is named in the description of every
   slideshow and, unless you switch it off, in its end credits. The rights to music you add are yours.
 - **Downloads on first use**: an image model (CLIP, 351 MB, MIT) from Hugging Face, to tell what a
   photo shows, and the music set (153 MB) from a release of this project, both into the data
