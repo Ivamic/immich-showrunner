@@ -3,13 +3,15 @@
 over each and how one gives way to the next. Pure logic and deterministic: the same photos give
 the same list, and the version of a list (a hash of it) says when a slideshow is to be made again.
 
-The rules (see D-091, D-097):
+The rules (see D-091, D-097, D-106):
 
-- one slideshow per year, of 3 to 5 minutes; a long year is cut into parts between scenes;
-- the order is the time of taking; a scene ends after a pause of more than two hours or a move of
-  more than about 20 km;
+- one slideshow per year, of 3 to 5 minutes; a long year is cut into parts of whole days, never
+  within a day, and is at most half an hour in all;
+- the order is the time of taking; a scene ends with the day, after a pause of more than two
+  hours or a move of more than about 20 km;
 - screenshots, documents and receipts are left out; a series of near copies becomes its best
-  photo; a scene gives at most a dozen photos;
+  photo; a day gives about twice the square root of its photos left (a busy day more, but not all
+  of them), shared among its scenes by their size;
 - about four seconds a photo, longer for groups and panoramas, shorter in a busy scene;
 - the camera moves slowly towards the faces (or what draws the eye), zooming in and out in turn;
   a standing photo is shown whole over a blurred copy of itself, a panorama is travelled along;
@@ -24,6 +26,7 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import StrEnum
+from itertools import pairwise
 from typing import Any
 from uuid import UUID
 
@@ -34,9 +37,9 @@ from showrunner.slideshow.content import is_junk
 from showrunner.slideshow.embed import similarity
 from showrunner.slideshow.photos import PhotoLook, distance
 
-PLAN_VERSION = 2
+PLAN_VERSION = 3
 """Raised when the rules change, so that every slideshow is made again (2: a series is measured
-against its first photo, not the one before)."""
+against its first photo, not the one before; 3: a share for each day, parts of whole days)."""
 ASPECT = 16 / 9
 
 SCENE_GAP = timedelta(hours=2)
@@ -49,7 +52,14 @@ within SERIES_WINDOW of the first, belongs to it: only the best of a series stay
 SERIES_HASH_BITS = 10
 SERIES_LIKENESS = 0.9
 """Without embeddings: hashes this close and colours this alike make a series."""
-MAX_PER_SCENE = 12
+DAY_SHARE = 2.0
+"""A day gives about DAY_SHARE x sqrt(n) photos of the n left after near copies and junk."""
+DAY_ALL = 8
+"""A day with at most this many photos left shows them all."""
+DAY_MAX_PHOTOS = 55
+"""At most, so that a day fits in one part."""
+YEAR_MAX_SECONDS = 1800.0
+"""A year is at most half an hour in all; the shares of its days shrink alike to fit."""
 POOR = 0.2
 MIN_PHOTOS = 6
 """A year with fewer photos gets no slideshow."""
@@ -274,13 +284,23 @@ def plan_album(
         by_year.setdefault(photo.taken.year, []).append(photo)
     for year, every in sorted(by_year.items()):
         fates: dict[UUID, str] = {}
-        cut = scenes(every)
-        chosen = [_choose(scene, fates) for scene in cut]
-        chosen = [scene for scene in chosen if scene]
-        count = sum(len(scene) for scene in chosen)
+        cut: list[list[PlanPhoto]] = []
+        kept_days: list[list[list[PlanPhoto]]] = []
+        for one_day in _days(every):
+            day_scenes = scenes(one_day)
+            cut += day_scenes
+            kept = [_keep(scene, fates) for scene in day_scenes]
+            kept_days.append([scene for scene in kept if scene])
+        shares = _shares([sum(len(s) for s in d) for d in kept_days])
+        chosen_days = [_pick(d, share, fates) for d, share in zip(kept_days, shares, strict=True)]
+        chosen_days = [d for d in chosen_days if d]
+        count = sum(len(scene) for d in chosen_days for scene in d)
         if count < MIN_PHOTOS:
             continue
-        timed = [[(p, _seconds(p, len(scene), seed)) for p in scene] for scene in chosen]
+        timed = [
+            [[(p, _seconds(p, len(scene), seed)) for p in scene] for scene in d]
+            for d in chosen_days
+        ]
         parts = _split(timed)
         starts = [min(p.taken for scene in part for p, _ in scene) for part in parts]
         for index, part in enumerate(parts, start=1):
@@ -359,9 +379,60 @@ def _km(a: PlanPhoto, b: PlanPhoto) -> float | None:
     return 2 * 6371.0 * math.asin(math.sqrt(h))
 
 
-def _choose(scene: Sequence[PlanPhoto], fates: dict[UUID, str] | None = None) -> list[PlanPhoto]:
-    """The photos of a scene that go into the slideshow, in the order of taking. `fates` learns
-    why each photo left out was left out: "junk", "series", "poor" or "scene"."""
+def _days(photos: Sequence[PlanPhoto]) -> list[list[PlanPhoto]]:
+    """The photos (in the order of taking) by the day they were taken."""
+    result: dict[object, list[PlanPhoto]] = {}
+    for photo in photos:
+        result.setdefault(photo.taken.date(), []).append(photo)
+    return list(result.values())
+
+
+def _shares(sizes: Sequence[int]) -> list[int]:
+    """How many photos each day gives, of the `sizes` left after near copies and junk: all of a
+    few (DAY_ALL), else about DAY_SHARE x sqrt(n), at most DAY_MAX_PHOTOS; all shrunk alike
+    when the year would be too long."""
+    shares = [min(n, DAY_MAX_PHOTOS, max(DAY_ALL, round(DAY_SHARE * math.sqrt(n)))) for n in sizes]
+    limit = int(YEAR_MAX_SECONDS / PHOTO_SECONDS)
+    total = sum(shares)
+    if total > limit:
+        shares = [max(1, math.floor(s * limit / total)) if s else 0 for s in shares]
+    return shares
+
+
+def _pick(
+    day_scenes: Sequence[Sequence[PlanPhoto]], share: int, fates: dict[UUID, str]
+) -> list[list[PlanPhoto]]:
+    """The best photos of a day, `share` of them, shared among its scenes by their size (each
+    scene one at least, while there are enough); in the order of taking. The rest are noted as
+    "scene" (over the share)."""
+    counts = [0] * len(day_scenes)
+    # Every scene its first photo, the largest scenes first when there are too few.
+    order = sorted(range(len(day_scenes)), key=lambda i: (-len(day_scenes[i]), i))
+    for i in order[:share]:
+        counts[i] = 1
+    # The rest in proportion to the size of the scenes (highest averages).
+    for _ in range(share - sum(counts)):
+        free = [i for i in range(len(day_scenes)) if counts[i] < len(day_scenes[i])]
+        if not free:
+            break
+        best = max(free, key=lambda i: (len(day_scenes[i]) / (counts[i] + 1), -i))
+        counts[best] += 1
+    result = []
+    for scene, count in zip(day_scenes, counts, strict=True):
+        best_ones = sorted(scene, key=lambda p: (-_score(p), str(p.asset_id)))[:count]
+        keep = {p.asset_id for p in best_ones}
+        for p in scene:
+            if p.asset_id not in keep:
+                fates[p.asset_id] = "scene"
+        if keep:
+            result.append([p for p in scene if p.asset_id in keep])
+    return result
+
+
+def _keep(scene: Sequence[PlanPhoto], fates: dict[UUID, str] | None = None) -> list[PlanPhoto]:
+    """The photos of a scene that may go into the slideshow, in the order of taking: without
+    junk, near copies and (when there are better ones) poor photos. `fates` learns why each
+    photo left out was left out: "junk", "series" or "poor"."""
     fate = fates if fates is not None else {}
     kept = []
     for p in scene:
@@ -381,13 +452,6 @@ def _choose(scene: Sequence[PlanPhoto], fates: dict[UUID, str] | None = None) ->
             if p.look.score < POOR:
                 fate[p.asset_id] = "poor"
         kept = good
-    if len(kept) > MAX_PER_SCENE:
-        best = sorted(kept, key=lambda p: (-_score(p), str(p.asset_id)))[:MAX_PER_SCENE]
-        keep = {p.asset_id for p in best}
-        for p in kept:
-            if p.asset_id not in keep:
-                fate[p.asset_id] = "scene"
-        kept = [p for p in kept if p.asset_id in keep]
     return kept
 
 
@@ -447,34 +511,57 @@ Timed = list[list[tuple[PlanPhoto, float]]]
 """Scenes of photos with their seconds."""
 
 
-def _split(scenes_: Timed) -> list[Timed]:
-    """The scenes of a year, in parts of at most CLIP_MAX_SECONDS, cut between scenes (a scene
-    too long for one part is cut too). The parts are about equal."""
+def _split(days: Sequence[Timed]) -> list[Timed]:
+    """The days of a year (each its scenes) in parts of whole days, about equal and each at most
+    CLIP_MAX_SECONDS where the days allow it; a day is never cut."""
     extra = TITLE_SECONDS + CREDITS_SECONDS
-    units: Timed = []
-    for scene in scenes_:
-        chunk: list[tuple[PlanPhoto, float]] = []
-        for item in scene:
-            if chunk and sum(s for _, s in chunk) + item[1] > CLIP_TARGET_SECONDS:
-                units.append(chunk)
-                chunk = []
-            chunk.append(item)
-        units.append(chunk)
-    total = sum(s for unit in units for _, s in unit)
-    if total + extra <= CLIP_MAX_SECONDS:
-        return [units]
-    count = math.ceil(total / CLIP_TARGET_SECONDS)
-    target = total / count
-    parts: list[Timed] = [[]]
-    for unit in units:
-        seconds = sum(s for _, s in unit)
-        current = sum(s for u in parts[-1] for _, s in u)
-        # A new part when this one has its share and the unit would take it past the target
-        # by more than half of the unit.
-        if parts[-1] and current + seconds / 2 > target and len(parts) < count:
-            parts.append([])
-        parts[-1].append(unit)
-    return parts
+    lengths = [sum(s for scene in d for _, s in scene) for d in days]
+    total = sum(lengths)
+    if total + extra <= CLIP_MAX_SECONDS or len(days) == 1:
+        return [[scene for d in days for scene in d]]
+    fits = CLIP_MAX_SECONDS - extra
+    cuts: list[int] | None = None
+    count = max(2, math.ceil(total / CLIP_TARGET_SECONDS))
+    while cuts is None and count < len(days):
+        cuts = _balanced(lengths, count, fits)
+        count += 1
+    if cuts is None:
+        cuts = list(range(1, len(days)))
+    bounds = [0, *cuts, len(days)]
+    return [[scene for d in days[a:b] for scene in d] for a, b in pairwise(bounds)]
+
+
+def _balanced(lengths: Sequence[float], count: int, fits: float) -> list[int] | None:
+    """Where to cut `lengths` (in order) into `count` runs, none longer than `fits`, as equal as
+    can be (least sum of squares off the mean); None when they do not fit."""
+    n = len(lengths)
+    prefix = [0.0]
+    for length in lengths:
+        prefix.append(prefix[-1] + length)
+    mean = prefix[-1] / count
+    inf = float("inf")
+    # cost[k][i]: the best for the first i days in k runs; back[k][i]: where the last run starts.
+    cost = [[inf] * (n + 1) for _ in range(count + 1)]
+    back = [[0] * (n + 1) for _ in range(count + 1)]
+    cost[0][0] = 0.0
+    for k in range(1, count + 1):
+        for i in range(k, n - (count - k) + 1):
+            for j in range(i - 1, k - 2, -1):
+                run = prefix[i] - prefix[j]
+                if run > fits:
+                    break
+                if cost[k - 1][j] < inf:
+                    value = cost[k - 1][j] + (run - mean) ** 2
+                    if value < cost[k][i]:
+                        cost[k][i], back[k][i] = value, j
+    if cost[count][n] == inf:
+        return None
+    cuts: list[int] = []
+    i = n
+    for _ in range(count):
+        i = back[count - len(cuts)][i]
+        cuts.append(i)
+    return sorted(cuts)[1:]
 
 
 def _shots(part: Timed, title: str, seed: int, credits: bool) -> tuple[Shot, ...]:

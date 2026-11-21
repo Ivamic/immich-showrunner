@@ -238,7 +238,7 @@
 	"shows_slideshows": "diaporamas : {count}",
 	"album_slideshow_left_out": "Écartées : {reasons}",
 	"album_slideshow_reason_series": "quasi-doublons",
-	"album_slideshow_reason_scene": "au-delà de la limite d’une scène",
+	"album_slideshow_reason_scene": "au-delà de la part du jour",
 	"album_slideshow_reason_junk": "captures et documents",
 	"album_slideshow_reason_poor": "mauvaise qualité",
 	"album_slideshow_not_looked": "{count} photos pas encore examinées (elles arrivent aux prochaines synchronisations)",

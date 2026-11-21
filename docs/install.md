@@ -271,11 +271,13 @@ nothing up. The descriptions of people reach Jellyfin only.
 Off until you switch them on, on the Slideshows page. Then the photos of every album become videos
 with music, one for each year: "Photos 2024" among the specials (Season 0) of its show, placed after
 the episodes of that year in Jellyfin and Kodi. A year needs at least six photos; a long year is cut
-into parts of three to five minutes. An album of photos only becomes a show of slideshows only.
+into parts of three to five minutes, of whole days, and is at most half an hour in all. An album of photos only becomes a show of slideshows only.
 
 - **What goes in**: the photos in the order they were taken, cut into scenes by pauses and by moves
   of the camera. Near copies become their best photo; screenshots, documents and receipts are left
-  out. The camera moves slowly towards the faces; a standing photo is shown whole over a blurred
+  out. A day with a few photos shows them all; a busy day gives about twice the square root of its
+  photos (25 of 150, 40 of 400), shared among its scenes. The parts of a year go on with the next
+  piece of music. The camera moves slowly towards the faces; a standing photo is shown whole over a blurred
   copy of itself. The title and the credits are drawn in the style of the album. The page of the
   album says why photos were left out, in all and day by day.
 - **Music**: a set of 28 free pieces (CC BY and public domain, listed in

@@ -238,7 +238,7 @@
 	"shows_slideshows": "роликов: {count}",
 	"album_slideshow_left_out": "Отброшено: {reasons}",
 	"album_slideshow_reason_series": "почти копии",
-	"album_slideshow_reason_scene": "сверх лимита сцены",
+	"album_slideshow_reason_scene": "сверх квоты дня",
 	"album_slideshow_reason_junk": "скриншоты и документы",
 	"album_slideshow_reason_poor": "плохое качество",
 	"album_slideshow_not_looked": "ещё не разобрано фото: {count} (будут в следующих синхронизациях)",

@@ -238,7 +238,7 @@
 	"shows_slideshows": "slideshows: {count}",
 	"album_slideshow_left_out": "Left out: {reasons}",
 	"album_slideshow_reason_series": "near copies",
-	"album_slideshow_reason_scene": "over the limit of a scene",
+	"album_slideshow_reason_scene": "over the share of a day",
 	"album_slideshow_reason_junk": "screenshots and documents",
 	"album_slideshow_reason_poor": "poor quality",
 	"album_slideshow_not_looked": "{count} photos not looked at yet (they come in the next syncs)",

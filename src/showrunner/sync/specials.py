@@ -220,7 +220,7 @@ async def plan_specials(
         clips = plan_album(
             show.album_id, show.sort_title, inputs, seed=seed, credits=context.credits
         )
-        clips = [fit_to_music(clip, pieces) for clip in clips]
+        clips = music_in_turn(clips, pieces)
         specials = specials_of(show, clips, style)
         looked = {p.asset_id for p in inputs}
         waiting: dict[int, int] = {}
@@ -234,6 +234,22 @@ async def plan_specials(
             planned=[summary(s, waiting.get(s.year, 0)) for s in specials],
         )
         result.append((replace(show, specials=specials), folder))
+    return result
+
+
+def music_in_turn(clips: Sequence[Clip], pieces: Sequence[Track]) -> list[Clip]:
+    """The clips of an album (oldest first) set to the music, each going on with the piece after
+    the last one the clip before used: the parts of a year, and the years, do not all begin with
+    the same music. A piece comes again only when all of the mood have been heard."""
+    result = []
+    start = 0
+    for clip in clips:
+        turn = [*pieces[start:], *pieces[:start]]
+        fitted = fit_to_music(clip, turn)
+        result.append(fitted)
+        if fitted.music and pieces:
+            last = max(i for i, t in enumerate(turn) if any(m.track == t.id for m in fitted.music))
+            start = (start + last + 1) % len(pieces)
     return result
 
 
@@ -311,6 +327,7 @@ __all__ = [
     "RenderError",
     "RenderOptions",
     "SpecialsContext",
+    "music_in_turn",
     "newest_first",
     "plan_specials",
     "specials_of",

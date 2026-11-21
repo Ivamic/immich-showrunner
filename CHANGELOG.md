@@ -10,11 +10,12 @@ between releases.
 ### Added
 
 - **Slideshows of the photos** (off until switched on on the new Slideshows page): the photos of an
-  album become videos with music, one for each year ("Photos 2024", parts of 3 to 5 minutes for a
-  long year), among the specials (Season 0) of its show, placed after the episodes of their year in
+  album become videos with music, one for each year ("Photos 2024", parts of 3 to 5 minutes of whole
+  days for a long year, at most half an hour a year), among the specials (Season 0) of its show, placed after the episodes of their year in
   Jellyfin and Kodi. An album of photos only becomes a show of slideshows only.
 - **A cut list made with care**: the photos in the order they were taken, cut into scenes by pauses
-  and moves; near copies become their best photo; screenshots, documents and receipts are left out
+  and moves; near copies become their best photo; a day gives all of a few photos, else about twice
+  the square root of them (a busy day more, but not all), shared among its scenes; screenshots, documents and receipts are left out
   by a CLIP image model (OpenCLIP ViT-B/32, MIT, downloaded on first use, run by OpenCV on the CPU).
   The camera moves slowly towards the faces (or what draws the eye), a standing photo is shown
   whole over a blurred copy of itself, a panorama is travelled along; dissolves within a scene,
@@ -29,7 +30,7 @@ between releases.
   (`SHOWRUNNER_SLIDESHOW_CREDITS`, or on the page).
 - **On the page of an album**: slideshows off for this album, the mood of its music, "Other music",
   and its slideshows with their state, to watch on the page or download under the name of the show.
-  Why photos were left out (near copies, over the limit of a scene, screenshots and documents, poor
+  Why photos were left out (near copies, over the share of a day, screenshots and documents, poor
   quality), in all and day by day. The cards of the albums count their slideshows.
 - **The slideshow being drawn** is shown on the page: which one, how far, and how many wait.
 - **A trash for slideshows**: a slideshow drawn again or removed is kept for

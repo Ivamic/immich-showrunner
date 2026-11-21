@@ -134,6 +134,17 @@ def test_a_short_piece_gives_way_to_the_next() -> None:
     assert made.music[-1].at + made.music[-1].seconds == pytest.approx(made.seconds)
 
 
+def test_each_part_goes_on_with_the_next_piece_not_the_same_one() -> None:
+    from showrunner.sync.specials import music_in_turn
+
+    pieces = [track(1, 60), track(2, 60), track(3, 60), track(4, 60)]
+    parts = music_in_turn([clip(photos=12), clip(photos=12), clip(photos=12)], pieces)
+    used = [[m.track for m in part.music] for part in parts]
+    assert used[0][0] == "t1"
+    for before, after in itertools.pairwise(used):
+        assert after[0] == f"t{int(before[-1][1:]) % 4 + 1}", used
+
+
 def test_every_piece_is_brought_to_the_same_loudness_without_clipping() -> None:
     quiet = Track("q", analysis(loudness=-30.0), "q", "calm")
     loud = Track("l", analysis(loudness=-10.0), "l", "calm")

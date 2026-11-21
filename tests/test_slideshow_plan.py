@@ -2,6 +2,7 @@
 """The cut list of a slideshow: scenes, near copies and junk left out, a year in parts of at most
 five minutes, a timeline without gaps, and a camera that keeps the faces in view."""
 
+import itertools
 import random
 from datetime import datetime, timedelta
 from uuid import UUID
@@ -18,7 +19,9 @@ from showrunner.slideshow.photos import PhotoLook
 from showrunner.slideshow.plan import (
     ASPECT,
     CLIP_MAX_SECONDS,
-    MAX_PER_SCENE,
+    CREDITS_SECONDS,
+    TITLE_SECONDS,
+    YEAR_MAX_SECONDS,
     Layout,
     PlanPhoto,
     Transition,
@@ -157,11 +160,32 @@ def test_a_year_with_too_few_photos_gets_no_slideshow() -> None:
     assert plan_album(ALBUM, "Trip", day(1, 5)) == []
 
 
-def test_a_scene_gives_at_most_a_dozen_photos_the_best_ones() -> None:
+def test_a_day_gives_about_twice_the_square_root_of_its_photos_the_best_ones() -> None:
     photos = [photo(i, i * 5, score=0.3 + i / 100) for i in range(1, 21)]
     (clip,) = plan_album(ALBUM, "Trip", photos)
-    assert len(clip.photos) == MAX_PER_SCENE
-    assert clip.photos == [asset_id(i) for i in range(9, 21)], "the best, in the order of taking"
+    assert len(clip.photos) == 9, "2 x sqrt(20)"
+    assert clip.photos == [asset_id(i) for i in range(12, 21)], "the best, in the order of taking"
+
+
+def test_a_busy_day_gives_more_but_not_all_of_its_photos() -> None:
+    busy = [photo(i, i * 5, score=0.5 + (i % 7) / 100) for i in range(1, 101)]
+    quiet = [photo(200 + i, 24 * 60 + i * 20) for i in range(8)]
+    (clip,) = plan_album(ALBUM, "Trip", busy + quiet)
+    shown = set(clip.photos)
+    assert len(shown & {p.asset_id for p in busy}) == 20
+    assert len(shown & {p.asset_id for p in quiet}) == 8, "a few are all shown"
+    assert clip.report["days"][0]["scene"] == 80
+
+
+def test_the_share_of_a_day_goes_to_each_of_its_scenes_by_their_size() -> None:
+    morning = [photo(i, i * 5) for i in range(1, 31)]
+    evening = [photo(100 + i, 10 * 60 + i * 5) for i in range(10)]  # after a long pause
+    (clip,) = plan_album(ALBUM, "Trip", morning + evening)
+    shown = set(clip.photos)
+    from_morning = len(shown & {p.asset_id for p in morning})
+    from_evening = len(shown & {p.asset_id for p in evening})
+    assert from_morning + from_evening == 13, "2 x sqrt(40)"
+    assert from_evening >= 2 and from_morning > from_evening
 
 
 # --- the year in parts ------------------------------------------------------------------------
@@ -169,16 +193,44 @@ def test_a_scene_gives_at_most_a_dozen_photos_the_best_ones() -> None:
 
 def test_a_long_year_is_cut_into_parts_of_at_most_five_minutes() -> None:
     photos: list[PlanPhoto] = []
-    for d in range(20):  # twenty days of ten photos: about 13 minutes
+    for d in range(20):  # twenty days of six photos shown: about 7 minutes
         photos += day(1000 + d * 10, 10, start_minutes=d * 24 * 60)
     clips = plan_album(ALBUM, "Summer", photos)
-    assert len(clips) >= 3
+    assert len(clips) >= 2
     assert [c.part for c in clips] == list(range(1, len(clips) + 1))
     for clip in clips:
         assert 120 <= clip.seconds <= CLIP_MAX_SECONDS + 5, clip.seconds
     shown = [p for c in clips for p in c.photos]
     assert len(shown) == len(set(shown)), "each photo in one part"
     assert clips[0].last < clips[1].first, "parts follow each other in time"
+
+
+def test_a_day_is_never_cut_between_parts() -> None:
+    photos: list[PlanPhoto] = []
+    for d, count in enumerate([254, 206, 616, 639, 595, 117]):  # a trip of six days
+        photos += [photo(10000 * (d + 1) + i, d * 24 * 60 + i * 1.3) for i in range(count)]
+    clips = plan_album(ALBUM, "Trip", photos)
+    assert len(clips) >= 2
+    days_of = [{p.taken.date() for p in photos if p.asset_id in set(c.photos)} for c in clips]
+    for a, b in itertools.pairwise(days_of):
+        assert not a & b, "a day in one part only"
+    for clip in clips:
+        assert clip.seconds <= CLIP_MAX_SECONDS + 5, clip.seconds
+    longest, shortest = max(c.seconds for c in clips), min(c.seconds for c in clips)
+    assert longest - shortest < 120, [c.seconds for c in clips]
+
+
+def test_a_year_is_at_most_half_an_hour() -> None:
+    photos: list[PlanPhoto] = []
+    for d in range(100):  # a hundred busy days
+        photos += [photo(100000 + d * 100 + i, d * 24 * 60 + i * 5) for i in range(60)]
+    clips = plan_album(ALBUM, "Year", photos)
+    extra = TITLE_SECONDS + CREDITS_SECONDS
+    assert sum(c.seconds - extra for c in clips) <= YEAR_MAX_SECONDS + 30
+    days_shown = {
+        p.taken.date() for p in photos if p.asset_id in {a for c in clips for a in c.photos}
+    }
+    assert len(days_shown) == 100, "every day still has its place"
 
 
 def test_one_slideshow_per_year_and_part_zero_when_there_is_one() -> None:
@@ -318,12 +370,12 @@ def test_the_report_says_why_each_photo_was_left_out_day_by_day() -> None:
         photo(1, 0, embedding=same, score=0.9),
         photo(2, 0.1, embedding=same, score=0.5),  # a near copy of 1
         photo(3, 1, embedding=screenshot),  # junk
-        *[photo(10 + i, 2 + i * 5, score=0.3 + i / 100) for i in range(14)],  # 2 over the limit
+        *[photo(10 + i, 2 + i * 5, score=0.3 + i / 100) for i in range(14)],  # 7 over the share
         *[photo(40 + i, 24 * 60 + i * 20) for i in range(6)],  # the next day
     ]
     (clip,) = plan_album(ALBUM, "Trip", photos)
     report = clip.report
-    assert report["reasons"] == {"series": 1, "junk": 1, "scene": 3}
+    assert report["reasons"] == {"series": 1, "junk": 1, "scene": 7}
     assert sum(report["reasons"].values()) == clip.left_out
     first, second = report["days"]
     assert first["date"] == "2024-07-01" and first["photos"] == 17

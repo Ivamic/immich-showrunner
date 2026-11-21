@@ -93,7 +93,7 @@
 	const megabytes = (bytes: number) => (bytes / 1e6).toFixed(1);
 	const day = (iso: string) => new Date(iso).toLocaleDateString();
 
-	/** "left out: near copies 840, over the limit of a scene 346, …; 20 photos not looked at yet" */
+	/** "left out: near copies 840, over the share of a day 346, …; 20 photos not looked at yet" */
 	function reasons(s: Slideshow): string {
 		const r = s.report.reasons ?? {};
 		const parts = [

@@ -238,7 +238,7 @@
 	"shows_slideshows": "Diashows: {count}",
 	"album_slideshow_left_out": "Ausgelassen: {reasons}",
 	"album_slideshow_reason_series": "fast gleiche",
-	"album_slideshow_reason_scene": "über der Grenze einer Szene",
+	"album_slideshow_reason_scene": "über dem Anteil des Tages",
 	"album_slideshow_reason_junk": "Screenshots und Dokumente",
 	"album_slideshow_reason_poor": "schlechte Qualität",
 	"album_slideshow_not_looked": "{count} Fotos noch nicht geprüft (sie kommen bei den nächsten Synchronisierungen)",
