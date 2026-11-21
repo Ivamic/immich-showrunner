@@ -14,6 +14,7 @@ from fake_immich import album_id, asset_id
 from showrunner.artwork.faces import Face
 from showrunner.artwork.quality import Quality
 from showrunner.artwork.select import FrameLook
+from showrunner.model.naming import WHOLE_ALBUM
 from showrunner.slideshow.content import prompts, shares
 from showrunner.slideshow.photos import PhotoLook
 from showrunner.slideshow.plan import (
@@ -231,6 +232,14 @@ def test_a_year_is_at_most_half_an_hour() -> None:
         p.taken.date() for p in photos if p.asset_id in {a for c in clips for a in c.photos}
     }
     assert len(days_shown) == 100, "every day still has its place"
+
+
+def test_an_album_of_one_season_is_one_slideshow_of_all_its_years() -> None:
+    photos = day(1, 8) + [photo(100 + i, 365 * 24 * 60 + i * 20) for i in range(8)]
+    (clip,) = plan_album(ALBUM, "Two years", photos, whole=True)
+    assert (clip.year, clip.part) == (WHOLE_ALBUM, 0)
+    assert len(clip.photos) == 16
+    assert clip.caption == "Two years · 2024\N{EN DASH}2025"
 
 
 def test_one_slideshow_per_year_and_part_zero_when_there_is_one() -> None:

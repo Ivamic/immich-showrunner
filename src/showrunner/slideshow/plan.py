@@ -5,7 +5,8 @@ the same list, and the version of a list (a hash of it) says when a slideshow is
 
 The rules (see D-091, D-097, D-106):
 
-- one slideshow per year, of 3 to 5 minutes; a long year is cut into parts of whole days, never
+- one slideshow per year (or for the whole album, when it is one season), of 3 to 5 minutes;
+  a long year is cut into parts of whole days, never
   within a day, and is at most half an hour in all;
 - the order is the time of taking; a scene ends with the day, after a pause of more than two
   hours or a move of more than about 20 km;
@@ -33,6 +34,7 @@ from uuid import UUID
 import numpy as np
 
 from showrunner.artwork.select import likeness
+from showrunner.model.naming import WHOLE_ALBUM
 from showrunner.slideshow.content import is_junk
 from showrunner.slideshow.embed import similarity
 from showrunner.slideshow.photos import PhotoLook, distance
@@ -251,7 +253,10 @@ class Clip:
 
     @property
     def caption(self) -> str:
-        """The text of the title: the album and the year, and the months of a part."""
+        """The text of the title: the album and the year, and the months of a part; the years of
+        a slideshow of the whole album."""
+        if self.year == WHOLE_ALBUM:
+            return f"{self.title} · {years(self.first, self.last)}"
         if self.part:
             return f"{self.title} · {self.year} · {self.first:%m}-{self.last:%m}"
         return f"{self.title} · {self.year}"
@@ -276,12 +281,14 @@ def plan_album(
     *,
     seed: int = 0,
     credits: bool = True,
+    whole: bool = False,
 ) -> list[Clip]:
-    """The slideshows of an album: one per year (or several for a long year), oldest first."""
+    """The slideshows of an album: one per year (or several for a long year), oldest first;
+    `whole` (an album that is one season): its years together, as the year WHOLE_ALBUM."""
     clips: list[Clip] = []
     by_year: dict[int, list[PlanPhoto]] = {}
     for photo in sorted(photos, key=lambda p: (p.taken, str(p.asset_id))):
-        by_year.setdefault(photo.taken.year, []).append(photo)
+        by_year.setdefault(WHOLE_ALBUM if whole else photo.taken.year, []).append(photo)
     for year, every in sorted(by_year.items()):
         fates: dict[UUID, str] = {}
         cut: list[list[PlanPhoto]] = []
@@ -377,6 +384,13 @@ def _km(a: PlanPhoto, b: PlanPhoto) -> float | None:
         + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
     )
     return 2 * 6371.0 * math.asin(math.sqrt(h))
+
+
+def years(first: datetime, last: datetime) -> str:
+    """`2024`, or `2019-2024` (with an en dash)."""
+    if first.year == last.year:
+        return str(first.year)
+    return f"{first.year}\N{EN DASH}{last.year}"
 
 
 def _days(photos: Sequence[PlanPhoto]) -> list[list[PlanPhoto]]:

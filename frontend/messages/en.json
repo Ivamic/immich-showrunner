@@ -84,7 +84,7 @@
 	"show_seasons_label": "Seasons",
 	"show_seasons_year": "By year of filming",
 	"show_seasons_single": "One season",
-	"show_seasons_hint": "Changing this gives the episodes new numbers; their watched marks may be lost.",
+	"show_seasons_hint": "Changing this gives the episodes new numbers; their watched marks may be lost. Slideshows are made again: one season makes them for the whole album, not by year.",
 	"show_hide": "Leave this album out of the media server",
 	"show_saved": "Saved. The media server will have it in a minute.",
 	"show_season": "Season {year}",

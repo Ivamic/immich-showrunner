@@ -11,7 +11,8 @@ between releases.
 
 - **Slideshows of the photos** (off until switched on on the new Slideshows page): the photos of an
   album become videos with music, one for each year ("Photos 2024", parts of 3 to 5 minutes of whole
-  days for a long year, at most half an hour a year), among the specials (Season 0) of its show, placed after the episodes of their year in
+  days for a long year, at most half an hour a year; for an album of one season, all its years
+  together, "Photos 2019–2024"), among the specials (Season 0) of its show, placed after the episodes of their year in
   Jellyfin and Kodi. An album of photos only becomes a show of slideshows only.
 - **A cut list made with care**: the photos in the order they were taken, cut into scenes by pauses
   and moves; near copies become their best photo; a day gives all of a few photos, else about twice

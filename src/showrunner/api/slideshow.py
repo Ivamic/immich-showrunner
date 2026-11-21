@@ -26,7 +26,12 @@ from showrunner.api.errors import ApiError
 from showrunner.api.shows import AlbumsDep, row_for, state_of
 from showrunner.artwork.worker import music_task, render_worker
 from showrunner.config import Settings
-from showrunner.model.naming import kodi_special_file_stem, safe_name, special_file_stem
+from showrunner.model.naming import (
+    WHOLE_ALBUM,
+    kodi_special_file_stem,
+    safe_name,
+    special_file_stem,
+)
 from showrunner.slideshow.library import (
     AUDIO,
     Piece,
@@ -247,7 +252,7 @@ async def video(
         ),
         None,
     )
-    title = planned["title"] if planned else f"Photos {year}"
+    title = planned["title"] if planned else "Photos" if year == WHOLE_ALBUM else f"Photos {year}"
     # The title given on the page, or the name of the folder without its id.
     show_title = (
         (show.title or re.sub(r"\s*\[imm-[0-9a-f]+\]$", "", show.folder_name))

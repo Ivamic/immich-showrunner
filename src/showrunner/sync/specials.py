@@ -28,7 +28,8 @@ from uuid import UUID
 from showrunner.artwork.jobs import choose_style
 from showrunner.artwork.worker import ArtworkWorker, music_task, render_task, render_worker
 from showrunner.immich.client import ImmichClient, ImmichError
-from showrunner.model.show import SINGLE_SEASON, Show, Special
+from showrunner.model.naming import WHOLE_ALBUM
+from showrunner.model.show import SINGLE_SEASON, SeasonMode, Show, Special
 from showrunner.slideshow.content import album_mood
 from showrunner.slideshow.library import (
     Piece,
@@ -40,7 +41,7 @@ from showrunner.slideshow.library import (
     tracks,
 )
 from showrunner.slideshow.music import MusicAnalysis, MusicError
-from showrunner.slideshow.plan import Clip, plan_album
+from showrunner.slideshow.plan import Clip, plan_album, years
 from showrunner.slideshow.render import RenderError, RenderOptions
 from showrunner.slideshow.score import Track, choose_tracks, fit_to_music
 from showrunner.store.registry import Registry
@@ -217,8 +218,14 @@ async def plan_specials(
         music_seed = choice.music_seed if choice is not None else 0
         key = f"{show.album_id}/{seed}" + (f"/{music_seed}" if music_seed else "")
         pieces = choose_tracks(music, mood, key) if music else []
+        whole = show.season_mode is SeasonMode.SINGLE
         clips = plan_album(
-            show.album_id, show.sort_title, inputs, seed=seed, credits=context.credits
+            show.album_id,
+            show.sort_title,
+            inputs,
+            seed=seed,
+            credits=context.credits,
+            whole=whole,
         )
         clips = music_in_turn(clips, pieces)
         specials = specials_of(show, clips, style)
@@ -226,7 +233,7 @@ async def plan_specials(
         waiting: dict[int, int] = {}
         for asset in assets:
             if asset.id not in looked:
-                year = asset.local_date_time.year
+                year = WHOLE_ALBUM if whole else asset.local_date_time.year
                 waiting[year] = waiting.get(year, 0) + 1
         await registry.save_album_slideshow(
             show.album_id,
@@ -275,12 +282,16 @@ def specials_of(show: Show, clips: Sequence[Clip], style_id: str) -> tuple[Speci
     for clip in clips:
         parts[clip.year] = parts.get(clip.year, 0) + 1
     specials = []
+    whole = [c for c in clips if c.year == WHOLE_ALBUM]
+    span = years(min(c.first for c in whole), max(c.last for c in whole)) if whole else ""
     for number, clip in enumerate(sorted(clips, key=lambda c: (c.year, c.part)), start=1):
         count = parts[clip.year]
+        # The whole album is named by its years ("Photos 2019-2024"), each part alike.
+        label = span if clip.year == WHOLE_ALBUM else str(clip.year)
         title = (
-            PART_TITLE.format(year=clip.year, part=clip.part, parts=count)
+            PART_TITLE.format(year=label, part=clip.part, parts=count)
             if clip.part
-            else TITLE.format(year=clip.year)
+            else TITLE.format(year=label)
         )
         specials.append(
             Special(
@@ -290,7 +301,7 @@ def specials_of(show: Show, clips: Sequence[Clip], style_id: str) -> tuple[Speci
                 number=number,
                 title=title,
                 plot="\n".join(f"Music: {line}" for line in clip.music_credits),
-                aired=date(clip.year, 12, 31),
+                aired=clip.last.date() if clip.year == WHOLE_ALBUM else date(clip.year, 12, 31),
                 after_season=_season_before(show, clip.year),
                 version=f"{clip.version}-{style_id}",
                 clip=clip,

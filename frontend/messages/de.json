@@ -84,7 +84,7 @@
 	"show_seasons_label": "Staffeln",
 	"show_seasons_year": "Nach Aufnahmejahr",
 	"show_seasons_single": "Eine Staffel",
-	"show_seasons_hint": "Eine Änderung nummeriert die Folgen neu; ihre Gesehen-Markierungen können verloren gehen.",
+	"show_seasons_hint": "Eine Änderung nummeriert die Folgen neu; ihre Gesehen-Markierungen können verloren gehen. Diashows werden neu erstellt: eine Staffel macht sie für das ganze Album, nicht nach Jahren.",
 	"show_hide": "Dieses Album nicht im Medienserver zeigen",
 	"show_saved": "Gespeichert. In einer Minute ist es im Medienserver.",
 	"show_season": "Staffel {year}",

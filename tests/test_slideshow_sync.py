@@ -7,6 +7,7 @@ show of slideshows only."""
 import hashlib
 import os
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
 from datetime import date, datetime, timedelta
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -20,7 +21,8 @@ from test_slideshow_photos import FakeSlideshow, jpeg, scene
 from fake_immich import FakeImmich, album_id
 from showrunner.config import parse_path_map
 from showrunner.immich.client import ImmichClient
-from showrunner.model.show import Options, Show, Special
+from showrunner.model.naming import WHOLE_ALBUM, special_file_stem
+from showrunner.model.show import Options, SeasonMode, Show, Special
 from showrunner.slideshow.plan import Clip
 from showrunner.slideshow.score import Track
 from showrunner.store.registry import Registry
@@ -90,6 +92,22 @@ def test_a_year_without_its_season_follows_the_season_before_or_none() -> None:
     assert specials_of(show((2025,)), [clip(2024)], "s")[0].after_season is None
     assert specials_of(show((1,)), [clip(2024)], "s")[0].after_season == 1, "one season"
     assert specials_of(show(()), [clip(2024)], "s")[0].after_season is None, "photos only"
+
+
+def test_an_album_of_one_season_has_slideshows_of_all_its_years() -> None:
+    def whole(part: int, first: int, last: int) -> Clip:
+        return replace(
+            clip(WHOLE_ALBUM, part), first=datetime(first, 3, 1), last=datetime(last, 9, 30)
+        )
+
+    made = specials_of(show((1,)), [whole(1, 2019, 2021), whole(2, 2022, 2024)], "s")
+    span = "2019\N{EN DASH}2024"
+    assert [s.title for s in made] == [f"Photos {span} (1/2)", f"Photos {span} (2/2)"]
+    assert [s.after_season for s in made] == [1, 1]
+    assert made[1].aired == date(2024, 9, 30), "the day of its last photo"
+    (alone,) = specials_of(show((1,)), [whole(0, 2024, 2024)], "s")
+    assert alone.title == "Photos 2024"
+    assert special_file_stem(WHOLE_ALBUM, 1) == "99991231-235901 Photos [slideshow all 1]"
 
 
 def test_the_nfo_places_a_slideshow_for_both_media_servers() -> None:
@@ -238,6 +256,31 @@ async def one_pass(
 
 def specials_in(out: Path) -> dict[str, bytes]:
     return {p.name: p.read_bytes() for p in out.rglob("Specials/*") if not p.name.startswith(".")}
+
+
+@pytest.mark.anyio
+async def test_one_season_makes_one_slideshow_of_the_whole_album(
+    session: AsyncSession, tmp_path: Path
+) -> None:
+    out, data = tmp_path / "out", tmp_path / "data"
+    out.mkdir()
+    immich = photo_album(years=(2023, 2024))
+    assert (await one_pass(immich, session, out, FakeSpecials(data))).ok
+    assert len([n for n in specials_in(out) if n.endswith(".mp4")]) == 2, "by year"
+
+    # One season, chosen on the page: the years together, the slideshows by year go.
+    registry = Registry(session)
+    row = (await registry.shows())[album_id(1)]
+    row.season_mode = SeasonMode.SINGLE.value
+    await registry.commit()
+    report = await one_pass(immich, session, out, FakeSpecials(data), full=True)
+    assert report.ok
+    files = specials_in(out)
+    assert sorted(n for n in files if n.endswith(".mp4")) == [
+        "99991231-235900 Photos [slideshow all 0].mp4"
+    ]
+    nfo = files["99991231-235900 Photos [slideshow all 0].nfo"].decode()
+    assert "<title>Photos 2023\N{EN DASH}2024</title>" in nfo
 
 
 @pytest.mark.anyio

@@ -84,7 +84,7 @@
 	"show_seasons_label": "Saisons",
 	"show_seasons_year": "Par année de tournage",
 	"show_seasons_single": "Une saison",
-	"show_seasons_hint": "Ce changement renumérote les épisodes ; leurs marques « vu » peuvent être perdues.",
+	"show_seasons_hint": "Ce changement renumérote les épisodes ; leurs marques « vu » peuvent être perdues. Les diaporamas sont refaits : une seule saison les fait pour tout l’album, pas par année.",
 	"show_hide": "Ne pas mettre cet album dans le serveur multimédia",
 	"show_saved": "Enregistré. Ce sera dans le serveur multimédia dans une minute.",
 	"show_season": "Saison {year}",

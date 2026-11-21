@@ -84,7 +84,7 @@
 	"show_seasons_label": "Stagioni",
 	"show_seasons_year": "Per anno di ripresa",
 	"show_seasons_single": "Una stagione",
-	"show_seasons_hint": "Cambiarlo rinumera gli episodi; i segni di visto possono andare persi.",
+	"show_seasons_hint": "Cambiarlo rinumera gli episodi; i segni di visto possono andare persi. Le presentazioni vengono rifatte: una stagione le fa per l’intero album, non per anno.",
 	"show_hide": "Escludi questo album dal media server",
 	"show_saved": "Salvato. Sarà nel media server tra un minuto.",
 	"show_season": "Stagione {year}",

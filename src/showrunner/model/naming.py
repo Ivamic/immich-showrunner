@@ -22,6 +22,10 @@ SHOW_ID_PREFIX = "imm-"
 FALLBACK_NAME = "untitled"
 
 
+WHOLE_ALBUM = 9999
+"""The year of the slideshows of an album that is one season: all its years together (D-106)."""
+
+
 def safe_name(text: str, *, max_bytes: int = MAX_NAME_BYTES) -> str:
     """Make `text` a single path component: no separators, no control characters, no leading or
     trailing dots and spaces, not longer than `max_bytes` in UTF-8."""
@@ -82,6 +86,9 @@ def special_file_stem(year: int, part: int) -> str:
     """`20241231-235900 Photos 2024 [slideshow 2024 0]`: the same for the same year and part
     whatever the slideshow holds, so that a slideshow drawn again keeps its watched marks; a
     minute of its own per part, so that Jellyfin never takes two parts for versions of one."""
+    if year == WHOLE_ALBUM:
+        # The whole album: a name that does not change with its years.
+        return f"{year}1231-2359{part:02d} Photos [slideshow all {part}]"
     return f"{year}1231-2359{part:02d} Photos {year} [slideshow {year} {part}]"
 
 

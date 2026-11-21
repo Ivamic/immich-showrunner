@@ -141,6 +141,7 @@ class Show:
     hidden: tuple[Episode, ...] = ()
     # Slideshows of the photos, in Season 0.
     specials: tuple[Special, ...] = ()
+    season_mode: SeasonMode = SeasonMode.YEAR
 
     @property
     def seasons(self) -> tuple[int, ...]:
@@ -269,6 +270,7 @@ def build_show(
         cover_asset_id=album.album_thumbnail_asset_id,
         album_name=album_name,
         hidden=tuple(hidden),
+        season_mode=options.season_mode,
     )
 
 
