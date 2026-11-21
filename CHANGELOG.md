@@ -33,11 +33,11 @@ between releases.
   (`SHOWRUNNER_SLIDESHOW_CREDITS`, or on the page).
 - **On the page of an album**: slideshows off for this album, the mood of its music, "Other music",
   and its slideshows with their state, to watch on the page or download under the name of the show.
-  Why photos were left out (near copies, over the share of a day, screenshots and documents, poor
-  quality), in all and day by day. The cards of the albums count their slideshows.
+  Why photos were left out (near copies, beyond the twenty minutes of the season, screenshots and
+  documents, poor quality), in all and day by day. The cards of the albums count their slideshows.
 - **How a slideshow was chosen**, on a page of its own: every photo of its time, day by day and
   scene by scene: those shown, each group of near copies beside the photo it gave way to, those
-  over the share of the day, and apart the screenshots and documents.
+  that did not fit in the twenty minutes of the season, and apart the screenshots and documents.
 - **The slideshow being drawn** is shown on the page: which one, how far, and how many wait.
 - **A trash for slideshows**: a slideshow drawn again or removed is kept for
   `SHOWRUNNER_SLIDESHOW_TRASH_DAYS` (90) days in `.trash` in the folder of slideshows (in the data
@@ -63,7 +63,8 @@ between releases.
 - **A photo turned or cropped in Immich** (0.4.0-rc.5): it is looked at again and its slideshow
   drawn again, from the edited picture; before, both the look and the drawing kept to the
   original file, which an edit in Immich leaves as it is. The pictures on the pages are the edited
-  ones too.
+  ones too, and the page of a slideshow asks for them anew after an edit (0.4.0-rc.6), so that the
+  browser does not show the one it kept.
 - **Photos of people are no longer taken for screenshots** (0.4.0-rc.3): a photo with a face is
   never left out as a screenshot or document, the words photos are told by include tourists by
   a landmark, museums, signs, shops and ruins, and a photo is junk only when those words clearly

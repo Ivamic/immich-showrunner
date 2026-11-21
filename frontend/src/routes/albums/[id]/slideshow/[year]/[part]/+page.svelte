@@ -227,7 +227,7 @@
 										title="{time(photo.taken)} · {fateName(photo.fate)}"
 										onclick={() => (looking = photo)}
 									>
-										<img src={thumbnailUrl(photo.id)} alt="" loading="lazy" />
+										<img src={thumbnailUrl(photo.id, photo.edit)} alt="" loading="lazy" />
 										{#if photo.fate === 'series'}
 											<span class="tag">{m.slideshow_plan_copy()}</span>
 										{:else if photo.fate === 'scene'}
@@ -251,7 +251,7 @@
 								title="{time(photo.taken)} · {fateName(photo.fate)}"
 								onclick={() => (looking = photo)}
 							>
-								<img src={thumbnailUrl(photo.id)} alt="" loading="lazy" />
+								<img src={thumbnailUrl(photo.id, photo.edit)} alt="" loading="lazy" />
 								<span class="tag">{fateName(photo.fate)}</span>
 							</button>
 						{/each}
@@ -270,7 +270,7 @@
 		wide
 		onclose={() => (looking = null)}
 	>
-		<img class="large" src={previewUrl(looking.id)} alt="" />
+		<img class="large" src={previewUrl(looking.id, looking.edit)} alt="" />
 		<p class="meta">{details(looking)}</p>
 	</Dialog>
 {/if}

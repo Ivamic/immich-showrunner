@@ -212,6 +212,7 @@ def test_what_became_of_each_photo_is_shown_for_a_slideshow(
             "group": "00000000-0000-0000-0000-000000000001",
             "fate": "shown",
             "score": 0.8,
+            "edit": "turned",
         },
         {
             "id": "00000000-0000-0000-0000-000000000002",
@@ -229,6 +230,7 @@ def test_what_became_of_each_photo_is_shown_for_a_slideshow(
     got = client.get(url).json()
     assert got["title"] == "Photos 2024"
     assert [p["fate"] for p in got["photos"]] == ["shown", "series"]
+    assert [p["edit"] for p in got["photos"]] == ["turned", None], "the version of its picture"
     assert client.get(f"/api/shows/{album}/slideshow/plan?year=2023&part=0").status_code == 404
 
 

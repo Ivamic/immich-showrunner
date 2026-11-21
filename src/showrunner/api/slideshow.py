@@ -205,6 +205,9 @@ class TracedPhoto(BaseModel):
     """How alike it is to the photo of its group, or else to the photo before it (CLIP)."""
     junk: float | None = None
     """The share of the words of screenshots and documents (junk above 0.7, without a face)."""
+    edit: str | None = None
+    """The edit of the photo in Immich, when it has one: in the address of its picture, so that
+    the browser does not show one it kept from before the edit."""
 
 
 class SlideshowPlanOut(BaseModel):

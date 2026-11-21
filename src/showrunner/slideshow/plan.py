@@ -418,6 +418,7 @@ def _trace(
                 "junk": round(shares(p.embedding).get("junk", 0.0), 3)
                 if p.embedding is not None
                 else None,
+                "edit": p.edit or None,
             }
         )
         previous = p

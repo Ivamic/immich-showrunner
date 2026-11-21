@@ -149,7 +149,9 @@ export const moveEpisode = (
 	episode: string,
 	place: { after?: string; before?: string }
 ) => request<void>('POST', `/shows/${show}/episodes/${episode}/move`, place);
-export const thumbnailUrl = (assetId: string) => `/api/thumbnails/${assetId}`;
+/** `version` (of an edit in Immich) keeps a picture the browser kept from before it away. */
+export const thumbnailUrl = (assetId: string, version?: string | null) =>
+	`/api/thumbnails/${assetId}` + (version ? `?v=${encodeURIComponent(version)}` : '');
 /** The landscape picture the app drew for a show; the version keeps a cached old one away. */
 export const landscapeUrl = (show: string, version: string) =>
 	`/api/shows/${show}/artwork/file?path=landscape.jpg&v=${encodeURIComponent(version)}`;
@@ -335,6 +337,8 @@ export interface TracedPhoto {
 	like?: number | null;
 	/** The share of the words of screenshots and documents. */
 	junk?: number | null;
+	/** The edit of the photo in Immich, when it has one: the version of its picture. */
+	edit?: string | null;
 }
 
 export interface SlideshowPlan {
@@ -346,7 +350,8 @@ export interface SlideshowPlan {
 
 export const getSlideshowPlan = (show: string, year: number, part: number) =>
 	request<SlideshowPlan>('GET', `/shows/${show}/slideshow/plan?year=${year}&part=${part}`);
-export const previewUrl = (assetId: string) => `/api/thumbnails/${assetId}?size=preview`;
+export const previewUrl = (assetId: string, version?: string | null) =>
+	`/api/thumbnails/${assetId}?size=preview` + (version ? `&v=${encodeURIComponent(version)}` : '');
 
 /** A slideshow drawn before, kept in the trash for a while (D-105). */
 export interface TrashedSlideshow {

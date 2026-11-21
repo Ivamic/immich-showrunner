@@ -221,6 +221,8 @@ def test_an_edit_in_immich_is_in_the_cut_list_and_makes_it_again() -> None:
     assert shot.edit == "turned"
     assert after.version != before.version, "drawn again"
     assert Clip.from_dict(after.to_dict()).to_dict() == after.to_dict()
+    traced = {t["id"]: t["edit"] for t in after.trace}
+    assert traced[str(asset_id(3))] == "turned" and traced[str(asset_id(4))] is None
 
 
 def test_a_year_with_too_few_photos_gets_no_slideshow() -> None:
