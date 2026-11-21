@@ -229,5 +229,7 @@
 	"error_music_file_type": "Ce fichier n’est pas pris en charge (MP3, M4A, AAC, OGG, OPUS, FLAC, WAV).",
 	"error_music_exists": "Un morceau de ce nom existe déjà.",
 	"error_music_too_large": "Le fichier dépasse {megabytes} Mo.",
-	"error_music_not_usable": "Ce n’est pas une musique pour les diaporamas : {reason}"
+	"error_music_not_usable": "Ce n’est pas une musique pour les diaporamas : {reason}",
+	"status_slideshows_label": "Diaporamas",
+	"status_slideshows": "{drawn} créés lors de la dernière synchronisation, {waiting} en attente"
 }

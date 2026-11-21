@@ -229,5 +229,7 @@
 	"error_music_file_type": "This is not a music file the app takes (MP3, M4A, AAC, OGG, OPUS, FLAC, WAV).",
 	"error_music_exists": "A piece with this name is there already.",
 	"error_music_too_large": "The file is larger than {megabytes} MB.",
-	"error_music_not_usable": "This is no music for slideshows: {reason}"
+	"error_music_not_usable": "This is no music for slideshows: {reason}",
+	"status_slideshows_label": "Slideshows",
+	"status_slideshows": "{drawn} drawn in the last sync, {waiting} waiting"
 }

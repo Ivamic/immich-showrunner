@@ -90,6 +90,8 @@ export interface Status {
 	skipped: { album: string; file: string; reason: string }[];
 	pictures_failed: string[];
 	foreign: { path: string; detail: string }[];
+	slideshows_drawn: number;
+	slideshows_waiting: number;
 }
 
 export type SeasonMode = 'year' | 'single';

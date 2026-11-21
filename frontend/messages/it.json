@@ -229,5 +229,7 @@
 	"error_music_file_type": "Questo file non è supportato (MP3, M4A, AAC, OGG, OPUS, FLAC, WAV).",
 	"error_music_exists": "Esiste già un brano con questo nome.",
 	"error_music_too_large": "Il file supera {megabytes} MB.",
-	"error_music_not_usable": "Non è una musica per le presentazioni: {reason}"
+	"error_music_not_usable": "Non è una musica per le presentazioni: {reason}",
+	"status_slideshows_label": "Presentazioni",
+	"status_slideshows": "{drawn} create nell’ultima sincronizzazione, {waiting} in attesa"
 }

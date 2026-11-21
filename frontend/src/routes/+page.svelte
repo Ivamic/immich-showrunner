@@ -114,6 +114,15 @@
 				<dt>{m.status_kodi_pending_label()}</dt>
 				<dd>{status.kodi_pending}</dd>
 			{/if}
+			{#if status.slideshows_drawn || status.slideshows_waiting}
+				<dt>{m.status_slideshows_label()}</dt>
+				<dd>
+					{m.status_slideshows({
+						drawn: String(status.slideshows_drawn),
+						waiting: String(status.slideshows_waiting)
+					})}
+				</dd>
+			{/if}
 		</dl>
 		<p class="hint">
 			{m.status_interval({ minutes: String(Math.round(status.sync_interval_seconds / 60)) })}

@@ -229,5 +229,7 @@
 	"error_music_file_type": "Diese Datei nimmt die App nicht an (MP3, M4A, AAC, OGG, OPUS, FLAC, WAV).",
 	"error_music_exists": "Ein Stück mit diesem Namen gibt es schon.",
 	"error_music_too_large": "Die Datei ist größer als {megabytes} MB.",
-	"error_music_not_usable": "Das ist keine Musik für Diashows: {reason}"
+	"error_music_not_usable": "Das ist keine Musik für Diashows: {reason}",
+	"status_slideshows_label": "Diashows",
+	"status_slideshows": "{drawn} bei der letzten Synchronisierung erstellt, {waiting} warten"
 }

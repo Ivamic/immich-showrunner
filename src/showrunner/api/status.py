@@ -46,6 +46,8 @@ class Status(BaseModel):
     skipped: list[SkipOut]
     pictures_failed: list[str]
     foreign: list[ForeignOut]
+    slideshows_drawn: int
+    slideshows_waiting: int
 
 
 class SyncRequest(BaseModel):
@@ -83,6 +85,8 @@ async def status(request: Request, user: CurrentUser) -> Status:
         skipped=[SkipOut(album=x.album, file=x.file, reason=x.reason) for x in s.skipped],
         pictures_failed=s.pictures_failed,
         foreign=[ForeignOut(path=x.path, detail=x.detail) for x in s.foreign],
+        slideshows_drawn=s.slideshows_drawn,
+        slideshows_waiting=s.slideshows_waiting,
     )
 
 

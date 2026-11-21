@@ -64,6 +64,9 @@ class State:
     pictures_failed: list[str] = field(default_factory=list)
     # Videos still to look at for the pictures, per album, as the last pass left them.
     artwork_waiting: dict[UUID, int] = field(default_factory=dict)
+    # Slideshows drawn by the last pass and left for the next ones.
+    slideshows_drawn: int = 0
+    slideshows_waiting: int = 0
     foreign: list[Foreign] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     # A pass asked for from the page; `force` carries out a held mass removal.
@@ -96,6 +99,9 @@ class State:
         ]
         self.pictures_failed = [p for r in reports for p in r.pictures_failed][:MAX_LISTED]
         self.artwork_waiting = dict(first.artwork_waiting)
+        # A slideshow drawn once counts once, though every output folder gets it.
+        self.slideshows_drawn = max((r.slideshows_drawn for r in reports), default=0)
+        self.slideshows_waiting = max((r.slideshows_waiting for r in reports), default=0)
         self.foreign = [Foreign(str(o.action.path), o.detail) for r in reports for o in r.foreign][
             :MAX_LISTED
         ]

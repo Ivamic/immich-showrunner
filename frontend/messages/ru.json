@@ -229,5 +229,7 @@
 	"error_music_file_type": "Такой файл приложение не принимает (MP3, M4A, AAC, OGG, OPUS, FLAC, WAV).",
 	"error_music_exists": "Трек с таким именем уже есть.",
 	"error_music_too_large": "Файл больше {megabytes} МБ.",
-	"error_music_not_usable": "Это не подходит для слайдшоу: {reason}"
+	"error_music_not_usable": "Это не подходит для слайдшоу: {reason}",
+	"status_slideshows_label": "Слайдшоу",
+	"status_slideshows": "нарисовано за последнюю синхронизацию: {drawn}, ждут: {waiting}"
 }
