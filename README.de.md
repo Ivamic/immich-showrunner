@@ -81,7 +81,7 @@ oder Kodi.
   einem von neun Stilen. Ohne KI-Bildgenerierung: alles läuft auf der CPU Ihres Servers. Auf der
   Seite probieren Sie einen anderen Stil oder andere Einzelbilder, für alle Bilder oder nur eines,
   und heften die an, die Ihnen gefallen.
-- **Diashows aus den Fotos** (auf der Webseite einzuschalten): ein Video pro Jahr aus den Fotos
+- **Diashows aus den Fotos** (standardmäßig an, auf der Webseite abschaltbar): ein Video pro Jahr aus den Fotos
   eines Albums, unter den Specials seiner Serie, mit Musik aus einer freien Auswahl oder eigener
   Musik; die Fotos wechseln im Takt, die Kamera fährt langsam auf die Gesichter zu. Screenshots,
   Dokumente und fast gleiche Fotos bleiben weg. Alles läuft auf der CPU Ihres Servers; Ihre Fotos
@@ -108,6 +108,36 @@ oder Kodi.
   ihm geteilten Person einen Namen geben (nur für diesen Benutzer) und eine Einladung in eine
   Gruppe annehmen.
 - **Wiederherstellbar.** Die Ordner für die Medienserver können gelöscht und neu aufgebaut werden.
+
+## Diashows
+
+Aus den Fotos jedes Albums werden Videos mit Musik, auf dem Prozessor Ihres Servers erstellt: eines
+pro Jahr, „Photos 2024“, unter den Specials (Staffel 0) der Serie, nach den Folgen dieses Jahres.
+Sie sind standardmäßig an; ausschalten lassen sie sich auf der Seite Diashows oder für ein Album
+auf dessen Seite.
+
+1. **Die Fotos werden angesehen**, einmal, im Hintergrund der Abgleiche: was jedes zeigt, mit einem
+   Bildmodell (CLIP) auf dem Prozessor, die Gesichter aus Immich, die Beinahe-Kopien.
+2. **Ein Schnittplan**: die Fotos in der Reihenfolge der Aufnahme, in Szenen geteilt nach Pausen und
+   Ortswechseln. Beinahe-Kopien werden zu ihrem besten Foto; Bildschirmfotos, Dokumente und
+   Quittungen bleiben draußen, nie ein Foto mit Gesicht. Ein Jahr dauert höchstens zwanzig Minuten,
+   in Teilen von drei bis fünf; reichen zwanzig Minuten nicht für alle Fotos, gibt jeder Tag einen
+   Anteil.
+3. **Die Musik** folgt dem, was die Fotos zeigen (ruhig, hell, beschwingt, filmisch), aus einer
+   freien Sammlung von 35 Stücken oder Ihren eigenen; die Fotos wechseln im Takt, und das Video
+   endet mit einer Phrase.
+4. **Das Bild**: Die Kamera fährt langsam auf die Gesichter zu, ein Hochformat wird ganz über einer
+   unscharfen Kopie seiner selbst gezeigt, ein Panorama wird abgefahren; Überblendungen innerhalb
+   einer Szene, Abblenden zwischen den Szenen.
+5. **Titel und Abspann** im Stil des Albums: sein Name; darunter, kleiner, das Datum („März–Juli
+   2024“ für einen Teil eines Jahres); und wo die Fotos entstanden sind, bis zu drei Städte. Der
+   Text der Diashows kann in jeder der fünf Sprachen der Seite sein.
+
+Auf der Seite eines Albums: seine Diashows zum Ansehen oder Herunterladen, die Stimmung seiner
+Musik und warum ein Foto weggelassen wurde. Beim ersten Mal braucht eine große Bibliothek Stunden;
+die Diashows erscheinen nacheinander, die neuesten Jahre zuerst. `showrunner preview-titles`
+zeichnet in wenigen Minuten nur ihre Titel, zum Durchsehen. [Mehr zu Diashows](docs/install.md#9-slideshows)
+(auf Englisch).
 
 ## Installation
 

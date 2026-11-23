@@ -81,7 +81,7 @@ Kodi.
   volti, in uno di nove stili. Senza generazione di immagini con l’IA: tutto gira sulla CPU del tuo
   server. Sulla pagina prova un altro stile o altri fotogrammi, per tutte le immagini o per una sola,
   e fissa quelle che ti piacciono.
-- **Presentazioni delle foto** (da attivare nella pagina web): un video all’anno dalle foto di un
+- **Presentazioni delle foto** (attive di default, disattivabili nella pagina web): un video all’anno dalle foto di un
   album, tra gli speciali della sua serie, con musica libera inclusa o tua; le foto cambiano a tempo
   e la camera si avvicina lentamente ai volti. Screenshot, documenti e quasi-doppioni restano fuori.
   Tutto gira sulla CPU del tuo server; le tue foto non lo lasciano.
@@ -105,6 +105,36 @@ Kodi.
   tu stesso sulla pagina per l’utente del media server: dare un nome a una persona condivisa con
   lui (solo per quell’utente) e accettare un invito in un gruppo.
 - **Ricostruibile.** Le cartelle per i media server possono essere eliminate e ricostruite.
+
+## Presentazioni
+
+Le foto di ogni album diventano video con musica, creati sul processore del vostro server: uno per
+anno, «Photos 2024», tra gli speciali (stagione 0) della sua serie, dopo gli episodi di quell'anno.
+Sono attive per impostazione predefinita; si disattivano nella pagina Presentazioni, o per un
+album nella sua pagina.
+
+1. **Le foto vengono guardate** una volta, durante le sincronizzazioni: cosa mostra ciascuna, con
+   un modello di immagini (CLIP) sul processore, i volti da Immich, le foto quasi uguali.
+2. **Un montaggio**: le foto nell'ordine in cui sono state scattate, divise in scene da pause e
+   spostamenti. Le foto quasi uguali diventano la loro foto migliore; schermate, documenti e
+   scontrini restano fuori, mai una foto con un volto. Un anno dura al massimo venti minuti, in
+   parti da tre a cinque; quando venti minuti non bastano per tutte le sue foto, ogni giorno ne dà
+   una parte.
+3. **La musica** segue ciò che mostrano le foto (calma, luminosa, vivace, cinematografica), da una
+   raccolta libera di 35 brani o dai vostri; le foto cambiano a tempo e il video finisce con una
+   frase.
+4. **L'immagine**: la camera si avvicina lentamente ai volti, una foto verticale è mostrata intera
+   su una copia sfocata di sé stessa, un panorama viene percorso; dissolvenze incrociate dentro una
+   scena, dissolvenze in nero tra le scene.
+5. **Il titolo e i titoli di coda** nello stile dell'album: il suo nome; sotto, più piccola, la data
+   («marzo–luglio 2024» per una parte dell'anno); e dove sono state scattate le foto, fino a tre
+   città. Il testo delle presentazioni può essere in una delle cinque lingue della pagina.
+
+Nella pagina di un album: le sue presentazioni, da guardare o scaricare, l'umore della sua musica,
+e perché una foto è stata lasciata fuori. La prima volta una grande libreria richiede ore; le
+presentazioni compaiono una alla volta, dagli anni più recenti. `showrunner preview-titles`
+disegna solo i loro titoli, in pochi minuti, per controllarli.
+[Di più sulle presentazioni](docs/install.md#9-slideshows) (in inglese).
 
 ## Installazione
 

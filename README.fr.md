@@ -81,7 +81,7 @@ Jellyfin ou Kodi.
   les visages en vue, dans l’un de neuf styles. Sans génération d’images par IA : tout tourne sur
   le processeur de votre serveur. Sur la page, essayez un autre style ou d’autres images, pour
   toutes les illustrations ou une seule, et épinglez celles qui vous plaisent.
-- **Des diaporamas des photos** (à activer sur la page web) : une vidéo par année à partir des
+- **Des diaporamas des photos** (activés par défaut, désactivables sur la page web) : une vidéo par année à partir des
   photos d’un album, parmi les épisodes spéciaux de sa série, sur une musique libre fournie ou la
   vôtre ; les photos changent en rythme et la caméra s’approche lentement des visages. Captures
   d’écran, documents et quasi-doublons sont écartés. Tout tourne sur le processeur de votre serveur ;
@@ -108,6 +108,37 @@ Jellyfin ou Kodi.
   du serveur multimédia : nommer une personne partagée avec lui (pour cet utilisateur seulement)
   et accepter une invitation dans un groupe.
 - **Reconstructible.** Les dossiers des serveurs multimédias peuvent être supprimés et reconstruits.
+
+## Diaporamas
+
+Les photos de chaque album deviennent des vidéos en musique, faites sur le processeur de votre
+serveur : une par année, « Photos 2024 », parmi les épisodes spéciaux (saison 0) de sa série,
+après les épisodes de cette année. Ils sont activés par défaut ; on les désactive sur la page
+Diaporamas, ou pour un album sur sa page.
+
+1. **Les photos sont regardées** une fois, en arrière-plan des synchronisations : ce que chacune
+   montre, par un modèle d'image (CLIP) sur le processeur, les visages venus d'Immich, les
+   quasi-doublons.
+2. **Un découpage** : les photos dans l'ordre de la prise de vue, découpées en scènes par les pauses
+   et les déplacements. Les quasi-doublons deviennent leur meilleure photo ; captures d'écran,
+   documents et tickets sont écartés, jamais une photo avec un visage. Une année dure au plus vingt
+   minutes, en parties de trois à cinq ; quand vingt minutes ne suffisent pas pour toutes ses
+   photos, chaque jour en donne une part.
+3. **La musique** suit ce que montrent les photos (calme, lumineuse, entraînante, cinématographique),
+   tirée d'un ensemble libre de 35 morceaux ou des vôtres ; les photos changent sur les temps et la
+   vidéo s'achève sur une phrase.
+4. **L'image** : la caméra s'approche lentement des visages, une photo en hauteur est montrée en
+   entier sur une copie floue d'elle-même, un panorama est parcouru ; fondus enchaînés dans une
+   scène, fondus au noir entre les scènes.
+5. **Le titre et le générique** dans le style de l'album : son nom ; dessous, plus petit, la date
+   (« mars–juillet 2024 » pour une partie d'année) ; et où les photos ont été prises, jusqu'à trois
+   villes. Le texte des diaporamas peut être dans chacune des cinq langues de la page.
+
+Sur la page d'un album : ses diaporamas, à regarder ou à télécharger, l'humeur de sa musique, et
+pourquoi une photo a été écartée. La première fois, une grande bibliothèque demande des heures ;
+les diaporamas apparaissent un par un, les années les plus récentes d'abord.
+`showrunner preview-titles` ne dessine que leurs titres, en quelques minutes, pour les passer en
+revue. [En savoir plus sur les diaporamas](docs/install.md#9-slideshows) (en anglais).
 
 ## Installation
 

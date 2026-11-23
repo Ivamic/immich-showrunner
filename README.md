@@ -78,7 +78,7 @@ Kodi.
   poster for every season are drawn from frames of the album's videos, with the faces kept in view,
   in one of nine styles. No AI image generation: it all runs on the CPU of your server. On the page,
   try another style or other frames, for all the pictures or just one, and pin the ones you like.
-- **Slideshows of the photos** (switched on on the page): one video a year from the photos of an
+- **Slideshows of the photos** (on by default, switched off on the page): one video a year from the photos of an
   album, among the specials of its show, with music from a free set or your own, the photos changing
   on the beats and the camera moving slowly towards the faces. Screenshots, documents and near copies
   are left out. It all runs on the CPU of your server; your photos never leave it.
@@ -102,6 +102,32 @@ Kodi.
   yourself on the app's page for the media server's user: naming a person shared with it, for
   that user only, and accepting an invitation into a group.
 - **Rebuildable.** The folders for the media servers can be deleted and built again.
+
+## Slideshows
+
+The photos of every album become videos with music, made on the CPU of your server: one for each
+year, "Photos 2024", among the specials (Season 0) of its show, after the episodes of that year.
+They are on by default; switch them off on the Slideshows page, or for one album on its page.
+
+1. **The photos are looked at** once, in the background of the syncs: what each shows, by an image
+   model (CLIP) on the CPU, the faces from Immich, the near copies.
+2. **A cut list**: the photos in the order they were taken, cut into scenes by pauses and moves.
+   Near copies become their best photo; screenshots, documents and receipts are left out, never a
+   photo with a face. A year is at most twenty minutes, in parts of three to five; when twenty
+   minutes cannot hold all its photos, each day gives a share of them.
+3. **The music** follows what the photos show (calm, bright, upbeat, cinematic), from a free set of
+   35 pieces or your own; the photos change on the beats and the video ends with a phrase.
+4. **The picture**: the camera moves slowly towards the faces, a standing photo is shown whole over
+   a blurred copy of itself, a panorama is travelled along; dissolves within a scene, fades between
+   scenes.
+5. **The title and the credits** in the style of the album: its name; under it, smaller, the date
+   ("March–July 2024" for a part of a year); and where the photos were taken, up to three cities.
+   The text of slideshows can be in any of the five languages of the page.
+
+On the page of an album: its slideshows, to watch or download, the mood of its music, and why each
+photo was left out. The first time, a large library takes hours; slideshows appear one by one, the
+newest years first. `showrunner preview-titles` draws only their titles, in minutes, to look them
+over. [More on slideshows](docs/install.md#9-slideshows).
 
 ## Installation
 
