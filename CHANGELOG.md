@@ -7,6 +7,33 @@ between releases.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-23
+
+### Added
+
+- **Places on the title of a slideshow**: under the date, smaller still, where its photos were
+  taken — up to three cities with the most photos, or the countries of a long journey, as Immich
+  names them from the coordinates. On by default; switched off on the Slideshows page, or for an
+  album on its page.
+- **`showrunner preview-titles`**: the titles of all slideshows as pictures, in minutes, to look
+  over the names, dates and places in the style of each album; writes nothing else.
+- **The language of the text in slideshows** (English, Deutsch, Français, Italiano, Русский), on the
+  Slideshows page: the months on the title of a part and the word before the music in the credits.
+
+### Changed
+
+- **Slideshows are on by default**: a new installation, or one where they were never switched on or
+  off on the page, makes them; a choice saved on the page stays. The first time, a large library
+  takes hours: they appear one by one, the newest years first.
+- **A title breaks better**: a dash between words stays at the end of a line with its spaces
+  ("Rome - Tivoli", not "Rome -Tivoli"), and a word such as a date ("2017-03-27_30") is broken
+  only when it does not fit the line whole; in the titles of slideshows, and in posters from the
+  next time they are drawn.
+- **The date on a line of its own** under the name of the album on the title of a slideshow, smaller,
+  so that it is not mistaken for a date in the name; a part names its months ("March–July 2024")
+  instead of numbers ("2024 · 03-07"), which read like a date. A long name gets smaller rather than
+  reach the photos beside it. Every slideshow is drawn again once.
+
 ## [0.4.0] - 2026-11-21
 
 ### Added
