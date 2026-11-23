@@ -91,13 +91,35 @@ def in_db(database: str, work: Any) -> Any:
 # --- settings and albums ----------------------------------------------------------------------
 
 
-def test_slideshows_are_switched_on_on_the_page(client: TestClient) -> None:
+def test_slideshows_are_on_until_switched_off_on_the_page(client: TestClient) -> None:
     got = client.get("/api/slideshow/settings").json()
-    assert got == {"enabled": False, "credits": True, "folder": True, "data": True}
-    put = client.put("/api/slideshow/settings", json={"enabled": True})
-    assert put.json()["enabled"] is True and put.json()["credits"] is True
+    assert got == {
+        "enabled": True,
+        "credits": True,
+        "language": "en",
+        "places": True,
+        "folder": True,
+        "data": True,
+    }
+    put = client.put("/api/slideshow/settings", json={"enabled": False})
+    assert put.json()["enabled"] is False and put.json()["credits"] is True
     put = client.put("/api/slideshow/settings", json={"credits": False})
-    assert put.json() == {"enabled": True, "credits": False, "folder": True, "data": True}
+    assert put.json() == {
+        "enabled": False,
+        "credits": False,
+        "language": "en",
+        "places": True,
+        "folder": True,
+        "data": True,
+    }
+
+
+def test_the_language_of_the_text_and_the_places_are_set_on_the_page(client: TestClient) -> None:
+    put = client.put("/api/slideshow/settings", json={"language": "ru", "places": False}).json()
+    assert (put["language"], put["places"], put["credits"]) == ("ru", False, True)
+    again = client.put("/api/slideshow/settings", json={"credits": False}).json()
+    assert (again["language"], again["places"]) == ("ru", False), "the rest stays"
+    assert client.put("/api/slideshow/settings", json={"language": "es"}).status_code == 422
 
 
 def plan_of(database: str, album: UUID, version: str = "v1") -> None:
@@ -147,7 +169,13 @@ def test_the_slideshows_of_an_album_their_state_and_a_look(
 ) -> None:
     album = world.album
     empty = client.get(f"/api/shows/{album}/slideshow").json()
-    assert empty == {"enabled": None, "mood": None, "auto_mood": None, "slideshows": []}
+    assert empty == {
+        "enabled": None,
+        "mood": None,
+        "auto_mood": None,
+        "places": None,
+        "slideshows": [],
+    }
     plan_of(empty_database, album)
     (waiting,) = client.get(f"/api/shows/{album}/slideshow").json()["slideshows"]
     assert waiting["state"] == "waiting" and waiting["photos"] == 23
@@ -268,6 +296,15 @@ def test_a_choice_for_an_album_asks_for_a_pass(client: TestClient, world: World)
     assert got["enabled"] is False and got["mood"] == "wistful", "the rest stays"
     got = client.put(f"/api/shows/{album}/slideshow", json={"enabled": None, "mood": None}).json()
     assert (got["enabled"], got["mood"]) == (None, None)
+    assert got["places"] is None, "as the settings say"
+    got = client.put(f"/api/shows/{album}/slideshow", json={"places": False}).json()
+    assert got["places"] is False
+    got = client.put(f"/api/shows/{album}/slideshow", json={"mood": "calm"}).json()
+    assert got["places"] is False, "a field left out stays"
+    got = client.put(f"/api/shows/{album}/slideshow", json={"places": True}).json()
+    assert got["places"] is True
+    got = client.put(f"/api/shows/{album}/slideshow", json={"places": None}).json()
+    assert got["places"] is None
     assert client.put(f"/api/shows/{album}/slideshow", json={"mood": "sad"}).status_code == 422
 
 

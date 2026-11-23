@@ -19,6 +19,7 @@ from showrunner.immich.client import (
     missing_permissions,
 )
 from showrunner.model.show import Options
+from showrunner.slideshow.words import language_of
 from showrunner.store.registry import Registry
 from showrunner.sync.artwork import ArtworkContext
 from showrunner.sync.executor import Executor
@@ -200,10 +201,10 @@ async def sync_once(
                 notes.append(warning)
         slideshow = None
         specials = None
-        # Slideshows are switched on and off on the page (D-103); SHOWRUNNER_SLIDESHOW turns
-        # them on whatever the page says, for development.
+        # Slideshows are on unless switched off on the page (D-103, D-113); SHOWRUNNER_SLIDESHOW
+        # turns them on whatever the page says, for development.
         setting = await Registry(session).slideshow_setting()
-        enabled = settings.slideshow or (setting is not None and setting.enabled)
+        enabled = settings.slideshow or setting is None or setting.enabled
         credits = setting.credits if setting is not None else settings.slideshow_credits
         if enabled and not dry_run:
             full_size = can_download(await immich.api_key_info())
@@ -228,6 +229,8 @@ async def sync_once(
                     full=full_size,
                     styles=sorted(styles()),
                     credits=credits,
+                    language=language_of(setting.language if setting is not None else None),
+                    places=setting.places if setting is not None else True,
                     threads=settings.slideshow_threads,
                     budget_seconds=settings.slideshow_render_budget_seconds,
                 )

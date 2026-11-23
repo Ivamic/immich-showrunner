@@ -111,6 +111,22 @@ def test_file_name_breaks_after_underscores() -> None:
     assert all(line.endswith("_") for line in fitted.lines[:-1])
 
 
+def test_a_dash_between_words_keeps_its_spaces_and_ends_a_line() -> None:
+    title = "2026-06_07 - Dubrovnik - Rome - Tivoli"
+    for width in (400, 600, 900, 2000):
+        fitted = fit(title, width, 20, 90, 3, MEASURE)
+        assert " ".join(fitted.lines) == title, fitted.lines
+        assert not any(line.startswith("-") for line in fitted.lines[1:]), fitted.lines
+
+
+def test_a_date_in_a_title_stays_whole_while_it_fits() -> None:
+    for width in (300, 500, 800):
+        fitted = fit("2017-03-27_30 - Moscow", width, 30, 90, 3, MEASURE)
+        assert any("2017-03-27_30" in line for line in fitted.lines), fitted.lines
+    en = "\N{EN DASH}"
+    assert fit(f"Rome {en} Tivoli", 2000, 20, 90, 1, MEASURE).lines == (f"Rome {en} Tivoli",)
+
+
 def test_word_wider_than_the_line_breaks_between_letters() -> None:
     word = "Supercalifragilisticexpialidocious"
     fitted = fit(word, 300, 40, 90, 4, MEASURE)

@@ -4,8 +4,10 @@
 Every number of lines up to the limit is tried with the words balanced between the lines;
 the largest size wins, with a small penalty for each extra line. A title too long for the
 smallest size is cut at a word with "…", leaving no short word (a preposition) hanging
-before it. A word without spaces — a file name — is broken after `_` and `-` first, then,
-if still too wide, between letters with a hyphen. Widths are measured with the font."""
+before it. A dash between words stays at the end of the line, with the word before it. A word
+without spaces (a file name, a date like 2017-03-27_30) stays whole while it fits the line at
+the smallest size; wider, it is broken after `_` and `-` first, then between letters with a
+hyphen. Widths are measured with the font."""
 
 from __future__ import annotations
 
@@ -19,6 +21,8 @@ from PIL import ImageFont
 
 ELLIPSIS = "…"
 LINE_PENALTY = 0.12
+DASHES = frozenset({"-", "\N{EN DASH}", "\N{EM DASH}"})
+"""A dash standing between words ("Rome - Tivoli"): kept with the word before it."""
 REFERENCE_SIZE = 100
 
 Measure = Callable[[str, float], float]
@@ -57,10 +61,12 @@ def font_measure(
 
 
 def join(words: list[str]) -> str:
-    """Words back into a line: no space after a piece that ends with `_` or `-`."""
+    """Words back into a line: no space after a piece of a word broken after `_` or `-`
+    (a dash standing between words keeps its space)."""
     line = ""
     for word in words:
-        line += " " + word if line and not line.endswith(("_", "-")) else word
+        piece = line and line.endswith(("_", "-")) and len(line) > 1 and line[-2] != " "
+        line += word if not line or piece else " " + word
     return line
 
 
@@ -68,8 +74,8 @@ def tokens(text: str, width: float, size: float, measure: Measure) -> list[str]:
     """Words of the text; parts of a word joined by `_` or `-` are separate words, and a part
     wider than the line at this size is broken between letters with a hyphen."""
     out: list[str] = []
-    for word in _bound(text.split(), width, size, measure):
-        if " " in word:
+    for word in _bound(_dashes(text.split()), width, size, measure):
+        if " " in word or measure(word, size) <= width:
             out.append(word)
             continue
         for part in re.split(r"(?<=[_\-])", word):
@@ -82,6 +88,17 @@ def tokens(text: str, width: float, size: float, measure: Measure) -> list[str]:
                 out.append(part[:cut] + "-")
                 part = part[cut:]
             out.append(part)
+    return out
+
+
+def _dashes(words: list[str]) -> list[str]:
+    """A dash between words joined to the word before it: it ends a line, never begins one."""
+    out: list[str] = []
+    for word in words:
+        if word in DASHES and out:
+            out[-1] = f"{out[-1]} {word}"
+        else:
+            out.append(word)
     return out
 
 

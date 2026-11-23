@@ -12,7 +12,7 @@ import re
 import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from uuid import UUID
 
 import yaml
@@ -42,6 +42,7 @@ from showrunner.slideshow.library import (
     set_pieces,
 )
 from showrunner.slideshow.music import MAX_BYTES, MusicAnalysis, MusicError
+from showrunner.slideshow.words import language_of
 from showrunner.store.models import FileRow
 from showrunner.store.registry import Registry
 from showrunner.sync.specials import plan_file
@@ -50,6 +51,7 @@ from showrunner.targets.base import JELLYFIN, KODI, SLIDESHOWS, FileKind
 router = APIRouter()
 
 Mood = Literal["calm", "wistful", "bright", "upbeat", "solemn", "cinematic"]
+Language = Literal["en", "de", "fr", "it", "ru"]
 
 
 # --- settings ---------------------------------------------------------------------------------
@@ -58,6 +60,10 @@ Mood = Literal["calm", "wistful", "bright", "upbeat", "solemn", "cinematic"]
 class SettingsOut(BaseModel):
     enabled: bool
     credits: bool
+    language: Language
+    """Of the text drawn in slideshows: the months of a part, the credits."""
+    places: bool
+    """Where the photos were taken, under the title (an album may say otherwise)."""
     folder: bool
     """A folder of slideshows is set: the output folders link to it (D-102)."""
     data: bool
@@ -67,13 +73,18 @@ class SettingsOut(BaseModel):
 class SettingsIn(BaseModel):
     enabled: bool | None = None
     credits: bool | None = None
+    language: Language | None = None
+    places: bool | None = None
 
 
 async def _settings(db: DbDep, settings: Settings) -> SettingsOut:
     row = await Registry(db).slideshow_setting()
     return SettingsOut(
-        enabled=settings.slideshow or (row is not None and row.enabled),
+        # On unless switched off on the page (since 0.5; before, off until switched on).
+        enabled=settings.slideshow or (row is None or row.enabled),
         credits=row.credits if row is not None else settings.slideshow_credits,
+        language=cast(Language, language_of(row.language if row is not None else None)),
+        places=row.places if row is not None else True,
         folder=settings.slideshow_dir is not None,
         data=settings.data_dir is not None,
     )
@@ -88,13 +99,15 @@ async def get_settings(user: CurrentUser, db: DbDep, settings: SettingsDep) -> S
 async def put_settings(
     body: SettingsIn, request: Request, user: CurrentUser, db: DbDep, settings: SettingsDep
 ) -> SettingsOut:
-    values = {k: v for k, v in body.model_dump().items() if v is not None}
+    values: dict[str, bool | str] = {k: v for k, v in body.model_dump().items() if v is not None}
     if values:
         registry = Registry(db)
         current = await registry.slideshow_setting()
-        base = {
-            "enabled": current.enabled if current is not None else False,
+        base: dict[str, bool | str] = {
+            "enabled": current.enabled if current is not None else True,
             "credits": current.credits if current is not None else settings.slideshow_credits,
+            "language": language_of(current.language if current is not None else None),
+            "places": current.places if current is not None else True,
         }
         await registry.save_slideshow_setting(**(base | values))
         await registry.commit()
@@ -125,12 +138,15 @@ class AlbumSlideshowOut(BaseModel):
     """False: switched off for this album; None: as the settings say."""
     mood: Mood | None
     auto_mood: Mood | None
+    places: bool | None
+    """The places under the title for this album; None: as the settings say."""
     slideshows: list[SlideshowOut]
 
 
 class AlbumSlideshowIn(BaseModel):
     enabled: bool | None = None
     mood: Mood | None = None
+    places: bool | None = None
     other_music: bool = False
 
 
@@ -184,6 +200,7 @@ async def album_slideshow(
         enabled=choice.enabled if choice is not None else None,
         mood=choice.mood if choice is not None else None,
         auto_mood=choice.auto_mood if choice is not None else None,
+        places=choice.places if choice is not None else None,
         slideshows=slideshows,
     )
 
@@ -244,7 +261,7 @@ async def choose(
     albums: AlbumsDep,
 ) -> AlbumSlideshowOut:
     """Keep a choice; the next pass plans and draws it. A field left out stays as it was;
-    `null` gives `enabled` and `mood` back to the settings and the photos."""
+    `null` gives `enabled`, `mood` and `places` back to the settings and the photos."""
     registry = Registry(db)
     await row_for(registry, albums, album_id)
     current = (await registry.album_slideshows()).get(album_id)
@@ -254,6 +271,8 @@ async def choose(
         values["enabled"] = False if body.enabled is False else None
     if "mood" in sent:
         values["mood"] = body.mood
+    if "places" in sent:
+        values["places"] = body.places
     if body.other_music:
         values["music_seed"] = (current.music_seed if current is not None else 0) + 1
     if values:

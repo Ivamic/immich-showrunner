@@ -201,13 +201,18 @@ class ArtworkRow(Base):
 
 
 class SlideshowSettingRow(Base):
-    """The settings of slideshows made on the page (D-103): one row."""
+    """The settings of slideshows made on the page (D-103): one row. Without it, slideshows
+    are on (D-113)."""
 
     __tablename__ = "slideshow_setting"
 
     id: Mapped[int] = mapped_column(primary_key=True, default=1)
-    enabled: Mapped[bool] = mapped_column(default=False, server_default=false())
+    enabled: Mapped[bool] = mapped_column(default=True, server_default=true())
     credits: Mapped[bool] = mapped_column(default=True, server_default=true())
+    # The language of the text drawn in slideshows: the months of a part, the credits.
+    language: Mapped[str] = mapped_column(String(8), default="en", server_default="en")
+    # Where the photos were taken, a line under the title.
+    places: Mapped[bool] = mapped_column(default=True, server_default=true())
 
 
 class AlbumSlideshowRow(Base):
@@ -222,6 +227,8 @@ class AlbumSlideshowRow(Base):
     mood: Mapped[str | None] = mapped_column(String(16), default=None)
     # "Other music": another order of the pieces of the mood.
     music_seed: Mapped[int] = mapped_column(default=0, server_default="0")
+    # The places under the title: True or False for this album; None: as the settings say.
+    places: Mapped[bool | None] = mapped_column(default=None)
     # The mood its photos suggest and the slideshows of the last pass (for the page).
     auto_mood: Mapped[str | None] = mapped_column(String(16), default=None)
     planned: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, server_default="[]")

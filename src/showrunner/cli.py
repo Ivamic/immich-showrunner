@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Commands: `showrunner serve | sync | check | migrate`."""
+"""Commands: `showrunner serve | sync | check | migrate | preview-titles`."""
 
 import argparse
 import asyncio
@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 from collections import Counter
+from pathlib import Path
 
 import uvicorn
 from pydantic import ValidationError
@@ -21,9 +22,12 @@ from showrunner.runner import (
     jellyfin_client,
     jellyfin_output_path,
     kodi_client,
+    styles,
     sync_once,
 )
+from showrunner.slideshow.preview import preview_titles
 from showrunner.store.db import make_engine, make_session_factory, upgrade
+from showrunner.store.registry import Registry
 from showrunner.sync.plan import ActionType
 from showrunner.sync.service import SyncReport
 from showrunner.targets.jellyfin.client import JellyfinError
@@ -98,6 +102,24 @@ async def cmd_sync(settings: Settings, args: argparse.Namespace) -> int:
         await engine.dispose()
     print_reports(reports, notes)
     return 0 if all(report.ok for report in reports) else 1
+
+
+async def cmd_preview_titles(settings: Settings, out: Path, album: str | None) -> int:
+    engine = make_engine(settings.database_url)
+    try:
+        async with immich_client(settings) as immich, make_session_factory(engine)() as session:
+            written = await preview_titles(
+                immich,
+                Registry(session),
+                styles(),
+                out,
+                data_dir=settings.data_dir,
+                only=album,
+            )
+    finally:
+        await engine.dispose()
+    print(f"{len(written)} title(s) in {out}")
+    return 0
 
 
 async def cmd_check(settings: Settings) -> int:
@@ -196,6 +218,13 @@ def main(argv: list[str] | None = None) -> int:
 
     commands.add_parser("check", help="check the settings, Immich, Jellyfin and the folders")
     commands.add_parser("migrate", help="bring the database to the latest version")
+    titles = commands.add_parser(
+        "preview-titles",
+        help="draw the titles of the slideshows into a folder, to look them over; nothing else "
+        "is written",
+    )
+    titles.add_argument("--out", required=True, help="the folder for the pictures")
+    titles.add_argument("--album", help="only albums whose name has this in it")
 
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -219,6 +248,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "check":
             return asyncio.run(cmd_check(settings))
+        if args.command == "preview-titles":
+            out = Path(args.out).resolve()
+            out.mkdir(parents=True, exist_ok=True)
+            upgrade(settings.database_url)
+            return asyncio.run(cmd_preview_titles(settings, out, args.album))
         upgrade(settings.database_url)
         return asyncio.run(cmd_sync(settings, args))
     except (ImmichError, SetupError) as exc:

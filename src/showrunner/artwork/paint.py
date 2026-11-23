@@ -567,27 +567,63 @@ class TextPlacement:
     starts: list[float]
     box: Rect
     """The lines: left, top, width, height in pixels."""
+    under: tuple[LineUnder, ...] = ()
+
+
+@dataclass(frozen=True)
+class LineUnder:
+    """A smaller line under the lines of the text, on the same plate (the date and the places
+    of a slideshow under its title)."""
+
+    text: str
+    face: ImageFont.FreeTypeFont
+    spacing: float
+    left: float
+    top: float
+
+
+UNDER_GAP = 0.35
+"""Before a line under the text, in parts of that line's size."""
 
 
 def place_text(
-    fitted: FittedText, spec: TextBlock, area: Rect, font_file: FontFile
+    fitted: FittedText,
+    spec: TextBlock,
+    area: Rect,
+    font_file: FontFile,
+    under: Sequence[FittedText] = (),
 ) -> TextPlacement:
     face = font(font_file.path, fitted.size, font_file.index, font_file.variation)
     spacing = spec.letter_spacing * fitted.size
     ascent, descent = face.getmetrics()
     pitch = fitted.size * spec.line_height
     block_height = pitch * (len(fitted.lines) - 1) + ascent + descent
+    widths = [_line_width(face, line, spacing) for line in fitted.lines] or [0.0]
+    lines: list[tuple[str, ImageFont.FreeTypeFont, float, float]] = []
+    for item in under:
+        if not item.lines:
+            continue
+        small = font(font_file.path, item.size, font_file.index, font_file.variation)
+        small_spacing = spec.letter_spacing * item.size
+        small_ascent, small_descent = small.getmetrics()
+        below = block_height + item.size * UNDER_GAP
+        block_height = below + small_ascent + small_descent
+        widths.append(_line_width(small, item.lines[0], small_spacing))
+        lines.append((item.lines[0], small, small_spacing, below))
     x, y, w, h = area
     top = {"top": y, "center": y + (h - block_height) / 2, "bottom": y + h - block_height}[
         spec.anchor
     ]
-    widths = [_line_width(face, line, spacing) for line in fitted.lines] or [0.0]
     starts = [
         {"left": x, "center": x + (w - lw) / 2, "right": x + w - lw}[spec.align] for lw in widths
     ]
-    return TextPlacement(
-        face, spacing, pitch, top, starts, (min(starts), top, max(widths), block_height)
+    box = (min(starts), top, max(widths), block_height)
+    own = len(starts) - len(lines)
+    placed = tuple(
+        LineUnder(text, small, small_spacing, left, top + below)
+        for (text, small, small_spacing, below), left in zip(lines, starts[own:], strict=True)
     )
+    return TextPlacement(face, spacing, pitch, top, starts[:own], box, placed)
 
 
 def text_extent(placement: TextPlacement, spec: TextBlock, scale: float) -> Space:
@@ -614,12 +650,13 @@ def draw_text(
     font_file: FontFile,
     scale: float,
     assets: AssetResolver,
+    under: Sequence[FittedText] = (),
 ) -> None:
-    """The lines on their plate. Text and plate are drawn on their own layer first, so the
-    whole block can be turned and cast one shadow."""
+    """The lines on their plate, and the smaller lines `under` them. Text and plate are drawn
+    on their own layer first, so the whole block can be turned and cast one shadow."""
     if not fitted.lines:
         return
-    at = place_text(fitted, spec, area, font_file)
+    at = place_text(fitted, spec, area, font_file, under)
     face, spacing = at.face, at.spacing
     text_box = at.box
     block = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
@@ -631,19 +668,24 @@ def draw_text(
     draw = ImageDraw.Draw(letters)
     stroke = round(spec.stroke.width * scale) if spec.stroke else 0
     stroke_fill = rgba(spec.stroke.color) if spec.stroke else None
-    for i, line in enumerate(fitted.lines):
-        at_x, at_y = at.starts[i], at.top + at.pitch * i
-        pieces = [line] if not spacing else list(line)
+    lines = [
+        (line, at.starts[i], at.top + at.pitch * i, face, spacing)
+        for i, line in enumerate(fitted.lines)
+    ]
+    for small in at.under:
+        lines.append((small.text, small.left, small.top, small.face, small.spacing))
+    for line, at_x, at_y, line_face, line_spacing in lines:
+        pieces = [line] if not line_spacing else list(line)
         for piece in pieces:
             draw.text(
                 (at_x, at_y),
                 piece,
-                font=face,
+                font=line_face,
                 fill=rgba(spec.color),
                 stroke_width=stroke,
                 stroke_fill=stroke_fill,
             )
-            at_x += face.getlength(piece) + spacing
+            at_x += line_face.getlength(piece) + line_spacing
     if spec.shadow is not None:
         letters = _with_shadow_same_size(letters, spec.shadow, scale)
     block.alpha_composite(letters)

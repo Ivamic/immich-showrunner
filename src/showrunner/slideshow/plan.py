@@ -29,7 +29,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import StrEnum
 from itertools import pairwise
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID
 
 import numpy as np
@@ -39,12 +39,14 @@ from showrunner.model.naming import WHOLE_ALBUM
 from showrunner.slideshow.content import is_junk, shares
 from showrunner.slideshow.embed import similarity
 from showrunner.slideshow.photos import PhotoLook, distance
+from showrunner.slideshow.words import DEFAULT_LANGUAGE, months
 
-PLAN_VERSION = 5
+PLAN_VERSION = 6
 """Raised when the rules change, so that every slideshow is made again (2: a series is measured
 against its first photo, not the one before; 3: a share for each day, parts of whole days; 4: a
 milder likeness within a minute, never junk with a face, photos of a scene unlike each other;
-5: twenty minutes a season, shared among its days; a busy day may be cut at its pauses)."""
+5: twenty minutes a season, shared among its days; a busy day may be cut at its pauses; 6: the
+date on a line of its own under the title, a part named by its months)."""
 ASPECT = 16 / 9
 
 SCENE_GAP = timedelta(hours=2)
@@ -131,6 +133,9 @@ class PlanPhoto:
     edit: str = ""
     """The edit of the photo in Immich (turned, cropped), when it has one: the edited picture is
     shown, and another edit makes the slideshow again."""
+    city: str = ""
+    country: str = ""
+    """Where it was taken, as Immich found it from the coordinates (its reverse geocoding)."""
 
     @property
     def aspect(self) -> float:
@@ -224,6 +229,11 @@ class Clip:
     """Photos of these months not shown: junk, near copies, too many in a scene."""
     title: str
     credits: bool
+    language: str = DEFAULT_LANGUAGE
+    """Of the text drawn: the months of a part, the word before the music in the credits."""
+    places: tuple[str, ...] = ()
+    """Where its photos were taken (`places_of`), a smaller line under the title; none when
+    places are switched off or the photos have none."""
     music: tuple[AudioPart, ...] = ()
     music_credits: tuple[str, ...] = ()
     """Who made the music and under which licence, a line a piece."""
@@ -241,6 +251,13 @@ class Clip:
         return [s.asset_id for s in self.shots if s.asset_id is not None]
 
     def to_dict(self) -> dict[str, Any]:
+        text: dict[str, Any] = {}
+        # Only when there is something to say, so that the cut list of most slideshows keeps
+        # the fields it had.
+        if self.language != DEFAULT_LANGUAGE:
+            text["language"] = self.language
+        if self.places:
+            text["places"] = list(self.places)
         return {
             "v": PLAN_VERSION,
             "album_id": str(self.album_id),
@@ -254,6 +271,7 @@ class Clip:
             "shots": [s.to_dict() for s in self.shots],
             "music": [m.to_dict() for m in self.music],
             "music_credits": list(self.music_credits),
+            **text,
         }
 
     @classmethod
@@ -270,17 +288,25 @@ class Clip:
             credits=bool(data["credits"]),
             music=tuple(AudioPart.from_dict(m) for m in data.get("music", [])),
             music_credits=tuple(data.get("music_credits", [])),
+            language=data.get("language", DEFAULT_LANGUAGE),
+            places=tuple(data.get("places", [])),
         )
 
     @property
-    def caption(self) -> str:
-        """The text of the title: the album and the year, and the months of a part; the years of
-        a slideshow of the whole album."""
+    def when(self) -> str:
+        """The date under the title, on a line of its own (an album may have a date in its
+        name): the year, the months of a part (`March-July 2024` with an en dash, in the
+        language of the slideshow), the years of a slideshow of the whole album."""
         if self.year == WHOLE_ALBUM:
-            return f"{self.title} · {years(self.first, self.last)}"
+            return years(self.first, self.last)
         if self.part:
-            return f"{self.title} · {self.year} · {self.first:%m}-{self.last:%m}"
-        return f"{self.title} · {self.year}"
+            return months(self.first.month, self.last.month, self.year, self.language)
+        return str(self.year)
+
+    @property
+    def under_title(self) -> tuple[str, ...]:
+        """The lines under the title, each smaller: the date, then the places."""
+        return (self.when, " · ".join(self.places)) if self.places else (self.when,)
 
     @property
     def version(self) -> str:
@@ -303,9 +329,12 @@ def plan_album(
     seed: int = 0,
     credits: bool = True,
     whole: bool = False,
+    language: str = DEFAULT_LANGUAGE,
+    places: bool = False,
 ) -> list[Clip]:
     """The slideshows of an album: one per year (or several for a long year), oldest first;
-    `whole` (an album that is one season): its years together, as the year WHOLE_ALBUM."""
+    `whole` (an album that is one season): its years together, as the year WHOLE_ALBUM;
+    `places`: the title of each names where its photos were taken."""
     clips: list[Clip] = []
     by_year: dict[int, list[PlanPhoto]] = {}
     for photo in sorted(photos, key=lambda p: (p.taken, str(p.asset_id))):
@@ -352,6 +381,8 @@ def plan_album(
                     left_out=sum(1 for p in span if p.asset_id not in shown),
                     title=title,
                     credits=credits,
+                    language=language,
+                    places=places_of([p for scene in part for p, _ in scene]) if places else (),
                     report=_report(span, shown, fates, sum(1 for s in cut if s[0] in span)),
                     trace=_trace(span, shown, fates, groups, cut),
                 )
@@ -452,6 +483,57 @@ def _km(a: PlanPhoto, b: PlanPhoto) -> float | None:
         + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
     )
     return 2 * 6371.0 * math.asin(math.sqrt(h))
+
+
+MAX_PLACES = 3
+PLACE_SHARE = 0.05
+"""A place with fewer of the photos than this (of those with a place) is passed by: a stop on
+the way, not where the slideshow is."""
+
+
+class Placed(Protocol):
+    """Anything with the place it was taken: a photo of the plan, a photo of Immich."""
+
+    @property
+    def city(self) -> str: ...
+    @property
+    def country(self) -> str: ...
+
+
+def places_of(photos: Sequence[Placed]) -> tuple[str, ...]:
+    """Where the photos shown were taken, in the order they come: their cities (the country of a
+    photo with no city), up to MAX_PLACES of those with the most photos; when there are more
+    cities than that and they are in more than one country, the countries instead."""
+    named = [(p.city.strip(), p.country.strip()) for p in photos]
+    named = [(city or country, country) for city, country in named if city or country]
+    if not named:
+        return ()
+    cities = _most([city for city, _ in named])
+    if len(cities) > MAX_PLACES and len({country for _, country in named if country}) > 1:
+        cities = _most([country or city for city, country in named])
+    return tuple(cities[:MAX_PLACES]) if len(cities) <= MAX_PLACES else _top(cities, named)
+
+
+def _most(names: Sequence[str]) -> list[str]:
+    """The names in the order they first come, without those of too few photos (the one with
+    the most always stays)."""
+    counts: dict[str, int] = {}
+    for name in names:
+        counts[name] = counts.get(name, 0) + 1
+    top = max(counts.values())
+    return [n for n, c in counts.items() if c == top or c >= PLACE_SHARE * len(names)]
+
+
+def _top(names: list[str], named: Sequence[tuple[str, str]]) -> tuple[str, ...]:
+    """MAX_PLACES of `names` with the most photos, in the order they first come."""
+    counts = {n: 0 for n in names}
+    for city, country in named:
+        for key in (city, country):
+            if key in counts:
+                counts[key] += 1
+                break
+    chosen = set(sorted(names, key=lambda n: -counts[n])[:MAX_PLACES])
+    return tuple(n for n in names if n in chosen)
 
 
 def years(first: datetime, last: datetime) -> str:

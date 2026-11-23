@@ -283,7 +283,7 @@ class Registry:
             select(SlideshowSettingRow).execution_options(populate_existing=True)
         )
 
-    async def save_slideshow_setting(self, **values: bool) -> None:
+    async def save_slideshow_setting(self, **values: bool | str) -> None:
         statement = insert(SlideshowSettingRow).values(id=1, **values)
         await self._session.execute(
             statement.on_conflict_do_update(index_elements=[SlideshowSettingRow.id], set_=values)
@@ -297,7 +297,7 @@ class Registry:
 
     async def save_album_slideshow(self, album_id: UUID, **values: Any) -> None:
         """Set fields of the slideshows of an album (`enabled`, `mood`, `music_seed`,
-        `auto_mood`, `planned`), creating its row if there is none."""
+        `places`, `auto_mood`, `planned`), creating its row if there is none."""
         statement = insert(AlbumSlideshowRow).values(album_id=album_id, **values)
         await self._session.execute(
             statement.on_conflict_do_update(

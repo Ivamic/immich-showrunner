@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- The slideshows of a show (D-103): on or off for this album, the mood of the music, other
-     music, and the slideshows of its years with their state, a look at each one drawn and its
+<!-- The slideshows of a show (D-103): on or off for this album, the mood of the music, the
+     places under the title, other music, and the slideshows of its years with their state, a look at each one drawn and its
      file to save; the one being drawn now, and the ones drawn before, kept in the trash (D-105). -->
 <script lang="ts">
 	import {
@@ -64,6 +64,7 @@
 	async function change(what: {
 		enabled?: boolean | null;
 		mood?: Mood | null;
+		places?: boolean | null;
 		other_music?: boolean;
 	}) {
 		busy = true;
@@ -160,6 +161,26 @@
 						{#each MOODS as mood (mood)}
 							<option value={mood}>{moodName(mood)}</option>
 						{/each}
+					</select>
+				</label>
+				<label class="st-field places">
+					<span class="st-field__label">{m.album_slideshow_places()}</span>
+					<select
+						class="st-input st-input--select"
+						value={album.places === null ? '' : String(album.places)}
+						disabled={busy}
+						onchange={(e) => {
+							const value = e.currentTarget.value;
+							change({ places: value === '' ? null : value === 'true' });
+						}}
+					>
+						<option value="">
+							{settings?.places === false
+								? m.album_slideshow_places_global_off()
+								: m.album_slideshow_places_global_on()}
+						</option>
+						<option value="true">{m.album_slideshow_places_on()}</option>
+						<option value="false">{m.album_slideshow_places_off()}</option>
 					</select>
 				</label>
 				<button
@@ -326,7 +347,8 @@
 		gap: var(--space-4);
 		flex-wrap: wrap;
 	}
-	.mood {
+	.mood,
+	.places {
 		min-width: 16rem;
 	}
 	.hint {

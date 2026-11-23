@@ -44,6 +44,7 @@ from showrunner.slideshow.music import MusicAnalysis, MusicError
 from showrunner.slideshow.plan import Clip, plan_album, years
 from showrunner.slideshow.render import RenderError, RenderOptions
 from showrunner.slideshow.score import Track, choose_tracks, fit_to_music
+from showrunner.slideshow.words import DEFAULT_LANGUAGE, music_line
 from showrunner.store.registry import Registry
 from showrunner.sync.slideshow import PhotoReport, plan_inputs
 
@@ -62,6 +63,10 @@ class SpecialsContext:
     """The key may download: photos are drawn from their full size."""
     styles: Sequence[str]
     credits: bool = True
+    language: str = DEFAULT_LANGUAGE
+    """Of the text drawn in slideshows (the months of a part, the credits)."""
+    places: bool = True
+    """Where the photos were taken, under the title; an album may say otherwise."""
     threads: int = 2
     budget_seconds: float = 600.0
     worker: ArtworkWorker = field(default_factory=render_worker)
@@ -230,6 +235,12 @@ async def plan_specials(
             seed=seed,
             credits=context.credits,
             whole=whole,
+            language=context.language,
+            places=(
+                choice.places
+                if choice is not None and choice.places is not None
+                else context.places
+            ),
         )
         clips = music_in_turn(clips, pieces)
         specials = specials_of(show, clips, style)
@@ -334,7 +345,7 @@ def specials_of(show: Show, clips: Sequence[Clip], style_id: str) -> tuple[Speci
                 parts=count,
                 number=number,
                 title=title,
-                plot="\n".join(f"Music: {line}" for line in clip.music_credits),
+                plot="\n".join(music_line(line, clip.language) for line in clip.music_credits),
                 aired=clip.last.date() if clip.year == WHOLE_ALBUM else date(clip.year, 12, 31),
                 after_season=_season_before(show, clip.year),
                 version=f"{clip.version}-{style_id}",

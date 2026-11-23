@@ -1,8 +1,10 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Slideshows (D-103): switched on or off, the credits, the music set and the user's own music. -->
+<!-- Slideshows (D-103): switched on or off, the credits, the places under the title and the
+     language of the text drawn, the music set and the user's own music. -->
 <script lang="ts">
 	import {
 		MOODS,
+		SLIDESHOW_LANGUAGES,
 		changeTrack,
 		getMusic,
 		getSlideshowSettings,
@@ -11,11 +13,13 @@
 		trackUrl,
 		uploadTrack,
 		type Mood,
+		type SlideshowLanguage,
 		type SlideshowSettings,
 		type Track,
 		type TrackChange
 	} from '#lib/api.js';
 	import { errorMessage } from '#lib/errors.js';
+	import { LANGUAGE_NAMES } from '#lib/languages.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import Dialog from '#lib/ui/Dialog.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
@@ -59,7 +63,9 @@
 		setTimeout(() => (saved = false), 6000);
 	}
 
-	async function setSetting(change: { enabled?: boolean; credits?: boolean }) {
+	async function setSetting(
+		change: Partial<Pick<SlideshowSettings, 'enabled' | 'credits' | 'language' | 'places'>>
+	) {
 		busy = true;
 		try {
 			settings = await putSlideshowSettings(change);
@@ -196,6 +202,30 @@
 			<span>{m.slideshow_credits()}</span>
 		</label>
 		<p class="hint">{m.slideshow_credits_hint()}</p>
+		<label class="st-check">
+			<input
+				type="checkbox"
+				checked={settings.places}
+				disabled={busy}
+				onchange={(e) => setSetting({ places: e.currentTarget.checked })}
+			/>
+			<span>{m.slideshow_places()}</span>
+		</label>
+		<p class="hint">{m.slideshow_places_hint()}</p>
+		<label class="st-field language">
+			<span class="st-field__label">{m.slideshow_language()}</span>
+			<select
+				class="st-input st-input--select"
+				value={settings.language}
+				disabled={busy}
+				onchange={(e) => setSetting({ language: e.currentTarget.value as SlideshowLanguage })}
+			>
+				{#each SLIDESHOW_LANGUAGES as language (language)}
+					<option value={language}>{LANGUAGE_NAMES[language]}</option>
+				{/each}
+			</select>
+		</label>
+		<p class="hint">{m.slideshow_language_hint()}</p>
 	</section>
 {:else if !error}
 	<p>{m.status_loading()}</p>
@@ -373,6 +403,9 @@
 		flex-direction: column;
 		gap: var(--space-1);
 		max-width: 48rem;
+	}
+	.language {
+		max-width: 16rem;
 	}
 	.hint {
 		color: var(--color-text-muted);

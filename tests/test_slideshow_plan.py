@@ -321,7 +321,7 @@ def test_an_album_of_one_season_is_one_slideshow_of_all_its_years() -> None:
     (clip,) = plan_album(ALBUM, "Two years", photos, whole=True)
     assert (clip.year, clip.part) == (WHOLE_ALBUM, 0)
     assert len(clip.photos) == 16
-    assert clip.caption == "Two years · 2024\N{EN DASH}2025"
+    assert (clip.title, clip.when) == ("Two years", "2024\N{EN DASH}2025")
 
 
 def test_one_slideshow_per_year_and_part_zero_when_there_is_one() -> None:
@@ -450,7 +450,7 @@ def test_a_cut_list_comes_back_from_its_data() -> None:
     again = Clip.from_dict(clip.to_dict())
     assert again.to_dict() == clip.to_dict()
     assert again.version == clip.version
-    assert clip.caption == "Trip · 2024"
+    assert (clip.title, clip.when) == ("Trip", "2024")
 
 
 def test_the_report_says_why_each_photo_was_left_out_day_by_day() -> None:

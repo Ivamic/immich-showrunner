@@ -34,6 +34,7 @@ from showrunner.artwork.style import OutputKind, Style, text_block
 from showrunner.artwork.text import font
 from showrunner.slideshow.photos import open_photo
 from showrunner.slideshow.plan import Clip, Layout, Rect, Shot, Transition
+from showrunner.slideshow.words import DEFAULT_LANGUAGE, music_line
 
 log = logging.getLogger(__name__)
 
@@ -344,22 +345,26 @@ def _stills(
         except (KeyError, OSError, ValueError) as exc:
             raise RenderError(f"the photo {key} could not be read: {exc}") from exc
         frames.append(Frame(image=image))
-    stills = {"title": _still(render(style, OutputKind.LANDSCAPE, frames, clip.caption, 0).image)}
+    title = render(style, OutputKind.LANDSCAPE, frames, clip.title, 0, clip.under_title)
+    stills = {"title": _still(title.image)}
     if clip.credits:
-        stills["credits"] = _still(_credits(style, clip.music_credits))
+        stills["credits"] = _still(_credits(style, clip.music_credits, clip.language))
     return {k: _sized(v, options) for k, v in stills.items()}
 
 
-def _credits(style: Style, music: Sequence[str]) -> Image.Image:
+def _credits(style: Style, music: Sequence[str], language: str = DEFAULT_LANGUAGE) -> Image.Image:
     """The credits: the background of the style's landscape picture, the music (a line a
-    piece) and, below it, the line of the app, in the font and colour of the style's title."""
+    piece, in the language of the slideshow) and, below it, the line of the app, in the font and
+    colour of the style's title."""
     canvas = render(style, OutputKind.LANDSCAPE, [], "", 0).image.convert("RGBA")
     output, owner = style.output(OutputKind.LANDSCAPE)
     spec = text_block(output, None)
     color = rgba(spec.color) if spec is not None else (255, 255, 255, 255)
     face = owner.font_path(spec.font) if spec is not None else None
     width, height = canvas.size
-    lines: list[tuple[str, int]] = [(f"Music: {line}", round(height * 0.032)) for line in music]
+    lines: list[tuple[str, int]] = [
+        (music_line(line, language), round(height * 0.032)) for line in music
+    ]
     lines.append((CREDIT_LINE, round(height * 0.042)))
     draw = ImageDraw.Draw(canvas)
     fonts = []

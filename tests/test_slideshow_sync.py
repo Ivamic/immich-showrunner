@@ -204,6 +204,7 @@ class FakeSpecials(SpecialsContext):
             clock=lambda: 0.0,
         )
         self.made: list[str] = []
+        self.clips: list[Clip] = []
         self.queues: list[int] = []
         self.while_drawing: Callable[[], Awaitable[None]] | None = None
 
@@ -219,6 +220,7 @@ class FakeSpecials(SpecialsContext):
         if self.drawn(special.version):
             return self._drawn[special.version]
         self.made.append(f"{special.year}-{special.part}")
+        self.clips.append(special.clip)
         self.work.mkdir(parents=True, exist_ok=True)
         path = self.work / f"{special.version}.mp4"
         content = f"SLIDESHOW {special.title} {special.version}".encode()
@@ -353,6 +355,37 @@ async def test_a_new_photo_draws_its_year_again_under_the_same_name(
     assert after.keys() == before.keys()
     name = "20241231-235900 Photos 2024 [slideshow 2024 0].mp4"
     assert after[name] != before[name]
+
+
+@pytest.mark.anyio
+async def test_the_title_names_the_places_unless_the_album_says_no(
+    session: AsyncSession, tmp_path: Path
+) -> None:
+    immich = photo_album(years=(2024,))
+    album = next(iter(immich.albums))
+    for i, item in enumerate(immich.photos[album]):
+        item["exifInfo"] |= {"city": "Nice" if i < 4 else "Monaco", "country": "France"}
+    out, data = tmp_path / "out", tmp_path / "data"
+    out.mkdir()
+    first = FakeSpecials(data)
+    await one_pass(immich, session, out, first)
+    assert [c.places for c in first.clips] == [("Nice", "Monaco")]
+
+    # Switched off for this album on the page: drawn again without them.
+    await Registry(session).save_album_slideshow(album_id(1), places=False)
+    await Registry(session).commit()
+    second = FakeSpecials(data)
+    await one_pass(immich, session, out, second, full=True)
+    assert second.made == ["2024-0"]
+    assert [c.places for c in second.clips] == [()]
+
+    # Switched off for all, on again for this album; the text in German.
+    third = FakeSpecials(data)
+    third.places, third.language = False, "de"
+    await Registry(session).save_album_slideshow(album_id(1), places=True)
+    await Registry(session).commit()
+    await one_pass(immich, session, out, third, full=True)
+    assert [(c.places, c.language) for c in third.clips] == [(("Nice", "Monaco"), "de")]
 
 
 class RecordingWorker:

@@ -258,9 +258,16 @@ export const syncNow = (force = false) => request<void>('POST', '/sync', { force
 export type Mood = 'calm' | 'wistful' | 'bright' | 'upbeat' | 'solemn' | 'cinematic';
 export const MOODS: Mood[] = ['calm', 'wistful', 'bright', 'upbeat', 'solemn', 'cinematic'];
 
+/** The languages of the text drawn in slideshows (the months of a part, the credits). */
+export type SlideshowLanguage = 'en' | 'de' | 'fr' | 'it' | 'ru';
+export const SLIDESHOW_LANGUAGES: SlideshowLanguage[] = ['en', 'de', 'fr', 'it', 'ru'];
+
 export interface SlideshowSettings {
 	enabled: boolean;
 	credits: boolean;
+	language: SlideshowLanguage;
+	/** Where the photos were taken, under the title (an album may say otherwise). */
+	places: boolean;
 	/** A folder of slideshows is set: the output folders link to it. */
 	folder: boolean;
 	/** The data folder is there: without it nothing can be drawn. */
@@ -269,7 +276,7 @@ export interface SlideshowSettings {
 
 export const getSlideshowSettings = () => request<SlideshowSettings>('GET', '/slideshow/settings');
 export const putSlideshowSettings = (
-	change: Partial<Pick<SlideshowSettings, 'enabled' | 'credits'>>
+	change: Partial<Pick<SlideshowSettings, 'enabled' | 'credits' | 'language' | 'places'>>
 ) => request<SlideshowSettings>('PUT', '/slideshow/settings', change);
 
 export interface Slideshow {
@@ -309,6 +316,8 @@ export interface AlbumSlideshow {
 	enabled: boolean | null;
 	mood: Mood | null;
 	auto_mood: Mood | null;
+	/** The places under the title for this album; null: as the settings say. */
+	places: boolean | null;
 	slideshows: Slideshow[];
 }
 
@@ -316,7 +325,12 @@ export const getAlbumSlideshow = (show: string) =>
 	request<AlbumSlideshow>('GET', `/shows/${show}/slideshow`);
 export const putAlbumSlideshow = (
 	show: string,
-	change: { enabled?: boolean | null; mood?: Mood | null; other_music?: boolean }
+	change: {
+		enabled?: boolean | null;
+		mood?: Mood | null;
+		places?: boolean | null;
+		other_music?: boolean;
+	}
 ) => request<AlbumSlideshow>('PUT', `/shows/${show}/slideshow`, change);
 export const slideshowVideoUrl = (show: string, s: Slideshow, download = false) =>
 	`/api/shows/${show}/slideshow/video?year=${s.year}&part=${s.part}${download ? '&download=1' : ''}`;

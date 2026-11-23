@@ -203,6 +203,8 @@ def plan_inputs(photos: Sequence[Asset], rows: Mapping[UUID, PhotoLookRow]) -> l
                 longitude=exif.longitude if exif else None,
                 embedding=embedding,
                 edit=(photo.thumbhash or "edited") if photo.is_edited else "",
+                city=(exif.city or "") if exif else "",
+                country=(exif.country or "") if exif else "",
             )
         )
     return result

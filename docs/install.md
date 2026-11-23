@@ -235,8 +235,9 @@ On the page:
   Every change reaches Jellyfin and Kodi within a minute, and can be reset to what Immich says.
 - **People**: the people shared with the user of the app (see below), their names for the media
   server and their descriptions.
-- **Slideshows**: slideshows on or off, the end credits, your own music and the music set (see
-  below). On the page of an album: slideshows off for this album, the mood of its music, other
+- **Slideshows**: slideshows on (by default) or off, the end credits, the places on the title, the language of
+  the text in the slideshows, your own music and the music set (see below). On the page of an
+  album: slideshows off for this album, the mood of its music, the places on its titles, other
   music, and its slideshows to watch.
 - **Status**: the last sync, what it could not do, and a button to sync now.
 
@@ -268,8 +269,8 @@ nothing up. The descriptions of people reach Jellyfin only.
 
 ## 9. Slideshows
 
-Off until you switch them on, on the Slideshows page. Then the photos of every album become videos
-with music, one for each year: "Photos 2024" among the specials (Season 0) of its show, placed after
+On unless you switch them off on the Slideshows page (before 0.4.1 they were off until switched
+on; a choice saved on the page stays). The photos of every album become videos with music, one for each year: "Photos 2024" among the specials (Season 0) of its show, placed after
 the episodes of that year in Jellyfin and Kodi. A year needs at least six photos. A year is meant
 to be watched at one sitting: at most twenty minutes, in parts of three to five minutes, cut
 between days where they can be and else at the longest pauses and moves of a busy day (a
@@ -284,7 +285,15 @@ placed after that season. An album of photos only becomes a show of slideshows o
   them all, a busy day more but not in proportion), spread over its whole time, the photos chosen
   unlike each other. The parts of a year go on with the next
   piece of music. The camera moves slowly towards the faces; a standing photo is shown whole over a blurred
-  copy of itself. The title and the credits are drawn in the style of the album. The page of the
+  copy of itself. The title and the credits are drawn in the style of the album.
+- **The title**: the name of the album, and under it, smaller, the date on a line of its own, so
+  that it is never mistaken for a date in the name: the year ("2024"), the months of a part
+  ("March–July 2024"), the years of an album of one season ("2019–2024"). Under the date, smaller
+  still, where the photos were taken: up to three cities with the most photos, or the countries of
+  a long journey, as Immich names them from the coordinates (on by default; off on the Slideshows
+  page or for an album). The months and the word before the music in the credits are in the
+  language chosen on the Slideshows page (English by default).
+- **What became of the photos**: the page of the
   album says why photos were left out, in all and day by day; "How it was chosen" shows every
   photo of a slideshow, scene by scene: those shown, each group of near copies beside the photo it
   gave way to, those that did not fit in the twenty minutes of the season, and apart the
@@ -295,7 +304,7 @@ placed after that season. An album of photos only becomes a show of slideshows o
   from above; wistful and solemn only when you choose them for an album); the photos change on the beats. The music is named in the description of every
   slideshow and, unless you switch it off, in its end credits. The rights to music you add are yours.
 - **Downloads on first use**: an image model (CLIP, 351 MB, MIT) from Hugging Face, to tell what a
-  photo shows, and the music set (153 MB) from a release of this project, both into the data
+  photo shows, and the music set (213 MB) from a release of this project, both into the data
   volume of the app and checked by SHA-256. Without a network, slideshows are made without them. Your
   photos never leave the server.
 - **Time**: drawing takes a minute or two for a few minutes of video, on two threads. The first
@@ -331,7 +340,14 @@ docker compose run --rm app sync             # one full pass now
 docker compose run --rm app sync --dry-run   # show what would change
 docker compose run --rm app sync --force     # carry out a held mass removal
 docker compose run --rm app check
+docker compose run --rm app preview-titles --out /data/titles   # the titles of the slideshows
 ```
+
+`preview-titles` draws the title of every slideshow as a picture, in minutes, to look over the
+names, dates and places in the style of each album (`--album <text>`: only albums with that in
+their name). An album already planned gets the titles of its plan; any other one title a year.
+It writes nothing else; the pictures are in the data volume of the app
+(`docker compose cp app:/data/titles ./titles` copies them out).
 
 A sync that would remove more than half of all links (and more than 20) is **held**: that looks
 like a wrong API key, not like albums that are no longer shared. Nothing is changed until you run
